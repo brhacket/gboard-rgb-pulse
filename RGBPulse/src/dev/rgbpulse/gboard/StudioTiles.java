@@ -101,10 +101,33 @@ final class StudioTiles {
 
 
 
- static void fitHole(Path hole,RectF tile,boolean single){}
- static void fitHintHole(Path hole,RectF tile,boolean single){}
- static Path shape(RectF tile,Path hole){return null;}
- static void paint(Canvas c,RectF tile,Path shape,float dp,int alpha){}
+ static void fitHole(Path hole,RectF tile,boolean single){
+  if(hole==null||tile==null)return;
+  hole.reset();
+  RectF inset=new RectF(tile);
+  float pad=Math.max(1f,tile.width()*(single?.20f:.12f));
+  inset.inset(pad,pad);
+  if(single)hole.addOval(inset,Path.Direction.CW); else hole.addRoundRect(inset, pad, pad, Path.Direction.CW);
+ }
+ static void fitHintHole(Path hole,RectF tile,boolean single){
+  if(hole==null||tile==null)return;
+  RectF hint=new RectF(tile.centerX(),tile.top+tile.height()*.08f,
+      tile.right-tile.width()*.08f,tile.top+tile.height()*.34f);
+  hole.addOval(hint,Path.Direction.CW);
+ }
+ static Path shape(RectF tile,Path hole){
+  if(tile==null||tile.isEmpty())return new Path();
+  Path result=new Path();result.setFillType(Path.FillType.EVEN_ODD);
+  result.addRoundRect(tile,Math.min(tile.width(),tile.height())*.22f,
+      Math.min(tile.width(),tile.height())*.22f,Path.Direction.CW);
+  if(hole!=null)result.addPath(hole);
+  return result;
+ }
+ static void paint(Canvas c,RectF tile,Path shape,float dp,int alpha){
+  if(c==null||shape==null)return;
+  Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setColor(0xfff5f5f3);p.setAlpha(Math.max(0,Math.min(255,alpha)));
+  c.drawPath(shape,p);
+ }
  static void paintHint(Canvas c,RectF tile,String hint,Config cfg){
   Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));p.setColor(cfg.accentColor);p.setTextSize(tile.height()*.20f);p.setTextAlign(Paint.Align.CENTER);
   float x=tile.centerX()+tile.width()*.22f,y=tile.top+tile.height()*.25f;

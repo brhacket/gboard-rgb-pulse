@@ -6,7 +6,9 @@ final class BodyGeometry {
             int keys, int rows, int width, int height, int clipWidth, int clipHeight,
             float density, int screenHeight) {
         if (isInputRoot || !namedKeyboard || transformed || keys < 8 || rows < 3) return false;
-        if (width < 100*density || height < 75*density || clipWidth<=0 || clipHeight<=0) return false;
+        if (!Float.isFinite(density) || density <= 0 || screenHeight <= 0) return false;
+        if (width <= 0 || height <= 0 || width < 100*density || height < 75*density
+                || clipWidth<=0 || clipHeight<=0) return false;
         if (clipWidth>width || clipHeight>height) return false;
         if ((long)clipWidth*clipHeight < (long)width*height*.55) return false;
         return clipHeight <= screenHeight*.85f;

@@ -16,12 +16,20 @@
 3. Open **RGB Pulse 33** app → turn ON **Solid tonal tiles (Pulse Studio)** → Apply / force-stop Gboard
 4. Tap any text field – keys visible immediately as stock, tap any row to see white border=letter wave
 
-### Build
+### Build and test
+The build is intentionally a small command-line pipeline because the module is injected into
+Gboard by LSPosed rather than launched as a conventional app. It uses JDK 11+, Android API 34,
+R8/D8, `aapt`, `curl`, `openssl`, `zip`, and Debian's `libapksig-java` package. The generated
+`ShaderCode.java` is always rebuilt from `shaders/field.agsl` before compilation.
+
 ```bash
 cd RGBPulse
+bash test.sh                         # Android-free policy and source tests
 bash build.sh ../Gboard-RGB-Pulse-33.0.apk
-bash test.sh
 ```
+
+A missing tool now produces an actionable error instead of a partially-built APK. GitHub Actions
+runs the same policy tests on Java 17 and verifies that the checked-in shader embedding is current.
 
 ### Structure
 - `RGBPulse/src/dev/rgbpulse/gboard/` – Java/AGSL Vector/LSPosed hooks
