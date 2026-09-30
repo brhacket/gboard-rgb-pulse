@@ -48,12 +48,16 @@ jobs:
           packages: 'platform-tools build-tools;35.0.0'
       - name: Locate aapt
         run: echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
-      - name: Download APK signing library
-        run: curl --fail --location --retry 3 -o apksig.jar https://repo.maven.apache.org/maven2/com/android/tools/build/apksig/8.3.37/apksig-8.3.37.jar
+      - name: Locate APK signing library
+        run: |
+          APKSIG=$(find "$ANDROID_HOME" -name apksig.jar -type f -print -quit)
+          if [ -z "$APKSIG" ]; then
+            curl --fail --location --retry 3 -o apksig.jar https://dl.google.com/dl/android/maven2/com/android/tools/build/apksig/8.3.37/apksig-8.3.37.jar
+            APKSIG="$GITHUB_WORKSPACE/apksig.jar"
+          fi
+          echo "APKSIG_JAR=$APKSIG" >> "$GITHUB_ENV"
       - name: Build APK
         working-directory: RGBPulse
-        env:
-          APKSIG_JAR: ${{ github.workspace }}/apksig.jar
         run: bash build.sh "../Gboard-RGB-Pulse-${{ env.RELEASE }}.apk"
       - name: Verify APK archive
         run: unzip -t "Gboard-RGB-Pulse-${{ env.RELEASE }}.apk"
