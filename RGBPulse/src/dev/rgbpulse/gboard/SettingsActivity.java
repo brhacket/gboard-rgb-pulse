@@ -40,7 +40,7 @@ public final class SettingsActivity extends Activity {
         int p = (int) (16 * dp);
         col.setPadding(p, p, p, p * 3);
 
-        TextView title = text("RGB Pulse 33", 26, 0xFFFFFFFF);
+        TextView title = text("RGB Pulse 34", 26, 0xFFFFFFFF);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         col.addView(title);
         status = text(hooked ? "Shared-settings access available. This does not confirm Gboard detection." :

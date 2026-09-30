@@ -6,7 +6,8 @@ cd "$(dirname "$0")"
 for command in java javac curl zip openssl aapt python3; do
   command -v "$command" >/dev/null || { echo "error: missing required command: $command" >&2; exit 127; }
 done
-[[ -f /usr/share/java/apksig.jar ]] || { echo "error: install libapksig-java (or provide /usr/share/java/apksig.jar)" >&2; exit 1; }
+APKSIG_JAR="${APKSIG_JAR:-/usr/share/java/apksig.jar}"
+[[ -f "$APKSIG_JAR" ]] || { echo "error: apksig.jar not found at $APKSIG_JAR" >&2; exit 1; }
 
 python3 embed_shader.py
 mkdir -p tools signing
@@ -30,7 +31,7 @@ if [[ ! -s signing/key.pk8 || ! -s signing/cert.pem ]]; then
   openssl pkcs8 -topk8 -inform PEM -outform DER -in signing/key.pem -out signing/key.pk8 -nocrypt
   chmod 600 signing/key.pem signing/key.pk8
 fi
-javac -encoding UTF-8 -nowarn -cp /usr/share/java/apksig.jar -d work Sign.java
-java -cp /usr/share/java/apksig.jar:work Sign signing/key.pk8 signing/cert.pem \
+javac -encoding UTF-8 -nowarn -cp "$APKSIG_JAR" -d work Sign.java
+java -cp "$APKSIG_JAR:work" Sign signing/key.pk8 signing/cert.pem \
   work/unsigned.apk "${1:-Gboard-RGB-Pulse.apk}"
 echo "Built ${1:-Gboard-RGB-Pulse.apk}"

@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="33" android:versionName="33.0">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="34" android:versionName="34.0">
  <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="34"/>
  <application android:label="Gboard RGB Pulse" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:hasCode="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
   <activity android:name=".SettingsActivity" android:exported="true" android:label="Gboard RGB Pulse" android:windowSoftInputMode="adjustResize">

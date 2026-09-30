@@ -1,0 +1,49 @@
+name: Build and publish APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE: '34.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: sdkmanager "platform-tools" "build-tools;35.0.0"
+      - name: Locate aapt
+        run: echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
+      - name: Download APK signing library
+        run: curl --fail --location --retry 3 -o apksig.jar https://repo1.maven.org/maven2/com/android/tools/build/apksig/8.3.37/apksig-8.3.37.jar
+      - name: Run tests
+        working-directory: RGBPulse
+        run: bash test.sh
+      - name: Build APK
+        working-directory: RGBPulse
+        env:
+          APKSIG_JAR: ${{ github.workspace }}/apksig.jar
+        run: bash build.sh "../Gboard-RGB-Pulse-${{ env.RELEASE }}.apk"
+      - name: Verify APK is installable and signed
+        working-directory: RGBPulse
+        run: |
+          test -s "../Gboard-RGB-Pulse-${{ env.RELEASE }}.apk"
+          unzip -t "../Gboard-RGB-Pulse-${{ env.RELEASE }}.apk"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ env.RELEASE }}" \
+            "Gboard-RGB-Pulse-${{ env.RELEASE }}.apk" \
+            --repo "${{ github.repository }}" \
+            --title "Gboard RGB Pulse ${{ env.RELEASE }}" \
+            --generate-notes

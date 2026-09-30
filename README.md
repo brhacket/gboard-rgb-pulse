@@ -1,6 +1,6 @@
 # Gboard RGB Pulse – Stock Gboard + Waving Border & Letter Glow
 
-**v33.0** – Stock Gboard design kept, only border = letter waves, all keys including shift/enter/space, one-color white, multi-wave.
+**v34.0** – Stock Gboard design kept, only border = letter waves, all keys including shift/enter/space, one-color white, multi-wave.
 
 ### What it does
 - Keeps Google's default dark gray keys (no permanent white pills)
