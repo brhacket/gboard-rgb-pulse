@@ -7,7 +7,10 @@ for command in java javac curl zip openssl aapt python3; do
   command -v "$command" >/dev/null || { echo "error: missing required command: $command" >&2; exit 127; }
 done
 APKSIG_JAR="${APKSIG_JAR:-/usr/share/java/apksig.jar}"
-[[ -f "$APKSIG_JAR" ]] || { echo "error: apksig.jar not found at $APKSIG_JAR" >&2; exit 1; }
+APKSIGNER="${APKSIGNER:-$(command -v apksigner || true)}"
+if [[ ! -f "$APKSIG_JAR" && -z "$APKSIGNER" ]]; then
+  echo "error: apksig.jar or the Android apksigner command is required" >&2; exit 1
+fi
 
 python3 embed_shader.py
 mkdir -p tools signing
@@ -31,7 +34,12 @@ if [[ ! -s signing/key.pk8 || ! -s signing/cert.pem ]]; then
   openssl pkcs8 -topk8 -inform PEM -outform DER -in signing/key.pem -out signing/key.pk8 -nocrypt
   chmod 600 signing/key.pem signing/key.pk8
 fi
-javac -encoding UTF-8 -nowarn -cp "$APKSIG_JAR" -d work Sign.java
-java -cp "$APKSIG_JAR:work" Sign signing/key.pk8 signing/cert.pem \
-  work/unsigned.apk "${1:-Gboard-RGB-Pulse.apk}"
+output="${1:-Gboard-RGB-Pulse.apk}"
+if [[ -f "$APKSIG_JAR" ]]; then
+  javac -encoding UTF-8 -nowarn -cp "$APKSIG_JAR" -d work Sign.java
+  java -cp "$APKSIG_JAR:work" Sign signing/key.pk8 signing/cert.pem work/unsigned.apk "$output"
+else
+  "$APKSIGNER" sign --key signing/key.pk8 --cert signing/cert.pem \
+    --out "$output" work/unsigned.apk
+fi
 echo "Built ${1:-Gboard-RGB-Pulse.apk}"
