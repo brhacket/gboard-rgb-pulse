@@ -43,10 +43,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android build tools
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "build-tools;35.0.0"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools build-tools;35.0.0'
       - name: Locate aapt
         run: echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
       - name: Download APK signing library
