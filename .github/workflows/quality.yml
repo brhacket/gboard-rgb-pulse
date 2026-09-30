@@ -49,7 +49,7 @@ jobs:
       - name: Locate aapt
         run: echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
       - name: Download APK signing library
-        run: curl --fail --location --retry 3 -o apksig.jar https://repo1.maven.org/maven2/com/android/tools/build/apksig/8.3.37/apksig-8.3.37.jar
+        run: curl --fail --location --retry 3 -o apksig.jar https://repo.maven.apache.org/maven2/com/android/tools/build/apksig/8.3.37/apksig-8.3.37.jar
       - name: Build APK
         working-directory: RGBPulse
         env:
