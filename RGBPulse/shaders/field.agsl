@@ -1,0 +1,158 @@
+// RGB Pulse 6: expanding liquid waves only. Hologram tiles retained from v5.
+// No image inputs, sampled keyboard content, masks, sprites or particles.
+uniform float2 resolution;
+uniform float time;
+uniform float strength;
+uniform float effectSize;
+uniform float thickness;
+uniform float style;
+uniform float colorMode;
+uniform float hue1;
+uniform float hue2;
+uniform float saturation;
+uniform float4 taps[4];
+
+float3 hueRgb(float h) {
+    float3 wave=abs(fract(float3(h)+float3(0.0,0.6666667,0.3333333))*6.0-3.0);
+    return mix(float3(1.0),clamp(wave-1.0,0.0,1.0),saturation);
+}
+float3 palette(float f,float h) {
+    if(colorMode>1.5 && colorMode<2.5) {
+        float3 c=hueRgb(hue1);
+        return mix(c,float3(1.0),0.06+0.14*(0.5+0.5*sin(f*6.28318)));
+    }
+    if(colorMode>2.5 && colorMode<3.5)
+        return mix(hueRgb(hue1),hueRgb(hue2),0.5+0.5*sin(f*6.28318));
+    if(colorMode>0.5)return hueRgb(h+0.11*sin(f*4.0));
+    return hueRgb(h+0.19*f+0.035*time);
+}
+float bell(float v,float width) { return exp(-v*v/width); }
+float crest(float d,float width) { float w=width*thickness; return exp(-d*d/(w*w)); }
+
+half4 main(float2 frag) {
+    float height=max(resolution.y,1.0);
+    float3 light=float3(0.0);float energy=0.0;
+    for(int i=0;i<4;i++) {
+        float age=taps[i].z;
+        if(age>=0.0 && age<1.0) {
+            float2 q=(frag-taps[i].xy)/height;
+            float2 p=q/max(effectSize,.1);
+            float r=length(p),angle=atan(p.y,p.x+.00001);
+            float a=1.0-pow(1.0-age,2.0);
+            float envelope=smoothstep(0.0,.055,age)*(1.0-smoothstep(.30,1.0,age));
+            float3 color=float3(0.0);float intensity=0.0;
+            if(style<.5) {
+                // Exact v5 Hologram tiles field, including original lifetime curve.
+                float2 grid=p*8.0;
+                float row=floor(grid.y/.8660254);
+                grid.x+=mod(row,2.0)*.5;
+                float2 cell=float2(fract(grid.x)-.5,mod(grid.y,.8660254)-.4330127);
+                float edge=max(abs(cell.x)*.8660254+abs(cell.y)*.5,abs(cell.y));
+                float border=bell(edge-.39,.0013);
+                float front=.10+.95*a;
+                float active=bell(r-front,.045);
+                float flash=.65+.35*cos(floor(grid.x)*1.3+row*2.0+age*6.0);
+                color=mix(palette(row*.22+floor(grid.x)*.18,taps[i].w),float3(1.0),border*.28);
+                intensity=active*(.25*flash+border*.75);
+            } else {
+                // Near-linear outward travel. A broad wake stays visible behind each crest.
+                float progress=1.0-pow(1.0-age,1.30);
+                float R=.025+1.02*progress;
+                float d=r-R;
+                float attack=smoothstep(0.0,.035,age);
+                envelope=attack*(1.0-smoothstep(.58,1.0,age));
+                float hue=taps[i].w;
+                // Modern, soft styles: thin bright cores, deep bloom, gradient hues.
+                float sweep=angle*.15915+.5; // 0..1 around the circle
+                if(style<1.5) {
+                    // Neon halo: crisp thin ring + wide soft bloom, conic gradient.
+                    float core=crest(d,.006),glow=crest(d,.05),haze=crest(d,.16);
+                    color=mix(palette(sweep+age*.3,hue),float3(1.0),core*.6);
+                    intensity=core*.95+glow*.45+haze*.18;
+                } else if(style<2.5) {
+                    // Liquid glass: refracting lens rim with specular highlight and chroma edge.
+                    float wob=.012*sin(angle*3.0+age*6.0);
+                    float dd=d+wob;
+                    float rim=crest(dd,.012),inner=crest(dd+.05,.06);
+                    float spec=pow(max(0.0,cos(angle+2.3)),14.0)*crest(dd+.02,.02);
+                    float3 cA=palette(sweep,hue),cB=palette(sweep+.33,hue);
+                    color=mix(mix(cA,cB,smoothstep(-.02,.02,dd)),float3(1.0),spec*.9+rim*.3);
+                    intensity=rim*.75+inner*.22+spec;
+                } else if(style<3.5) {
+                    // Aurora ring: flowing, flickering curtain on a soft annulus.
+                    float n=sin(angle*5.0+age*4.0)*.5+sin(angle*9.0-age*6.0)*.3;
+                    float dd=d-n*.03;
+                    float band=crest(dd,.045);
+                    float curtain=.55+.45*sin(angle*14.0+n*3.0+age*5.0);
+                    color=palette(sweep*1.5+n*.2+age*.2,hue);
+                    intensity=band*(.35+.75*curtain)+crest(dd,.008)*.4;
+                } else if(style<4.5) {
+                    // Metaball blobs: liquid droplets orbit and merge on the ring.
+                    float field=0.0;float3 acc=float3(0.0);
+                    for(int k=0;k<6;k++){
+                        float fk=float(k);
+                        float ang=fk*1.0472+age*(1.5+fk*.2)*(mod(fk,2.0)*2.0-1.0);
+                        float2 c=R*float2(cos(ang),sin(ang));
+                        float2 dv=p-c;
+                        float f=.0035/(dot(dv,dv)+.0006);
+                        field+=f;acc+=palette(fk/6.0+age*.2,hue)*f;
+                    }
+                    float surf=smoothstep(.9,1.3,field);
+                    float edge=crest(field-1.1,.25);
+                    color=mix(acc/max(field,.001),float3(1.0),edge*.35);
+                    intensity=surf*.7+edge*.35+crest(d,.05)*.15;
+                } else if(style<5.5) {
+                    // Gradient bloom: soft filled disc that expands and fades like a light burst.
+                    float disc=1.0-smoothstep(R-.10,R+.02,r);
+                    float edge=crest(d,.03);
+                    color=mix(palette(r*1.4+sweep*.3,hue),float3(1.0),edge*.4);
+                    intensity=disc*.35*(1.0-age)+edge*.7;
+                } else if(style<6.5) {
+                    // Prism ring: RGB split rings with subtle dispersion.
+                    float rr=crest(d-.012,.010),gg=crest(d,.010),bb=crest(d+.012,.010);
+                    float3 rgb=float3(rr,gg,bb);
+                    float3 tint=palette(sweep+age*.2,hue);
+                    color=clamp(mix(rgb*1.3,tint,.35),0.0,1.0);
+                    intensity=max(rr,max(gg,bb))*.95+crest(d,.06)*.25;
+                } else if(style<7.5) {
+                    // Sonar pulse: evenly spaced soft echoes behind a bright leading edge.
+                    float echoes=pow(.5+.5*cos((r*22.0-age*14.0)),6.0)*step(r,R);
+                    float lead=crest(d,.008);
+                    float fade=exp(-max(0.0,R-r)*4.0);
+                    color=mix(palette(r+sweep*.2,hue),float3(1.0),lead*.5);
+                    intensity=lead+echoes*fade*.5;
+                } else if(style<8.5) {
+                    // Silk wave: smooth undulating ribbon ring with sheen.
+                    float wave=.035*sin(angle*6.0+age*7.0);
+                    float dd=d+wave;
+                    float ribbon=crest(dd,.022);
+                    float sheen=pow(.5+.5*cos(angle*6.0+age*7.0+1.2),8.0);
+                    color=mix(palette(sweep*2.0,hue),float3(1.0),sheen*ribbon*.6);
+                    intensity=ribbon*(.6+.5*sheen)+crest(dd,.08)*.18;
+                } else if(style<9.5) {
+                    // Plasma burst: turbulent flame-like edge.
+                    float t1=sin(angle*7.0+r*20.0-age*8.0)+sin(angle*11.0-age*10.0)*.6;
+                    float dd=d-t1*.018;
+                    float body=crest(dd,.035),hot=crest(dd,.009);
+                    color=mix(palette(t1*.2+sweep,hue),float3(1.0),hot*.55);
+                    intensity=body*.6+hot*.7;
+                } else {
+                    // Dual orbit: two rings counter-rotating with bright comet arcs.
+                    float R2=R*.7;
+                    float a1=pow(max(0.0,cos(angle-age*6.0)),10.0);
+                    float a2=pow(max(0.0,cos(angle+age*7.0+3.14)),10.0);
+                    float r1=crest(d,.008),r2=crest(r-R2,.008);
+                    color=mix(palette(sweep+age*.3,hue),float3(1.0),(a1*r1+a2*r2)*.6);
+                    intensity=r1*(.25+a1)+r2*(.25+a2)+crest(d,.05)*.12;
+                }
+                // Prevent wake tails leaking through the touch center at the beginning.
+                intensity*=smoothstep(0.0,.018,r);
+            }
+            float weight=clamp(intensity*envelope,0.0,1.0);
+            light+=color*weight;energy+=weight;
+        }
+    }
+    float opacity=clamp((1.0-exp(-energy*1.6))*strength,0.0,1.0);
+    float3 rgb=clamp(light/max(energy,.0001),0.0,1.0);
+    return half4(rgb*opacity,opacity);
+}

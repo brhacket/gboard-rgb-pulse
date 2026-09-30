@@ -1,0 +1,13 @@
+// Satin etched legend; static glyph-local variation. Paint clips this shader to glyphs.
+uniform float2 origin;
+uniform float textSize;
+uniform float amount;
+uniform float3 tint;
+float hash(float2 p) {float3 q=fract(float3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
+half4 main(float2 p){
+    float2 uv=(p-origin)/max(textSize,1.0);
+    float grain=hash(floor(uv*54.0))-.5;
+    float y=clamp(-uv.y,0.0,1.0);
+    float satin=.90+.08*y+amount*(grain*.17+sin(uv.y*180.0)*.015);
+    return half4(clamp(tint*satin,0.0,1.0),1.0);
+}

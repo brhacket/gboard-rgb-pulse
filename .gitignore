@@ -1,0 +1,8 @@
+RGBPulse/tools/
+RGBPulse/work/
+*.apk
+!Gboard-RGB-Pulse-33.0.apk
+*.zip
+Unselected files/
+__pycache__/
+.tmp/

@@ -1,0 +1,70 @@
+// Clear etched glass. lighting is OUR procedural field, not captured editor content.
+// Rounded-box lens coordinates remain in panel space; material noise is key-local.
+uniform shader lighting;
+uniform float4 box;
+uniform float density;
+uniform float optical;
+uniform float pressed;
+uniform float textureAmount;
+uniform float lensAmount;
+float noise(float2 p) {
+    float3 p3=fract(float3(p.xyx)*.1031);
+    p3+=dot(p3,p3.yzx+33.33);
+    return fract((p3.x+p3.y)*p3.z);
+}
+float sd(float2 p) {
+    float2 halfSize=max((box.zw-box.xy)*.5,float2(1));
+    float radius=min(10.0*density,min(halfSize.x,halfSize.y)*.58);
+    float2 q=abs(p-(box.xy+box.zw)*.5)-halfSize+radius;
+    return length(max(q,0.0))+min(max(q.x,q.y),0.0)-radius;
+}
+float sq(float v){return v*v;}
+half4 main(float2 p) {
+    float d=sd(p), cov=1.0-smoothstep(-.7,.7,d);
+    if(cov<=0.0)return half4(0.0);
+    float2 center=(box.xy+box.zw)*.5;
+    float2 halfSize=max((box.zw-box.xy)*.5,float2(1));
+    float2 local=(p-center)/halfSize;
+    float2 grad=float2(sd(p+float2(.5,0))-sd(p-float2(.5,0)),sd(p+float2(0,.5))-sd(p-float2(0,.5)));
+    float2 n=grad/max(length(grad),.0001);
+    float shortHalf=min(halfSize.x,halfSize.y);
+    float bevel=min(6.5*density,shortHalf*.55);
+    float t=clamp(-d/max(bevel,1.0),0.0,1.0);
+    // Inverse-power profile: pronounced folded rim, quiet central viewing area.
+    float slope=(pow(1.0+4.0*t,-1.6)-pow(5.0,-1.6))/(1.0-pow(5.0,-1.6));
+    if(optical>.5) {
+        float refr=min(6.0*density,shortHalf*.38)*lensAmount;
+        float2 offset=-n*slope*refr*(1.0+.22*pressed);
+        // Gentle center magnification, scaled to the SHORT side so spacebars don't stretch.
+        float dome=max(0.0,1.0-dot(local,local)*.5);
+        offset-=local*shortHalf*dome*(.035+.02*pressed)*lensAmount;
+        float spread=.075*slope;
+        // Child field is defined at any coordinate: no framebuffer clip sampling needed.
+        half4 rr=lighting.eval(p+offset*(1.0-spread));
+        half4 gg=lighting.eval(p+offset);
+        half4 bb=lighting.eval(p+offset*(1.0+spread));
+        float alpha=max(rr.a,max(gg.a,bb.a));
+        float3 rgb=min(float3(rr.r,gg.g,bb.b),float3(alpha));
+        return half4(rgb,alpha)*cov;
+    }
+    float2 dpLocal=(p-box.xy)/max(density,.1);
+    // Stable etched microfacets: sub-dp grain and faint directional striations.
+    float fine=noise(floor(dpLocal*2.2));
+    float grain=noise(floor(dpLocal*.85));
+    float brushed=sin(dpLocal.y*8.3+sin(dpLocal.x*.38)*.7)*.5+.5;
+    float micro=(fine*.60+grain*.25+brushed*.15)-.5;
+    float facing=dot(n,float2(-.8660254,-.5));
+    float lobe=pow(abs(facing),4.5);
+    float hair=exp(-sq((d+.60*density)/(.60*density)));
+    float inner=exp(-sq((d+2.0*density)/(1.65*density)));
+    // Broad softbox reflection on a curved surface, not a uniform outline.
+    float wash=exp(-sq((local.y+.62+local.x*.38)/.55))*.095;
+    float second=exp(-sq((local.y-.92+local.x*.3)/.26))*.028;
+    float spec=(hair*.50+inner*.095)*lobe*(1.0-.18*pressed);
+    float body=.055+wash+second+textureAmount*(.045+micro*.13);
+    float a=clamp(body+spec+pressed*.018,0.0,.85)*cov;
+    float rough=clamp(.66+micro*textureAmount*.50,0.0,1.0);
+    float3 base=mix(float3(.35,.44,.56),float3(.82,.89,.96),rough);
+    float3 col=mix(base,float3(.94,.97,1.0),clamp(spec/max(a,.001),0.0,1.0));
+    return half4(col*a,a);
+}
