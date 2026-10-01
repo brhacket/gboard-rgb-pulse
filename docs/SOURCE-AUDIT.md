@@ -1,5 +1,16 @@
 # Source review and UI cleanup
 
+## CI build update
+
+GitHub Actions run [36931162569](https://github.com/brhacket/gboard-rgb-pulse/actions/runs/36931162569)
+successfully ran the full Java and source-contract suite, compiled the APK,
+verified its archive and signature, and published the
+[35.0 test release](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/test-35-36931162569-1).
+Build commit: `c468044`. The APK uses a new test signing key; uninstall an older
+module before installing it (module settings will be lost). Device/LSPosed
+behavior and performance have not been verified. The local-workspace limitations
+below describe the initial review, before this successful remote build.
+
 ## Scope and limitations
 
 Reviewed the checked-out v34 source. Attempted to download the published
