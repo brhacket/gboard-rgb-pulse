@@ -16,7 +16,17 @@ python3 embed_shader.py
 mkdir -p tools signing
 rm -rf work
 mkdir -p work/classes
-fetch() { [[ -s "$2" ]] || curl --fail --location --retry 3 --retry-delay 2 --output "$2" "$1"; }
+# Never cache an interrupted download under the final dependency filename.
+fetch() {
+  [[ -s "$2" ]] && return 0
+  local partial="$2.partial"
+  if curl --fail --location --retry 3 --retry-delay 2 --output "$partial" "$1"; then
+    mv "$partial" "$2"
+  else
+    rm -f "$partial"
+    return 1
+  fi
+}
 fetch https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar tools/android.jar
 fetch https://api.xposed.info/de/robv/android/xposed/api/82/api-82.jar tools/xposed.jar
 fetch https://storage.googleapis.com/r8-releases/raw/8.3.37/r8.jar tools/r8.jar
@@ -28,7 +38,13 @@ java -cp tools/r8.jar com.android.tools.r8.D8 --release --lib tools/android.jar 
 aapt package -f -M AndroidManifest.xml -S res -A assets -I tools/android.jar -F work/unsigned.apk
 (cd work && zip -q -u unsigned.apk classes.dex)
 
-if [[ ! -s signing/key.pk8 || ! -s signing/cert.pem ]]; then
+if [[ -e signing/key.pk8 || -e signing/cert.pem || -e signing/key.pem ]]; then
+  if [[ ! -s signing/key.pk8 || ! -s signing/cert.pem ]]; then
+    echo "error: incomplete signing identity; restore key.pk8 and cert.pem instead of replacing an existing key" >&2
+    exit 1
+  fi
+else
+  umask 077
   openssl req -x509 -newkey rsa:2048 -keyout signing/key.pem -out signing/cert.pem \
     -days 10000 -nodes -subj '/CN=Gboard RGB Pulse local build/'
   openssl pkcs8 -topk8 -inform PEM -outform DER -in signing/key.pem -out signing/key.pk8 -nocrypt

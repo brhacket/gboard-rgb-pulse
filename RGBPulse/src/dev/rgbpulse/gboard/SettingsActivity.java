@@ -40,13 +40,18 @@ public final class SettingsActivity extends Activity {
         int p = (int) (16 * dp);
         col.setPadding(p, p, p, p * 3);
 
-        TextView title = text("RGB Pulse 34", 26, 0xFFFFFFFF);
+        TextView title = text("RGB Pulse · Settings", 26, 0xFFFFFFFF);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         col.addView(title);
         status = text(hooked ? "Shared-settings access available. This does not confirm Gboard detection." :
                 "Module not active in Vector. Enable it, scope Gboard, then reopen this app.", 13,
                 hooked ? 0xFF8BE78B : 0xFFFF8A80);
         col.addView(status);
+
+        section(col, "General");
+        toggle(col, "Enabled", cfg.enabled, v -> { cfg.enabled = v; save("enabled", v); });
+        choice(col, "Draw layer", Config.LAYERS, cfg.layer, i -> { cfg.layer = i; save("layer4", i); });
+        col.addView(text("Both modes target only the typing panel, never the toolbar or editor. Stock-key wave mode keeps background effects underneath the keys. With that mode off, both draw layers are available. Unsupported layouts stay unmodified.", 12, 0xFF9A9AB0));
 
         preview = new Preview(this);
         col.addView(preview, new LinearLayout.LayoutParams(-1, (int) (190 * dp)));
@@ -63,31 +68,25 @@ public final class SettingsActivity extends Activity {
         restart.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Restart Gboard?")
             .setMessage("Saves settings and requests root to force-stop Gboard. The keyboard will close; tap a text field to reopen it. If root is unavailable, Android app settings will open. Keep a backup keyboard available.")
             .setPositiveButton("Apply",(d,w) -> restartGboard(restart)).setNegativeButton("Cancel",null).show());col.addView(restart);
-        section(col,"Pulse Studio · solid tonal tiles");
-        toggle(col,"Solid tonal tiles (Pulse Studio)",cfg.glass,v->{cfg.glass=v;save("glass9",v);});
-        col.addView(text("Solid squircle tiles 18dp radius, exterior shadow band only, accent rim .55dp, centered solid legends with luminance-based dark/light text. Row-limited expanding background on tap: origin at tapped key, sweep travels right 90% width, keys left of front in that row blend toward accent. Triple-glow beam option.",12,0xFF9A9AB0));
-        choice(col,"Letter font",new String[]{"Gboard original","System medium","Rounded (system fallback)","Monospace","Serif","Imported font","Manrope","Outfit","Space Grotesk · Google Fonts","Syne · display","Orbitron · display"},cfg.font,v->{cfg.font=v;save("font11",v);});
-        slider(col,"Circle size",60,95,cfg.tileScale," %",v->{cfg.tileScale=v;save("tileScale18",v);});
-        Button accent=new Button(this);accent.setText("Accent color · rims and number hints");accent.setOnClickListener(v->accentDialog());col.addView(accent);
-        Button tileColor=new Button(this);tileColor.setText("Tile background color");tileColor.setOnClickListener(v->tileDialog());col.addView(tileColor);
-        choice(col,"Sideways expanding row",new String[]{"Off","Single beam","Triple glow"},cfg.sideStyle,v->{cfg.sideStyle=v;save("side20",v);});
+        section(col,"Key appearance & row waves");
+        toggle(col,"Stock keys + white row waves",cfg.glass,v->{cfg.glass=v;save("glass9",v);});
+        col.addView(text("Keeps stock key backgrounds. Taps expand white border and letter waves in both directions on the tapped row. Up to eight waves can overlap. Font changes apply to animated legends.",12,0xFF9A9AB0));
+        slider(col,"Animated legend area",60,95,cfg.tileScale," %",v->{cfg.tileScale=v;save("tileScale18",v);});
+        toggle(col,"Row waves",cfg.sideStyle>0,v->{cfg.sideStyle=v?1:0;save("side20",cfg.sideStyle);});
+        section(col,"Glide trail");
+        Button accent=new Button(this);accent.setText("Accent filament color");accent.setOnClickListener(v->accentDialog());col.addView(accent);
         choice(col,"Glide trail",new String[]{"Off","Neon ribbon","Twin stream","Accent filament"},cfg.trailStyle,v->{cfg.trailStyle=v;save("trail19",v);});
         slider(col,"Trail width",1,6,cfg.trailWidth," dp",v->{cfg.trailWidth=v;save("trailWidth19",v);});
         slider(col,"Trail fade",150,1000,cfg.trailLife," ms",v->{cfg.trailLife=v;save("trailLife19",v);});
-        col.addView(text("Number hints move inside the circles. Accent controls rims, hints and the filament trail—not Gboard's toolbar or icons. Trails are visual only; turn off Gboard's own gesture trail to avoid two trails. Glide typing must still be enabled in Gboard.",12,0xFF9A9AB0));
-        Button finishPreset=new Button(this);finishPreset.setText("Apply retro circular tiles");
-        finishPreset.setOnClickListener(v->{sp.edit().putBoolean("glass9",true).putBoolean("letterWave16",false).putInt("layer4",0).putInt("font11",6).putInt("letterSize9",100).putInt("tileScale18",78).commit();recreate();});col.addView(finishPreset);
+        col.addView(text("Trails are visual only. Disable Gboard’s own gesture trail to avoid double trails; keep glide typing enabled in Gboard. Accent color applies to the accent filament trail.",12,0xFF9A9AB0));
+        section(col,"Typography");
+        choice(col,"Letter font",new String[]{"Gboard original","System medium","Rounded (system fallback)","Monospace","Serif","Imported font","Manrope","Outfit","Space Grotesk · Google Fonts","Syne · display","Orbitron · display"},cfg.font,v->{cfg.font=v;save("font11",v);});
         toggle(col,"Bold letters",cfg.bold,v->{cfg.bold=v;save("bold9",v);});
         slider(col,"Letter size",75,125,cfg.letterSize," %",v->{cfg.letterSize=v;save("letterSize9",v);});
 
         Button fontImport=new Button(this);fontImport.setText("Import TTF / OTF (max 1 MB)");
         fontImport.setOnClickListener(v->{android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(android.content.Intent.CATEGORY_OPENABLE);startActivityForResult(i,91);});col.addView(fontImport);
         Button removeFont=new Button(this);removeFont.setText("Remove imported font");removeFont.setOnClickListener(v->{sp.edit().remove("fontData9").putInt("font11",6).commit();recreate();});col.addView(removeFont);
-        section(col, "General");
-        toggle(col, "Enabled", cfg.enabled, v -> { cfg.enabled = v; save("enabled", v); });
-        choice(col, "Draw layer", Config.LAYERS, cfg.layer, i -> { cfg.layer = i; save("layer4", i); });
-        col.addView(text("Both modes target only the typing panel, never the toolbar or editor. Retro circular cutout tiles always keep RGB underneath so waves show through the letters. With tiles off, both draw layers are available. Unsupported layouts stay unmodified.", 12, 0xFF9A9AB0));
-
         section(col, "Tap animation");
         col.addView(text("Hologram tiles + 10 redesigned reactive effects: luminous halos, glass rims, aurora curtains and merging liquid blobs. Background only by default. Requires Android 13+.", 12, 0xFF9A9AB0));
         selectedEffect=text("",18,0xFFFFFFFF); col.addView(selectedEffect); updateEffectLabel();
@@ -130,7 +129,10 @@ public final class SettingsActivity extends Activity {
         col.addView(text("The diagnostic outline has been removed. This switch enables bounded Vector layout/cap logs, starting with RGBPulse 33. Diagnostics contain class names, positions, dimensions and padding only, never typed text. If there is no effect, send those lines and your Gboard version. Unsupported handwriting, emoji-only or virtual-key layouts intentionally stay unmodified.", 12, 0xFF9A9AB0));
         Button reset = new Button(this);
         reset.setText("Reset to defaults");
-        reset.setOnClickListener(v -> { sp.edit().clear().commit(); recreate(); });
+        reset.setOnClickListener(v -> new AlertDialog.Builder(this)
+            .setTitle("Reset all settings?").setMessage("This also removes your imported font. This cannot be undone.")
+            .setPositiveButton("Reset", (dialog, which) -> { sp.edit().clear().apply(); recreate(); })
+            .setNegativeButton("Cancel", null).show());
         col.addView(reset);
 
         ScrollView sv = new ScrollView(this);
@@ -173,19 +175,6 @@ public final class SettingsActivity extends Activity {
             }catch(Exception e){runOnUiThread(()->android.widget.Toast.makeText(this,"Import failed: "+e.getMessage(),1).show());}
             finally{if(f!=null)f.delete();}
         },"Font import").start();
-    }
-    void tileDialog(){
-        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding((int)(20*dp),0,(int)(20*dp),0);
-        EditText hex=new EditText(this);hex.setSingleLine(true);hex.setHint("#RRGGBB");hex.setText(String.format("#%06X",cfg.tileColor&0xffffff));box.addView(hex);
-        LinearLayout colors=new LinearLayout(this);box.addView(colors);
-        for(int color:new int[]{0xfff5f5f3,0xff1a1c1e,0xffa6f0c6,0xffd8e4ff,0xffffe8a0}){
-            Button b=new Button(this);b.setText("●");b.setTextColor(color);b.setOnClickListener(v->hex.setText(String.format("#%06X",color&0xffffff)));colors.addView(b,new LinearLayout.LayoutParams(0,-2,1));
-        }
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Tile color").setView(box).setPositiveButton("Apply",null).setNegativeButton("Cancel",null).create();
-        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
-            String value=hex.getText().toString().trim();if(!value.matches("#[0-9a-fA-F]{6}")){hex.setError("Enter #RRGGBB");return;}
-            cfg.tileColor=0xff000000|Integer.parseInt(value.substring(1),16);save("tile19",cfg.tileColor);dialog.dismiss();
-        }));dialog.show();
     }
     void accentDialog(){
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding((int)(20*dp),0,(int)(20*dp),0);
@@ -241,8 +230,8 @@ public final class SettingsActivity extends Activity {
     }
 
     // ---------- persistence ----------
-    private void save(String k, int v) { sp.edit().putInt(k, v).apply(); preview.changed(); }
-    private void save(String k, boolean v) { sp.edit().putBoolean(k, v).apply(); preview.changed(); }
+    private void save(String k, int v) { sp.edit().putInt(k, v).apply(); if(preview!=null)preview.changed(); }
+    private void save(String k, boolean v) { sp.edit().putBoolean(k, v).apply(); if(preview!=null)preview.changed(); }
 
     // ---------- tiny UI helpers ----------
     interface IntCb { void on(int v); }
@@ -255,7 +244,7 @@ public final class SettingsActivity extends Activity {
         return t;
     }
     private void section(LinearLayout col, String s) {
-        TextView t = text(s.toUpperCase(), 13, 0xFFB388FF);
+        TextView t = text(s.toUpperCase(java.util.Locale.ROOT), 13, 0xFFB388FF);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setPadding(0, (int) (20 * dp), 0, (int) (4 * dp));
         col.addView(t);
@@ -264,6 +253,7 @@ public final class SettingsActivity extends Activity {
         Switch s = new Switch(this);
         s.setText(label); s.setTextColor(0xFFFFFFFF); s.setTextSize(16);
         s.setChecked(val);
+        s.setMinHeight((int)(48*dp));
         s.setPadding(0, (int) (8 * dp), 0, (int) (8 * dp));
         s.setOnCheckedChangeListener((b, c) -> cb.on(c));
         col.addView(s);
@@ -279,10 +269,15 @@ public final class SettingsActivity extends Activity {
             }
         };
         ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        sp.setContentDescription(label);
+        sp.setMinimumHeight((int)(48*dp));
         sp.setAdapter(ad);
         sp.setSelection(val);
         sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> a, View v, int pos, long id) { cb.on(pos); }
+            private int previous = val;
+            @Override public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
+                if(pos!=previous){previous=pos;cb.on(pos);}
+            }
             @Override public void onNothingSelected(AdapterView<?> a) { }
         });
         col.addView(sp);
@@ -291,6 +286,7 @@ public final class SettingsActivity extends Activity {
         TextView t = text(label + ": " + val + unit, 14, 0xFFCFCFE0);
         col.addView(t);
         SeekBar s = new SeekBar(this);
+        s.setContentDescription(label);
         s.setMax(max - min);
         s.setProgress(val - min);
         s.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -315,7 +311,9 @@ public final class SettingsActivity extends Activity {
         final EffectSurface surface = new EffectSurface();
         final Paint key = new Paint(Paint.ANTI_ALIAS_FLAG), label = new Paint(Paint.ANTI_ALIAS_FLAG);
         final String[] rows = {"qwertyuiop", "asdfghjkl", "zxcvbnm"};
-        final RectF r = new RectF(), play = new RectF();
+        final String[][] legends = new String[rows.length][];
+        final RectF r = new RectF(), play = new RectF(), tile = new RectF(), inset = new RectF();
+        final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG), legend = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Runnable tick = new Runnable() { @Override public void run() { if (running && isShown()) invalidate(); } };
         boolean running = true;
         long lastAuto;
@@ -323,19 +321,24 @@ public final class SettingsActivity extends Activity {
 
         Preview(Context c) {
             super(c);
+            for(int row=0;row<rows.length;row++){
+                legends[row]=new String[rows[row].length()];
+                for(int k=0;k<rows[row].length();k++)legends[row][k]=String.valueOf(rows[row].charAt(k));
+            }
             fx.cfg = cfg;
+            KeyStyle.configure(cfg,getContext());
             key.setColor(0xFF33333F);
             label.setColor(0xFFF1EEF8); label.setTextAlign(Paint.Align.CENTER); label.setTextSize(14 * dp);
             GradientDrawable bg = new GradientDrawable(); bg.setColor(0xFF181821); bg.setCornerRadius(14 * dp);
             setBackground(bg); setClipToOutline(true);
             setContentDescription("Tap keyboard preview to test the animation");
         }
-        void changed() { fx.cfg = cfg; fx.clear(); lastAuto=0; invalidate(); }
+        void changed() { fx.cfg = cfg; fx.clear(); KeyStyle.configure(cfg,getContext()); lastAuto=0; invalidate(); }
         @Override protected void onSizeChanged(int w,int h,int ow,int oh) { play.set(0,0,w,h); }
         @Override public boolean onTouchEvent(MotionEvent e) {
             int a=e.getActionMasked();
             long now=SystemClock.uptimeMillis();
-            if(a==MotionEvent.ACTION_CANCEL||e.getPointerCount()!=1){fx.glide.points.clear();}
+            if(!cfg.enabled||a==MotionEvent.ACTION_CANCEL||e.getPointerCount()!=1){fx.glide.points.clear();}
             else if(cfg.trailStyle>0){
                 if(a==MotionEvent.ACTION_DOWN)fx.glide.points.begin(e.getX(),e.getY(),now);
                 else if(a==MotionEvent.ACTION_MOVE){
@@ -347,10 +350,12 @@ public final class SettingsActivity extends Activity {
                 int i=e.getActionIndex(); lastAuto=SystemClock.uptimeMillis();
                 tapKey(e.getX(i),e.getY(i),lastAuto); invalidate();
             }
+            if(a==MotionEvent.ACTION_UP||a==MotionEvent.ACTION_CANCEL) getParent().requestDisallowInterceptTouchEvent(false);
             if(a==MotionEvent.ACTION_UP) performClick();
             return true;
         }
         void tapKey(float px,float py,long now) {
+            if(!cfg.enabled)return;
             float w=getWidth(),h=getHeight(),gap=5*dp,rowH=(h-gap*5)/4f,kw=(w-gap*11)/10f;
             for(int ri=0;ri<rows.length;ri++) {
                 float x=(w-(rows[ri].length()*kw+(rows[ri].length()-1)*gap))/2f,y=gap+ri*(rowH+gap);
@@ -371,12 +376,13 @@ public final class SettingsActivity extends Activity {
         @Override public boolean performClick() { super.performClick(); return true; }
         @Override protected void onDraw(Canvas c) {
             long now=SystemClock.uptimeMillis(); float w=getWidth(), h=getHeight();
-            KeyStyle.configure(cfg,getContext());
-            if (running && now-lastAuto>Math.max(1700,cfg.duration+500)) {
+            if (cfg.enabled && running && now-lastAuto>Math.max(1700,cfg.duration+500)) {
                 lastAuto=now; demo++;
                 float gap=5*dp, rh=(h-gap*5)/4f, kw=(w-gap*11)/10f;
                 tapKey(gap+(demo%10)*(kw+gap)+kw/2, gap+rh/2, now);
             }
+            boolean sideActive=cfg.enabled && cfg.sideStyle>0 && fx.side.active(now,cfg.duration);
+            if(sideActive)fx.side.draw(c,cfg,play,dp,now);
             int sv=c.save(); c.clipRect(play);
             try {
                 if(cfg.glass||cfg.layer==0)surface.draw(c,fx,play,now);
@@ -387,77 +393,43 @@ public final class SettingsActivity extends Activity {
                     for(int k=0;k<row.length();k++) {
                         r.set(x,y,x+kw,y+rowH);
                         drawCap(c,r);
-                        drawLegend(c,String.valueOf(row.charAt(k)),r,ri==0?String.valueOf((k+1)%10):null);
+                        drawLegend(c,legends[ri][k],r);
                         x+=kw+gap;
                     }
                 }
                 r.set(w*.24f,gap+3*(rowH+gap),w*.76f,h-gap);
-                drawCap(c,r); drawLegend(c,"space",r,null);
+                drawCap(c,r); drawLegend(c,"space",r);
                 if(cfg.layer==1&&!cfg.glass)surface.draw(c,fx,play,now);
-                if(cfg.sideStyle>0)fx.side.draw(c,cfg,play,dp,now);
-                fx.glide.draw(c,cfg,dp,now);
+                if(cfg.enabled)fx.glide.draw(c,cfg,dp,now);
                 if(fx.shaderIssue()!=null){label.setTextSize(10*dp);c.drawText("Shader unavailable — effects paused",w/2,14*dp,label);label.setTextSize(14*dp);}
             } finally { c.restoreToCount(sv); }
-            boolean active=fx.active(now);
+            boolean active=fx.active(now)||sideActive;
             removeCallbacks(tick);
-            if(running && isShown()) { if(active)postOnAnimation(tick);else postDelayed(tick,250); }
+            if(cfg.enabled && running && isShown()) { if(active)postOnAnimation(tick);else postDelayed(tick,250); }
         }
         void drawCap(Canvas c,RectF rect){
-            if(cfg.glass){ /* Tile and glyph hole are drawn together in drawLegend. */ }
-            else c.drawRoundRect(rect,6*dp,6*dp,key);
-            KeyStyle.configure(cfg,getContext());
-            label.setTypeface(cfg.glass?Typography.face:Typeface.DEFAULT);label.setTextSize(14*dp*(cfg.glass?cfg.letterSize/100f:1));
+            c.drawRoundRect(rect,6*dp,6*dp,key);
+            label.setTypeface(Typeface.DEFAULT);label.setTextSize(14*dp);
             label.clearShadowLayer();label.setShader(null);
         }
-        void drawLegend(Canvas c,String text,RectF rect,String hint){
-            boolean isSpace=text.equals("space");
-            if(isSpace){text="space";}
+        void drawLegend(Canvas c,String text,RectF rect){
             float baseline=rect.centerY()-(label.ascent()+label.descent())/2;
-            if(cfg.glass){
-                float typical=(getWidth()-55*dp)/10f;
-                float size=TileGeometry.diameter(rect.width(),rect.height(),typical,dp,cfg.tileScale);
-                boolean single=text.codePointCount(0,text.length())==1;
-                float tw=single?size:rect.width()*.86f;
-                RectF tile=new RectF(rect.centerX()-tw/2,rect.centerY()-size/2,rect.centerX()+tw/2,rect.centerY()+size/2);
-                // row-limited sweep preview
-                int tileCol=cfg.tileColor!=0?cfg.tileColor:0xfff5f5f3;
-                int accent=cfg.accentColor!=0?cfg.accentColor:0xffa6f0c6;
-                int finalTileCol=tileCol;
-                // simulate sweep across middle row
-                float sweepX=play.left+play.width()*0.6f;
-                float keyCx=rect.centerX();
-                float rowY=play.height()*0.5f;
-                boolean inActiveRow=Math.abs(rect.centerY()-rowY)<40*dp;
-                if(inActiveRow && keyCx<=sweepX){
-                    float fade=Math.max(0,1-(sweepX-keyCx)/(360*dp));
-                    finalTileCol=StudioTiles.blend(tileCol,accent,0.22f+0.38f*fade);
-                }
-                // v32 preview: stock dark keys, border only during wave
-                Paint stock=new Paint(Paint.ANTI_ALIAS_FLAG);stock.setColor(0xFF3A3A42);c.drawRoundRect(tile,12*dp,12*dp,stock);
-                // simulate wave in middle row
-                float sweepProg=0.5f; // for preview
-                float originX=play.centerX();
-                float radius=play.width()*0.4f;
-                float dist=Math.abs(rect.centerX()-originX);
-                boolean inRow=Math.abs(rect.centerY()-play.centerY())<40*dp;
-                boolean inWave=inRow && dist<=radius;
-                int finalCol=inWave?0xffffffff:0xffe8e8ec;
-                if(inWave){
-                    Paint glow=new Paint(Paint.ANTI_ALIAS_FLAG);glow.setColor(finalCol);glow.setAlpha(90);glow.setStyle(Paint.Style.STROKE);glow.setStrokeWidth(6*dp);
-                    c.drawRoundRect(tile,12*dp,12*dp,glow);
-                    Paint rim2=new Paint(Paint.ANTI_ALIAS_FLAG);rim2.setColor(finalCol);rim2.setStyle(Paint.Style.STROKE);rim2.setStrokeWidth(2.4f*dp);
-                    RectF ins=new RectF(tile);ins.inset(1.2f*dp,1.2f*dp);c.drawRoundRect(ins,12*dp,12*dp,rim2);
-                }
-                if(isSpace){return;}
-                Paint leg=new Paint(label);leg.setColor(StudioTiles.legendColorFor(finalTileCol));leg.setTextAlign(Paint.Align.CENTER);leg.setShader(null);leg.clearShadowLayer();
-                leg.setTypeface(Typography.face);
-                float twm=leg.measureText(text);float maxW=tile.width()*(single?.56f:.84f);if(twm>maxW)leg.setTextSize(leg.getTextSize()*maxW/twm);
-                float base=tile.centerY()-(leg.ascent()+leg.descent())/2;
-                c.drawText(text,tile.centerX(),base,leg);
-                if(hint!=null){
-                    Paint hp=new Paint(Paint.ANTI_ALIAS_FLAG);hp.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));hp.setColor(accent);hp.setTextSize(tile.height()*.20f);hp.setTextAlign(Paint.Align.CENTER);
-                    c.drawText(hint,tile.centerX()+tile.width()*.22f,tile.top+tile.height()*.25f-(hp.ascent()+hp.descent())/2,hp);
-                }
+            float alpha=cfg.enabled && cfg.glass && cfg.sideStyle>0
+                ?SideSweep.glowAt(rect.centerX(),(int)rect.top,dp,true):0;
+            if(alpha>0.01f){
+                tile.set(rect);
+                rim.setColor(StudioTiles.blend(0xffe8e8ec,0xffffffff,0.2f+0.8f*alpha));
+                rim.setStyle(Paint.Style.STROKE);
+                rim.setAlpha(Math.round(90*alpha));rim.setStrokeWidth(6*dp);
+                c.drawRoundRect(tile,6*dp,6*dp,rim);
+                rim.setAlpha(255);rim.setStrokeWidth(2.4f*dp);
+                inset.set(tile);inset.inset(1.2f*dp,1.2f*dp);
+                c.drawRoundRect(inset,6*dp,6*dp,rim);
+                legend.set(label);legend.setColor(rim.getColor());
+                legend.setTypeface(Typography.face);legend.setTextSize(14*dp*cfg.letterSize/100f);
+                float measured=legend.measureText(text), maxWidth=rect.width()*.84f;
+                if(measured>maxWidth)legend.setTextSize(legend.getTextSize()*maxWidth/measured);
+                c.drawText(text,rect.centerX(),rect.centerY()-(legend.ascent()+legend.descent())/2,legend);
             }else c.drawText(text,rect.centerX(),baseline,label);
         }
         @Override protected void onDetachedFromWindow() { removeCallbacks(tick); surface.release();super.onDetachedFromWindow(); }

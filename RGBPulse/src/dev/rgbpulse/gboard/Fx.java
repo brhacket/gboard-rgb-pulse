@@ -35,7 +35,7 @@ public final class Fx {
     }
     final java.util.ArrayList<RectF> lensBoxes=new java.util.ArrayList<RectF>();
     public void lenses(java.util.List<RectF> boxes,float dp){lensBoxes.clear();lensBoxes.addAll(boxes);}
-    public void drawFields(Canvas canvas,RectF play,long now){if(fields!=null&&fields.active(now,cfg.duration))fields.draw(canvas,play,cfg,now);}
+    public void drawFields(Canvas canvas,RectF play,long now){if(cfg.enabled&&fields!=null&&fields.active(now,cfg.duration))fields.draw(canvas,play,cfg,now);}
     public void clear(){glide.points.clear();side.clear();if(fields!=null)fields.clear();}
-    public void dispose(){clear();fields=null;}
+    public void dispose(){clear();fields=null;attempted=false;issue=null;}
 }

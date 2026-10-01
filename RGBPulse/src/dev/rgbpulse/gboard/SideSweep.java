@@ -66,67 +66,29 @@ final class SideSweep {
    sweepRadius=maxR;
   }
  }
- // Helper for Glass/StudioTiles to compute final border color with multi-wave blending, one color uniform (white, no green)
- static int computeFinalBorder(View view, int base, float dp){
-  synchronized(waves){
-   if(waves.isEmpty()) return base;
-   Integer bodyTop=StudioTiles.bodyTops.get(view);
-   Float bodyCx=StudioTiles.bodyCx.get(view);
-   int topCheck;
-   float keyCx;
-   if(bodyTop!=null && bodyCx!=null){
-    topCheck=bodyTop;
-    keyCx=bodyCx;
-   }else{
-    topCheck=view.getTop();
-    keyCx=view.getLeft()+view.getWidth()/2f;
-   }
-   float bestFade=0;
-   for(Wave w:waves){
-    int rt=w.rowTop!=0?w.rowTop:w.rowTopParent;
-    if(rt!=0 && Math.abs(topCheck-rt)>36*dp) continue;
-    float origin=w.originX!=0?w.originX:w.originXParent;
-    float dist=Math.abs(keyCx-origin);
-    if(dist<=w.radius && w.radius>1){
-     float fade=1f-dist/w.radius;
-     if(fade>bestFade) bestFade=fade;
-    }
-   }
-   if(bestFade>0.01f){
-    // One color uniform – white glow, not green, blend base light -> white
-    int white=0xffffffff;
-    float t=0.2f+0.8f*bestFade;
-    return StudioTiles.blend(base, white, t);
-   }
-   return base;
-  }
- }
+ // Body coordinates may legitimately be zero. Choose the coordinate space by
+ // map presence, never by the numeric value of the tapped row or origin.
  static float computeGlowAlpha(View view, float dp){
+  Integer top=StudioTiles.bodyTops.get(view);
+  Float cx=StudioTiles.bodyCx.get(view);
+  boolean body=top!=null && cx!=null;
+  return glowAt(body?cx:view.getLeft()+view.getWidth()/2f,
+      body?top:view.getTop(),dp,body);
+ }
+ static float glowAt(float cx,int top,float dp,boolean body){
   synchronized(waves){
-   if(waves.isEmpty()) return 0;
-   Integer bodyTop=StudioTiles.bodyTops.get(view);
-   Float bodyCx=StudioTiles.bodyCx.get(view);
-   int topCheck;
-   float keyCx;
-   if(bodyTop!=null && bodyCx!=null){
-    topCheck=bodyTop;
-    keyCx=bodyCx;
-   }else{
-    topCheck=view.getTop();
-    keyCx=view.getLeft()+view.getWidth()/2f;
-   }
    float best=0;
-   for(Wave w:waves){
-    int rt=w.rowTop!=0?w.rowTop:w.rowTopParent;
-    if(rt!=0 && Math.abs(topCheck-rt)>36*dp) continue;
-    float origin=w.originX!=0?w.originX:w.originXParent;
-    float dist=Math.abs(keyCx-origin);
-    if(dist<=w.radius && w.radius>1){
-     float fade=1f-dist/w.radius;
-     if(fade>best) best=fade;
-    }
+   for(int i=0;i<waves.size();i++){
+    Wave w=waves.get(i);
+    int rt=body?w.rowTop:w.rowTopParent;
+    float origin=body?w.originX:w.originXParent;
+    best=Math.max(best,WavePolicy.glow(cx,top,origin,rt,w.radius,dp));
    }
    return best;
   }
+ }
+ static int computeFinalBorder(View view,int base,float dp){
+  float fade=computeGlowAlpha(view,dp);
+  return fade>0.01f?StudioTiles.blend(base,0xffffffff,0.2f+0.8f*fade):base;
  }
 }

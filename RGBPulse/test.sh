@@ -24,6 +24,9 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/TileGeometry.java te
 java -cp work/tests dev.rgbpulse.gboard.TileGeometryTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/TrailPoints.java tests/TrailPointsTest.java
 java -cp work/tests dev.rgbpulse.gboard.TrailPointsTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/WavePolicy.java tests/WavePolicyTest.java
+java -cp work/tests dev.rgbpulse.gboard.WavePolicyTest
+python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py
 python3 tests/material_contract_test.py
 printf 'PASS: Java policy and source contract tests\n'
