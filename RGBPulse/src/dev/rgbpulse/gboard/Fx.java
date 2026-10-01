@@ -22,7 +22,7 @@ public final class Fx {
     public String shaderIssue(){return issue!=null?issue:fields==null?null:fields.issue();}
     public boolean active(long now){return cfg.enabled&&((fields!=null&&fields.active(now,cfg.duration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
     public void tap(float x,float y,RectF play,long now) {
-        if(!cfg.enabled)return;
+        if(!cfg.enabled || !cfg.tapEffects)return;
         init();
         if(fields==null||fields.issue()!=null)return; // Never resurrect a removed effect as fallback.
         int style=cfg.effect;

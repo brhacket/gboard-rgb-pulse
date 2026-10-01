@@ -74,3 +74,21 @@ Remaining review candidates: corrupted preference types currently abort the rest
 of configuration loading; wave state is process-global across controllers;
 fixed row tolerance may need tuning for very compact layouts. No claim is made
 that every error has been found.
+
+
+## Explicit-Apply follow-up (36.0 test)
+
+- The editor writes only to a private draft; Apply is the only path that writes
+  the module's shared settings. Discard reloads the last applied snapshot.
+- Removed automatic preview taps and idle polling, root requests and force-stop.
+- Fresh installs default to disabled, no trail, no row wave and the original-font
+  selection. Background animations have their own off-by-default switch.
+- Animation shortcuts change only the named animation, not colors or timing.
+- Row-wave creation now checks its switches; row-only animation no longer depends
+  on a shader animation being active. The final frame invalidates keys to remove
+  stale wave borders.
+- Import/remove/reset affect the draft, not live Gboard settings. Leaving a dirty
+  draft prompts before exiting. Screen rotation retains the private draft.
+
+Visual correctness on the user's Gboard layout remains unverified; a screenshot
+and device/Gboard version are needed to reproduce the remaining visual report.

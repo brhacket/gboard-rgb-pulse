@@ -13,7 +13,9 @@ import android.view.*;
 import android.widget.*;
 
 public final class SettingsActivity extends Activity {
-    private SharedPreferences sp;
+    private SharedPreferences sp, applied;
+    private boolean hooked;
+    private Button applyButton;
     private Config cfg;
     private Preview preview;
     private float dp;
@@ -23,14 +25,21 @@ public final class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         dp = getResources().getDisplayMetrics().density;
-        boolean hooked = true;
+        hooked = true;
         try {
             // Vector/LSPosed make this world-readable for the Gboard hook (xposedsharedprefs).
-            sp = getSharedPreferences(Config.PREFS, Context.MODE_WORLD_READABLE);
+            applied = getSharedPreferences(Config.PREFS, Context.MODE_WORLD_READABLE);
         } catch (SecurityException e) {
             hooked = false;
-            sp = getSharedPreferences(Config.PREFS, Context.MODE_PRIVATE);
+            applied = getSharedPreferences(Config.PREFS, Context.MODE_PRIVATE);
         }
+        sp = getSharedPreferences("settings_draft", Context.MODE_PRIVATE);
+        if(b==null)copySettings(applied.getAll(),sp).commit();
+        renderSettings();
+    }
+
+    private void renderSettings() {
+        if(preview!=null){preview.running=false;preview.removeCallbacks(preview.tick);preview.fx.dispose();}
         cfg = Config.from(sp);
         getWindow().setStatusBarColor(0xFF121218);
         getWindow().setNavigationBarColor(0xFF121218);
@@ -55,7 +64,7 @@ public final class SettingsActivity extends Activity {
 
         preview = new Preview(this);
         col.addView(preview, new LinearLayout.LayoutParams(-1, (int) (190 * dp)));
-        col.addView(text("Tap or glide to preview. This is a demo layout, not a capture of Gboard. Close and reopen Gboard to apply settings.", 12, 0xFF9A9AB0));
+        col.addView(text("Tap or glide to preview your draft. Nothing changes in Gboard until you press Apply. There is no automatic demo.", 12, 0xFF9A9AB0));
 
         EditText test = new EditText(this);
         test.setHint("Test with Gboard here…");
@@ -64,10 +73,14 @@ public final class SettingsActivity extends Activity {
         test.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         col.addView(test);
 
-        Button restart=new Button(this);restart.setText("Apply / force-stop Gboard");
-        restart.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Restart Gboard?")
-            .setMessage("Saves settings and requests root to force-stop Gboard. The keyboard will close; tap a text field to reopen it. If root is unavailable, Android app settings will open. Keep a backup keyboard available.")
-            .setPositiveButton("Apply",(d,w) -> restartGboard(restart)).setNegativeButton("Cancel",null).show());col.addView(restart);
+        applyButton=new Button(this);applyButton.setText("Apply changes to Gboard");
+        applyButton.setOnClickListener(v -> applySettings());col.addView(applyButton);
+        Button discard=new Button(this);discard.setText("Discard draft changes");
+        discard.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Discard draft?")
+            .setMessage("Your last applied settings will be restored in this editor.")
+            .setPositiveButton("Discard",(dialog,which)->{copySettings(applied.getAll(),sp).commit();renderSettings();})
+            .setNegativeButton("Cancel",null).show());col.addView(discard);
+        col.addView(text("Effects are off on fresh installs. Enable the module and each effect you want, then Apply. If Gboard does not refresh, close and reopen it manually. This app never requests root or restarts Gboard.",12,0xFF9A9AB0));
         section(col,"Key appearance & row waves");
         toggle(col,"Stock keys + white row waves",cfg.glass,v->{cfg.glass=v;save("glass9",v);});
         col.addView(text("Keeps stock key backgrounds. Taps expand white border and letter waves in both directions on the tapped row. Up to eight waves can overlap. Font changes apply to animated legends.",12,0xFF9A9AB0));
@@ -86,8 +99,9 @@ public final class SettingsActivity extends Activity {
 
         Button fontImport=new Button(this);fontImport.setText("Import TTF / OTF (max 1 MB)");
         fontImport.setOnClickListener(v->{android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(android.content.Intent.CATEGORY_OPENABLE);startActivityForResult(i,91);});col.addView(fontImport);
-        Button removeFont=new Button(this);removeFont.setText("Remove imported font");removeFont.setOnClickListener(v->{sp.edit().remove("fontData9").putInt("font11",6).commit();recreate();});col.addView(removeFont);
+        Button removeFont=new Button(this);removeFont.setText("Remove imported font");removeFont.setOnClickListener(v->{sp.edit().remove("fontData9").putInt("font11",0).commit();renderSettings();});col.addView(removeFont);
         section(col, "Tap animation");
+        toggle(col,"Background tap animation",cfg.tapEffects,v->{cfg.tapEffects=v;save("tapEffects36",v);});
         col.addView(text("Hologram tiles + 10 redesigned reactive effects: luminous halos, glass rims, aurora curtains and merging liquid blobs. Background only by default. Requires Android 13+.", 12, 0xFF9A9AB0));
         selectedEffect=text("",18,0xFFFFFFFF); col.addView(selectedEffect); updateEffectLabel();
         LinearLayout browse=new LinearLayout(this);
@@ -101,13 +115,13 @@ public final class SettingsActivity extends Activity {
         browse.addView(next,new LinearLayout.LayoutParams((int)(52*dp),-2));col.addView(browse);
         LinearLayout presets=new LinearLayout(this);
         Button water=new Button(this);water.setText("Neon halo");
-        water.setOnClickListener(v -> preset(1,3,185,220,1750,110));
+        water.setOnClickListener(v -> selectEffect(1));
         Button oil=new Button(this);oil.setText("Liquid glass");
-        oil.setOnClickListener(v -> preset(2,3,185,285,1900,115));
+        oil.setOnClickListener(v -> selectEffect(2));
         presets.addView(water,new LinearLayout.LayoutParams(0,-2,1));presets.addView(oil,new LinearLayout.LayoutParams(0,-2,1));col.addView(presets);
         LinearLayout presets2=new LinearLayout(this);
         Button tiles=new Button(this);tiles.setText("Hologram tiles");tiles.setOnClickListener(v -> selectEffect(0));
-        Button shuffle=new Button(this);shuffle.setText("Shuffle waves");shuffle.setOnClickListener(v -> preset(Config.LIQUID_SHUFFLE,0,185,280,1850,115));
+        Button shuffle=new Button(this);shuffle.setText("Shuffle waves");shuffle.setOnClickListener(v -> selectEffect(Config.LIQUID_SHUFFLE));
         presets2.addView(tiles,new LinearLayout.LayoutParams(0,-2,1));presets2.addView(shuffle,new LinearLayout.LayoutParams(0,-2,1));col.addView(presets2);
         slider(col, "Duration", 300, 3500, cfg.duration, " ms", v -> { cfg.duration = v; save("duration3", v); });
         slider(col, "Size", 30, 250, cfg.size, " %", v -> { cfg.size = v; save("size", v); });
@@ -130,8 +144,8 @@ public final class SettingsActivity extends Activity {
         Button reset = new Button(this);
         reset.setText("Reset to defaults");
         reset.setOnClickListener(v -> new AlertDialog.Builder(this)
-            .setTitle("Reset all settings?").setMessage("This also removes your imported font. This cannot be undone.")
-            .setPositiveButton("Reset", (dialog, which) -> { sp.edit().clear().apply(); recreate(); })
+            .setTitle("Reset all settings?").setMessage("Resets the draft and removes its imported font. Gboard is unchanged until Apply. Discard restores your last applied settings.")
+            .setPositiveButton("Reset", (dialog, which) -> { sp.edit().clear().apply(); renderSettings(); })
             .setNegativeButton("Cancel", null).show());
         col.addView(reset);
 
@@ -142,21 +156,37 @@ public final class SettingsActivity extends Activity {
         setContentView(sv);
     }
 
-    void restartGboard(Button button) {
-        sp.edit().commit();button.setEnabled(false);button.setText("Waiting for root…");
+    private static SharedPreferences.Editor copySettings(java.util.Map<String,?> values,SharedPreferences target){
+        SharedPreferences.Editor editor=target.edit().clear();
+        for(java.util.Map.Entry<String,?> entry:values.entrySet()){
+            Object value=entry.getValue();String key=entry.getKey();
+            if(value instanceof Boolean)editor.putBoolean(key,(Boolean)value);
+            else if(value instanceof Integer)editor.putInt(key,(Integer)value);
+            else if(value instanceof String)editor.putString(key,(String)value);
+            else if(value instanceof Long)editor.putLong(key,(Long)value);
+            else if(value instanceof Float)editor.putFloat(key,(Float)value);
+        }
+        return editor;
+    }
+    private void applySettings(){
+        final java.util.Map<String,?> snapshot=sp.getAll();
+        applyButton.setEnabled(false);
         new Thread(()->{
-            boolean ok=false;Process process=null;
-            try {
-                process=new ProcessBuilder("su","-c","am force-stop --user current com.google.android.inputmethod.latin").redirectErrorStream(true).start();
-                ok=process.waitFor(25,java.util.concurrent.TimeUnit.SECONDS)&&process.exitValue()==0;
-            }catch(Exception ignored){}finally{if(process!=null)process.destroy();}
-            final boolean success=ok;
-            runOnUiThread(()->{if(isFinishing()||isDestroyed())return;button.setEnabled(true);button.setText("Apply / force-stop Gboard");
-                if(success)android.widget.Toast.makeText(this,"Gboard stopped. Tap a text field to reopen.",1).show();
-                else {android.widget.Toast.makeText(this,"Root unavailable or command failed. Tap Force stop here.",1).show();
-                    try{startActivity(new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:com.google.android.inputmethod.latin")));}catch(Exception e){android.widget.Toast.makeText(this,"Open Android Settings > Apps > Gboard manually.",1).show();}}
+            boolean ok=copySettings(snapshot,applied).commit();
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                applyButton.setEnabled(true);
+                status.setText(ok?(sp.getAll().equals(snapshot)?"Settings applied. Gboard was not restarted.":"Snapshot applied; newer draft edits still need Apply."):
+                    "Could not save settings. Please retry Apply.");
             });
-        },"Gboard restart").start();
+        },"Apply settings").start();
+    }
+    @Override public void onBackPressed(){
+        if(!sp.getAll().equals(applied.getAll())){
+            new AlertDialog.Builder(this).setTitle("Leave without applying?")
+                .setMessage("Gboard will keep your last applied settings. Draft changes will be discarded on your next launch.")
+                .setPositiveButton("Leave",(dialog,which)->finish()).setNegativeButton("Keep editing",null).show();
+        }else super.onBackPressed();
     }
     @Override protected void onActivityResult(int request,int result,android.content.Intent data){
         super.onActivityResult(request,result,data);if(request!=91||result!=RESULT_OK||data==null||data.getData()==null)return;
@@ -171,7 +201,7 @@ public final class SettingsActivity extends Activity {
                 if(!ttf&&!otf)throw new Exception("Choose a TTF or OTF font");
                 f=java.io.File.createTempFile("fontcheck",".ttf",getCacheDir());try(java.io.FileOutputStream file=new java.io.FileOutputStream(f)){file.write(bytes);}Typeface.createFromFile(f);
                 if(!sp.edit().putString("fontData9",android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)).putInt("font11",5).commit())throw new Exception("Unable to save font");
-                runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){android.widget.Toast.makeText(this,"Font imported. Apply to Gboard.",1).show();recreate();}});
+                runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){android.widget.Toast.makeText(this,"Font imported. Apply to Gboard.",1).show();renderSettings();}});
             }catch(Exception e){runOnUiThread(()->android.widget.Toast.makeText(this,"Import failed: "+e.getMessage(),1).show());}
             finally{if(f!=null)f.delete();}
         },"Font import").start();
@@ -183,7 +213,7 @@ public final class SettingsActivity extends Activity {
         for(int color:new int[]{0xff575c68,0xff315ee8,0xff8843b5,0xff16745c,0xffac4934}){
             Button b=new Button(this);b.setText("●");b.setTextColor(color);b.setOnClickListener(v->hex.setText(String.format("#%06X",color&0xffffff)));colors.addView(b,new LinearLayout.LayoutParams(0,-2,1));
         }
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Accent color").setView(box).setPositiveButton("Apply",null).setNegativeButton("Cancel",null).create();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Accent color · draft").setView(box).setPositiveButton("Use in draft",null).setNegativeButton("Cancel",null).create();
         dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
             String value=hex.getText().toString().trim();if(!value.matches("#[0-9a-fA-F]{6}")){hex.setError("Enter #RRGGBB");return;}
             cfg.accentColor=Color.parseColor(value);save("accent19",cfg.accentColor);dialog.dismiss();
@@ -216,12 +246,6 @@ public final class SettingsActivity extends Activity {
     private void selectEffect(int effect) {
         cfg.effect=effect;save("tapFx6",effect);updateEffectLabel();
     }
-    private void preset(int fx,int colors,int hue1,int hue2,int duration,int size) {
-        sp.edit().putInt("tapFx6",fx).putInt("colorMode",colors).putInt("hue1",hue1).putInt("hue2",hue2)
-            .putInt("duration3",duration).putInt("opacity3",90).putInt("sat",100)
-            .putInt("size",size).apply();
-        recreate();
-    }
     private void showCatalog() {
         new AlertDialog.Builder(this).setTitle("Modern animations")
             .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index) -> {
@@ -230,8 +254,8 @@ public final class SettingsActivity extends Activity {
     }
 
     // ---------- persistence ----------
-    private void save(String k, int v) { sp.edit().putInt(k, v).apply(); if(preview!=null)preview.changed(); }
-    private void save(String k, boolean v) { sp.edit().putBoolean(k, v).apply(); if(preview!=null)preview.changed(); }
+    private void save(String k, int v) { sp.edit().putInt(k, v).apply(); if(preview!=null)preview.changed(); if(status!=null)status.setText("Draft only — press Apply to change Gboard."); }
+    private void save(String k, boolean v) { sp.edit().putBoolean(k, v).apply(); if(preview!=null)preview.changed(); if(status!=null)status.setText("Draft only — press Apply to change Gboard."); }
 
     // ---------- tiny UI helpers ----------
     interface IntCb { void on(int v); }
@@ -301,7 +325,7 @@ public final class SettingsActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); if (preview != null) preview.running = true; if (preview != null) preview.invalidate(); }
-    @Override protected void onPause() { if (preview != null) { preview.running = false; preview.removeCallbacks(preview.tick); } super.onPause(); }
+    @Override protected void onPause() { if (preview != null) { preview.running = false; preview.removeCallbacks(preview.tick); preview.fx.clear(); } super.onPause(); }
     @Override protected void onDestroy() { if (preview != null) preview.fx.dispose(); super.onDestroy(); }
 
     /** Native background draw ordering, with no key mask or pixel extraction. */
@@ -316,8 +340,7 @@ public final class SettingsActivity extends Activity {
         final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG), legend = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Runnable tick = new Runnable() { @Override public void run() { if (running && isShown()) invalidate(); } };
         boolean running = true;
-        long lastAuto;
-        int demo = 0;
+
 
         Preview(Context c) {
             super(c);
@@ -333,7 +356,7 @@ public final class SettingsActivity extends Activity {
             setBackground(bg); setClipToOutline(true);
             setContentDescription("Tap keyboard preview to test the animation");
         }
-        void changed() { fx.cfg = cfg; fx.clear(); KeyStyle.configure(cfg,getContext()); lastAuto=0; invalidate(); }
+        void changed() { fx.cfg = cfg; fx.clear(); KeyStyle.configure(cfg,getContext()); invalidate(); }
         @Override protected void onSizeChanged(int w,int h,int ow,int oh) { play.set(0,0,w,h); }
         @Override public boolean onTouchEvent(MotionEvent e) {
             int a=e.getActionMasked();
@@ -347,8 +370,8 @@ public final class SettingsActivity extends Activity {
             }
             invalidate();
             if (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN) {
-                int i=e.getActionIndex(); lastAuto=SystemClock.uptimeMillis();
-                tapKey(e.getX(i),e.getY(i),lastAuto); invalidate();
+                int i=e.getActionIndex();
+                tapKey(e.getX(i),e.getY(i),now); invalidate();
             }
             if(a==MotionEvent.ACTION_UP||a==MotionEvent.ACTION_CANCEL) getParent().requestDisallowInterceptTouchEvent(false);
             if(a==MotionEvent.ACTION_UP) performClick();
@@ -362,7 +385,7 @@ public final class SettingsActivity extends Activity {
                 for(int k=0;k<rows[ri].length();k++,x+=kw+gap) {
                     if(px>=x && px<x+kw && py>=y && py<y+rowH) {
                         fx.tap(x+kw/2,y+rowH/2,play,now);
-                        if(cfg.sideStyle>0)fx.side.tapParent(x+kw/2,(int)y,now,x+kw/2,(int)y);
+                        if(cfg.glass && cfg.sideStyle>0)fx.side.tapParent(x+kw/2,(int)y,now,x+kw/2,(int)y);
                         return;
                     }
                 }
@@ -370,17 +393,12 @@ public final class SettingsActivity extends Activity {
             float top=gap+3*(rowH+gap);
             if(px>=w*.24f && px<w*.76f && py>=top && py<h-gap){
                 fx.tap(w*.5f,(top+h-gap)/2,play,now);
-                if(cfg.sideStyle>0)fx.side.tapParent(w*.5f,(int)top,now,w*.5f,(int)top);
+                if(cfg.glass && cfg.sideStyle>0)fx.side.tapParent(w*.5f,(int)top,now,w*.5f,(int)top);
             }
         }
         @Override public boolean performClick() { super.performClick(); return true; }
         @Override protected void onDraw(Canvas c) {
             long now=SystemClock.uptimeMillis(); float w=getWidth(), h=getHeight();
-            if (cfg.enabled && running && now-lastAuto>Math.max(1700,cfg.duration+500)) {
-                lastAuto=now; demo++;
-                float gap=5*dp, rh=(h-gap*5)/4f, kw=(w-gap*11)/10f;
-                tapKey(gap+(demo%10)*(kw+gap)+kw/2, gap+rh/2, now);
-            }
             boolean sideActive=cfg.enabled && cfg.sideStyle>0 && fx.side.active(now,cfg.duration);
             if(sideActive)fx.side.draw(c,cfg,play,dp,now);
             int sv=c.save(); c.clipRect(play);
@@ -405,7 +423,7 @@ public final class SettingsActivity extends Activity {
             } finally { c.restoreToCount(sv); }
             boolean active=fx.active(now)||sideActive;
             removeCallbacks(tick);
-            if(cfg.enabled && running && isShown()) { if(active)postOnAnimation(tick);else postDelayed(tick,250); }
+            if(cfg.enabled && running && isShown() && active)postOnAnimation(tick);
         }
         void drawCap(Canvas c,RectF rect){
             c.drawRoundRect(rect,6*dp,6*dp,key);
