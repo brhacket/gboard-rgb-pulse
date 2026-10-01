@@ -92,3 +92,21 @@ that every error has been found.
 
 Visual correctness on the user's Gboard layout remains unverified; a screenshot
 and device/Gboard version are needed to reproduce the remaining visual report.
+
+
+## Refined ripple follow-up (37.0 test)
+
+The primary editor now contains an interactive preview, one enable switch and two
+sliders. Setup and diagnostics are collapsed; Apply/Discard are in a fixed footer.
+The first Apply explicitly confirms replacing legacy RGB/font/trail settings.
+
+The ripple is a symmetric traveling band with smooth attack and release; its
+opacity is bounded and overlapping waves use the maximum, not additive bloom.
+The renderer is shared by the preview and key background hook. Refined mode
+bypasses the custom text/cap replacement path to preserve stock glyph layout.
+The original background receives state/level/hotspot and drawable callbacks.
+Paint and bounds objects are reused and light is clipped inside key bounds.
+
+New tests cover bounded opacity, symmetric travel, compact-row isolation, smooth
+expiration, disabled defaults, corrupt preference types and refined-mode limits.
+Device visuals, performance and LSPosed compatibility remain unverified here.

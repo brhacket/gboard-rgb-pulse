@@ -12,6 +12,7 @@ public final class Config {
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
+    public boolean refined = false;
     public int effect = 0, colorMode = 0;
     public int hue1 = 290, hue2 = 190, sat = 100;
     public int opacity = 90, duration = 1700, size = 120, thickness = 100;
@@ -28,31 +29,47 @@ public final class Config {
         Config c = new Config();
         if (p == null) return c;
         try {
-            c.enabled = p.getBoolean("enabled", c.enabled);
-            c.tapEffects = p.getBoolean("tapEffects36", false);
+            c.refined = flag(p,"refined37",false);
+            c.enabled = flag(p,"enabled", c.enabled);
+            c.tapEffects = flag(p,"tapEffects36", false);
             // v6 catalog is intentionally new. First upgrade selects the user's favorite.
-            c.effect = clamp(p.getInt("tapFx6", c.effect), 0, EFFECTS.length - 1);
-            c.colorMode = clamp(p.getInt("colorMode", c.colorMode), 0, COLORS.length - 1);
-            c.hue1 = clamp(p.getInt("hue1", c.hue1), 0, 360);
-            c.hue2 = clamp(p.getInt("hue2", c.hue2), 0, 360);
-            c.sat = clamp(p.getInt("sat", c.sat), 0, 100);
-            c.opacity = clamp(p.getInt("opacity3", c.opacity), 5, 100);
-            c.duration = clamp(p.getInt("duration3", c.duration), 300, 3500);
-            c.size = clamp(p.getInt("size", c.size), 30, 250);
-            c.thickness = clamp(p.getInt("thickness8", c.thickness), 25, 300);
-            c.accentColor=p.getInt("accent19",0xff575c68);c.tileColor=p.getInt("tile19",0xfff5f5f3);c.sideStyle=clamp(p.getInt("side20",0),0,2);c.trailStyle=clamp(p.getInt("trail19",0),0,3);c.trailWidth=clamp(p.getInt("trailWidth19",2),1,6);c.trailLife=clamp(p.getInt("trailLife19",420),150,1000);
-            c.layer = clamp(p.getInt("layer4", c.layer), 0, LAYERS.length - 1);
-            c.letterWave=false;c.letterBrightness=clamp(p.getInt("letterBrightness16",55),20,100);c.metal=clamp(p.getInt("metal16",70),0,100);
-            c.glass=p.getBoolean("glass9",false); c.bold=p.getBoolean("bold9",false);
-            c.tileScale=clamp(p.getInt("tileScale18",78),60,95);
-            c.font=clamp(p.getInt("font11",p.getInt("font9",0)==5?5:0),0,10);c.letterSize=clamp(p.getInt("letterSize9",100),75,125);
-            c.roundness=clamp(p.getInt("roundness15",90),0,100);
-            c.frost=clamp(p.getInt("frost13",35),0,100);
-            c.texture=clamp(p.getInt("texture12",8),0,100);c.lens=clamp(p.getInt("lens12",125),0,200);c.letterTexture=clamp(p.getInt("letterTexture11",40),0,100);
-            c.glow=clamp(p.getInt("glow9",35),0,100);c.fontData=p.getString("fontData9","");
-            c.debug = p.getBoolean("debug3", false);
+            c.effect = clamp(number(p,"tapFx6", c.effect), 0, EFFECTS.length - 1);
+            c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
+            c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);
+            c.hue2 = clamp(number(p,"hue2", c.hue2), 0, 360);
+            c.sat = clamp(number(p,"sat", c.sat), 0, 100);
+            c.opacity = clamp(number(p,"opacity3", c.opacity), 5, 100);
+            c.duration = clamp(number(p,"duration3", c.duration), 300, 3500);
+            c.size = clamp(number(p,"size", c.size), 30, 250);
+            c.thickness = clamp(number(p,"thickness8", c.thickness), 25, 300);
+            c.accentColor=number(p,"accent19",0xff575c68);c.tileColor=number(p,"tile19",0xfff5f5f3);c.sideStyle=clamp(number(p,"side20",0),0,2);c.trailStyle=clamp(number(p,"trail19",0),0,3);c.trailWidth=clamp(number(p,"trailWidth19",2),1,6);c.trailLife=clamp(number(p,"trailLife19",420),150,1000);
+            c.layer = clamp(number(p,"layer4", c.layer), 0, LAYERS.length - 1);
+            c.letterWave=false;c.letterBrightness=clamp(number(p,"letterBrightness16",55),20,100);c.metal=clamp(number(p,"metal16",70),0,100);
+            c.glass=flag(p,"glass9",false); c.bold=flag(p,"bold9",false);
+            c.tileScale=clamp(number(p,"tileScale18",78),60,95);
+            c.font=clamp(number(p,"font11",number(p,"font9",0)==5?5:0),0,10);c.letterSize=clamp(number(p,"letterSize9",100),75,125);
+            c.roundness=clamp(number(p,"roundness15",90),0,100);
+            c.frost=clamp(number(p,"frost13",35),0,100);
+            c.texture=clamp(number(p,"texture12",8),0,100);c.lens=clamp(number(p,"lens12",125),0,200);c.letterTexture=clamp(number(p,"letterTexture11",40),0,100);
+            c.glow=clamp(number(p,"glow9",35),0,100);c.fontData=string(p,"fontData9","");
+            c.debug = flag(p,"debug3", false);
         } catch (RuntimeException ignored) { }
+        if(c.refined){
+            c.glass=true;c.sideStyle=1;c.tapEffects=false;c.trailStyle=0;c.layer=0;
+            c.font=0;c.bold=false;c.letterSize=100;
+            c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
+        }
         return c;
+    }
+    // A malformed preference must not abort loading every setting after it.
+    static boolean flag(SharedPreferences p,String key,boolean fallback){
+        try{return p.getBoolean(key,fallback);}catch(ClassCastException e){return fallback;}
+    }
+    static int number(SharedPreferences p,String key,int fallback){
+        try{return p.getInt(key,fallback);}catch(ClassCastException e){return fallback;}
+    }
+    static String string(SharedPreferences p,String key,String fallback){
+        try{String value=p.getString(key,fallback);return value==null?fallback:value;}catch(ClassCastException e){return fallback;}
     }
     static int clamp(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 }

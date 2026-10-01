@@ -26,6 +26,8 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/TrailPoints.java tes
 java -cp work/tests dev.rgbpulse.gboard.TrailPointsTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/WavePolicy.java tests/WavePolicyTest.java
 java -cp work/tests dev.rgbpulse.gboard.WavePolicyTest
+javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreferences.java src/dev/rgbpulse/gboard/Config.java tests/ConfigTest.java
+java -cp work/tests dev.rgbpulse.gboard.ConfigTest
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py
 python3 tests/material_contract_test.py

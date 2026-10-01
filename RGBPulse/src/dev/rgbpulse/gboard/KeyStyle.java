@@ -22,7 +22,7 @@ final class KeyStyle {
     final IdentityHashMap<View,Drawable> originals=new IdentityHashMap<View,Drawable>();
     static void configure(Config c,android.content.Context context) {cfg=c;Typography.configure(c,context);face=Typography.face;}
     static boolean markedTree(View v){
-        if(!cfg.enabled||!cfg.glass)return false;
+        if(!cfg.enabled||!cfg.glass||cfg.refined)return false;
         for(int i=0;i<12 && v!=null;i++){
             if(XposedHelpers.getAdditionalInstanceField(v,TAG)!=null)return true;
             if(PulseModule.keyboardClass(v))return false;
@@ -61,7 +61,7 @@ final class KeyStyle {
                 if(args.length==0 || args[args.length-1]!=Paint.class || !methods.add(m))continue;
                 XposedBridge.hookMethod(m,new XC_MethodHook(){
                     protected void beforeHookedMethod(MethodHookParam p){
-                        Integer depth=scope.get();if(depth==null||depth==0||!cfg.enabled||!cfg.glass)return;
+                        Integer depth=scope.get();if(depth==null||depth==0||!cfg.enabled||!cfg.glass||cfg.refined)return;
                         Integer nested=textDepth.get();textDepth.set(nested==null?1:nested+1);p.setObjectExtra("rgbText",true);
                         if(nested!=null&&nested>0)return;
                         try {
@@ -142,7 +142,7 @@ final class KeyStyle {
             }
             if(!(key.getBackground() instanceof Glass)){originals.put(key,key.getBackground());setBackground(key,new Glass(key, key.getResources().getDisplayMetrics().density, key.getBackground()));invalidateTree(key);}
         }
-        caps.apply(keys);cutouts.bind(keys);
+        if(!c.refined){caps.apply(keys);cutouts.bind(keys);}else {caps.restore();cutouts.studio.bind(keys);}
     }
     static void invalidateTree(View v){v.invalidate();if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)invalidateTree(g.getChildAt(i));}}
     void refresh(){for(View v:originals.keySet())invalidateTree(v);}
@@ -153,11 +153,13 @@ final class KeyStyle {
 
 
     /** v33 stock default always visible, border only during multi-wave, white one-color */
-    static final class Glass extends Drawable {
+    static final class Glass extends Drawable implements Drawable.Callback {
+        final RipplePaint ripple=new RipplePaint();
+        final RectF rippleBounds=new RectF();
         final View view;
         final float dp;
         final Drawable orig;
-        Glass(View v,float d,Drawable o){view=v;dp=d;orig=o;}
+        Glass(View v,float d,Drawable o){view=v;dp=d;orig=o;if(orig!=null)orig.setCallback(this);}
         Glass(View v,float d){this(v,d,null);}
         Glass(float d){this(null,d,null);}
         Glass(float d,Drawable o){this(null,d,o);}
@@ -171,12 +173,17 @@ final class KeyStyle {
             if(w<=0) w=b.width()>0?b.width():80;
             if(h<=0) h=b.height()>0?b.height():60;
             if(orig!=null){
-                orig.setBounds(0,0,w,h);
+                orig.setBounds(getBounds());
                 orig.draw(c);
             }
-            if(!SideSweep.activeRow) return;
+            if(!cfg.enabled||!cfg.glass||cfg.sideStyle==0||!SideSweep.activeRow) return;
             float glowAlpha=SideSweep.computeGlowAlpha(view, dp);
             if(glowAlpha<=0.01f) return;
+            if(cfg.refined){
+                rippleBounds.set(getBounds());
+                ripple.draw(c,rippleBounds,dp,glowAlpha,cfg.opacity/100f,6*dp);
+                return;
+            }
             int finalBorder=SideSweep.computeFinalBorder(view, 0xffe8e8ec, dp);
             RectF tile=new RectF(0,0,w,h);
             float rad=12*dp;
@@ -189,6 +196,17 @@ final class KeyStyle {
             c.drawRoundRect(inset,rad,rad,rim);
         }
         public void setAlpha(int a){if(orig!=null)orig.setAlpha(a);}public void setColorFilter(ColorFilter f){if(orig!=null)orig.setColorFilter(f);}
+        @Override public boolean isStateful(){return orig!=null&&orig.isStateful();}
+        @Override protected boolean onStateChange(int[] state){boolean changed=orig!=null&&orig.setState(state);if(changed)invalidateSelf();return changed;}
+        @Override protected boolean onLevelChange(int level){return orig!=null&&orig.setLevel(level);}
+        @Override public boolean getPadding(Rect padding){return orig!=null?orig.getPadding(padding):super.getPadding(padding);}
+        @Override public int getIntrinsicWidth(){return orig!=null?orig.getIntrinsicWidth():-1;}
+        @Override public int getIntrinsicHeight(){return orig!=null?orig.getIntrinsicHeight():-1;}
+        @Override public void setHotspot(float x,float y){if(orig!=null)orig.setHotspot(x,y);}
+        @Override public void jumpToCurrentState(){if(orig!=null)orig.jumpToCurrentState();}
+        @Override public void invalidateDrawable(Drawable who){invalidateSelf();}
+        @Override public void scheduleDrawable(Drawable who,Runnable what,long when){scheduleSelf(what,when);}
+        @Override public void unscheduleDrawable(Drawable who,Runnable what){unscheduleSelf(what);}
         public int getOpacity(){return PixelFormat.TRANSLUCENT;}
     }
 }

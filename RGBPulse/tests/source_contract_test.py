@@ -10,7 +10,8 @@ assert 'tapFx6' in cfg and 'tapFx4' not in cfg
 assert 'effect = 0' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg
 ui=(src/'SettingsActivity.java').read_text();fx=(src/'Fx.java').read_text()
-assert '.setSingleChoiceItems(Config.EFFECTS,cfg.effect' in ui
+# Legacy catalog remains loadable, but the simplified UI intentionally exposes one effect.
+assert 'Browse animations' not in ui and 'Quiet by design.' in ui
 assert 'slider(col, "Particles"' not in ui and 'Idle background' not in ui
 assert 'Bitmap' not in fx and 'Burst' not in fx
 assert '1+rnd.nextInt(Config.GPU_COUNT-1)' in fx
