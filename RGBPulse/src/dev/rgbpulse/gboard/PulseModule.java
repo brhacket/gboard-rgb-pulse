@@ -252,7 +252,9 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             XposedBridge.log("RGBPulse tree d="+depth+" "+v.getClass().getName()+" ["+v.getLeft()+","+v.getTop()+" "+v.getWidth()+"x"+v.getHeight()+"] bg="+(v.getBackground()==null?"none":v.getBackground().getClass().getName()));
             if (v instanceof ViewGroup) { ViewGroup g=(ViewGroup)v; for(int i=0;i<g.getChildCount();i++) dump(g.getChildAt(i),depth+1,count); }
         }
-        @Override public boolean onPreDraw() { safeScan(true);  return true; }
+        // Full key discovery allocates and reapplies hooks; do not repeat it every frame.
+        // Touch and explicit layout-settle paths still request an immediate scan.
+        @Override public boolean onPreDraw() { safeScan(false); return true; }
 
         void glideEvent(MotionEvent e){
             int action=e.getActionMasked();
@@ -301,26 +303,23 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         }
         void kick() {
             if (ticking || disposed || disabled || !visible || body==null || !body.isShown() || !config.enabled) return;
-            if (!fx.active(SystemClock.uptimeMillis()) && !fx.side.active(SystemClock.uptimeMillis(),config.duration)) return;
+            // Always allow a final cleanup frame. Testing/expiring waves here used to
+            // skip the last redraw and leave a cached key highlight behind.
             ticking=true; root.postOnAnimation(this);
         }
         @Override public void run() {
             ticking=false;
-            if (disposed || disabled || !visible || body==null || !body.isShown()) return;
+            if (disposed || disabled || !visible || !config.enabled || body==null || !body.isShown()) return;
             long now=SystemClock.uptimeMillis();
             if (lastDraw==0 || now-lastDraw>150) missedFrames++; else missedFrames=0;
             if (missedFrames>60) { disabled=true; log("selected view bypassed framework dispatchDraw or stopped drawing; effect stopped"); return; }
             boolean active=fx.active(now);
             boolean sideActive=fx.side.active(now,config.duration);
-            if(!active && !sideActive){
-                body.invalidate();
-                for(View k:keys) k.invalidate();
-                return;
-            }
-            if(now-lastDraw>=16){
-                body.invalidate();
-                for(View k:keys) k.invalidate();
-            }
+            if(sideActive)fx.side.advance(config,play,now);
+            // postOnAnimation already follows the display refresh rate. A fixed 16ms
+            // gate skips 90/120Hz frames and can freeze cached key backgrounds.
+            body.invalidate();
+            for(View k:keys) k.invalidate();
             if(active||sideActive) kick();
         }
         void render(Canvas canvas) {
@@ -354,7 +353,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         }
         void pause() {
             visible=false; fx.clear(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
-            if (body!=null) body.invalidate();
+            if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }
         @Override public void onViewDetachedFromWindow(View v) { pause(); bind(null); surface.release(); }

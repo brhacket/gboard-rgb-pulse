@@ -55,7 +55,7 @@ public final class Config {
             c.debug = flag(p,"debug3", false);
         } catch (RuntimeException ignored) { }
         if(c.refined){
-            c.glass=true;c.sideStyle=1;c.tapEffects=false;c.trailStyle=0;c.layer=0;
+            c.glass=true;c.sideStyle=1;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
         }

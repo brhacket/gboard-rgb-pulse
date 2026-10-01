@@ -110,3 +110,27 @@ Paint and bounds objects are reused and light is clipped inside key bounds.
 New tests cover bounded opacity, symmetric travel, compact-row isolation, smooth
 expiration, disabled defaults, corrupt preference types and refined-mode limits.
 Device visuals, performance and LSPosed compatibility remain unverified here.
+
+
+## Gboard frame pacing and restored controls (38.0 test)
+
+- Restored an actual EditText for testing the active keyboard. It neither opens
+  automatically nor persists typed text in app saved state. Copy distinguishes
+  draft preview effects from Gboard's last applied configuration.
+- Restored optional background animations in a collapsed section, including
+  animation catalog, color mode and primary/secondary hues. Choosing a style does
+  not enable it; explicit Apply remains required. Refined mode no longer forcibly
+  turns off the background preference. The preview now taps/draws the same field
+  renderer used by Gboard, behind its stock-key demo.
+- Removed the Gboard controller's fixed 16ms redraw gate. Every scheduled display
+  callback advances side-wave state before invalidating the actual keys. Wave
+  expiration no longer prevents scheduling the cleanup frame; pause also
+  invalidates keys to remove cached highlights.
+- Changed the per-frame pre-draw scan from forced to throttled. Touch/settle scans
+  still run immediately. This reduces repeated tree discovery/hook application.
+- Extended configuration and source regression checks for background opt-in/out,
+  restored typing input, frame ordering and the absence of the old fixed gate.
+
+These are source-level causes of divergence/jank, not a measured guarantee of
+smoothness on every device. Actual Gboard/LSPosed frame times still need device
+validation (especially 60/90/120Hz, overlapping taps and layout changes).

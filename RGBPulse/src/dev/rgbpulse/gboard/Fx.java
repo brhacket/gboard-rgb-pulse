@@ -20,7 +20,7 @@ public final class Fx {
         try {fields=new FieldFx();}catch(LinkageError|RuntimeException e){issue=e.toString();}
     }
     public String shaderIssue(){return issue!=null?issue:fields==null?null:fields.issue();}
-    public boolean active(long now){return cfg.enabled&&((fields!=null&&fields.active(now,cfg.duration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
+    public boolean active(long now){return cfg.enabled&&((cfg.tapEffects&&fields!=null&&fields.active(now,cfg.duration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
     public void tap(float x,float y,RectF play,long now) {
         if(!cfg.enabled || !cfg.tapEffects)return;
         init();
@@ -35,7 +35,7 @@ public final class Fx {
     }
     final java.util.ArrayList<RectF> lensBoxes=new java.util.ArrayList<RectF>();
     public void lenses(java.util.List<RectF> boxes,float dp){lensBoxes.clear();lensBoxes.addAll(boxes);}
-    public void drawFields(Canvas canvas,RectF play,long now){if(cfg.enabled&&fields!=null&&fields.active(now,cfg.duration))fields.draw(canvas,play,cfg,now);}
+    public void drawFields(Canvas canvas,RectF play,long now){if(cfg.enabled&&cfg.tapEffects&&fields!=null&&fields.active(now,cfg.duration))fields.draw(canvas,play,cfg,now);}
     public void clear(){glide.points.clear();side.clear();if(fields!=null)fields.clear();}
     public void dispose(){clear();fields=null;attempted=false;issue=null;}
 }

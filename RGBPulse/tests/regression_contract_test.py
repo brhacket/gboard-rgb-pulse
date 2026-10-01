@@ -27,3 +27,19 @@ assert 'new Paint' not in paint and 'new RectF' not in paint
 assert 'canvas.clipRect(bounds)' in paint
 assert 'RGBPulse/signing/' in (root.parent/'.gitignore').read_text()
 print('PASS: simple UI, explicit Apply, stock text, drawable state, shared clipped renderer, safe preferences')
+
+assert 'Test your keyboard' in ui and 'EditText test=new EditText(this)' in ui
+assert 'test.setSaveEnabled(false)' in ui
+assert 'fx.drawFields(canvas,play,now)' in ui and 'fx.tap(rect.centerX(),rect.centerY(),play,now)' in ui
+assert 'Enable background animations' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
+assert 'putBoolean("refined37",true).putBoolean("tapEffects36",false)' not in ui
+module=(src/'PulseModule.java').read_text()
+assert 'now-lastDraw>=16' not in module
+frame=module.split('@Override public void run() {',1)[1].split('void render(',1)[0]
+assert frame.index('fx.side.advance(config,play,now)') < frame.index('body.invalidate()')
+assert 'for(View k:keys) k.invalidate();' in frame and 'root.postOnAnimation(this)' in module
+assert 'c.sideStyle=1;c.tapEffects=false' not in cfg
+print('PASS: real keyboard input restored, optional background pipeline, refresh-rate redraw and pre-invalidation advancement')
+assert 'onPreDraw() { safeScan(false);' in module
+fx=(src/'Fx.java').read_text()
+assert 'cfg.enabled&&cfg.tapEffects&&fields!=null' in fx

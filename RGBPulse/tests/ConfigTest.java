@@ -19,8 +19,12 @@ public final class ConfigTest {
         p.put("refined37",true);p.put("tapEffects36",true);p.put("font11",8);
         p.put("duration3",3500);p.put("opacity3",100);p.put("trail19",3);
         c=Config.from(p);
-        check(c.refined&&c.glass&&c.sideStyle==1&&!c.tapEffects&&c.trailStyle==0);
+        check(c.refined&&c.glass&&c.sideStyle==1&&c.tapEffects&&c.trailStyle==0);
         check(c.font==0&&c.letterSize==100&&c.duration==1100&&c.opacity==85);
+        p.put("tapEffects36",false);
+        check(!Config.from(p).tapEffects); // refined mode honors the background opt-out
+        p.put("tapEffects36",true);
+        check(Config.from(p).tapEffects); // and the explicit opt-in
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

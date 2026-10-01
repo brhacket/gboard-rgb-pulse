@@ -49,7 +49,9 @@ final class SideSweep {
    return true;
   }
  }
- void draw(Canvas c,Config cfg,RectF play,float dp,long now){
+ void draw(Canvas c,Config cfg,RectF play,float dp,long now){advance(cfg,play,now);}
+ // Advance before invalidating cached key display lists as well as before a panel draw.
+ void advance(Config cfg,RectF play,long now){
   synchronized(waves){
    if(waves.isEmpty())return;
    for(Wave w:waves){
