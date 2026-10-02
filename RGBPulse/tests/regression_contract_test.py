@@ -16,7 +16,7 @@ assert 'ok&&restart&&GboardRestart.stop()' in ui
 assert 'Browse animations' not in ui and 'Import TTF' not in ui
 assert 'Enable ripple' in ui and 'Setup & troubleshooting' in ui
 assert ui.count('slider(settings,')==2
-assert 'copySettings(snapshot,applied).commit()' in ui
+assert 'SettingsStore.save(snapshot,applied)' in ui
 assert 'getSharedPreferences("settings_draft",Context.MODE_PRIVATE)' in ui
 assert 'Apply settings / restart Gboard?' in ui and 'Discard draft changes?' in ui
 assert 'enabled = false' in cfg and 'tapEffects = false' in cfg

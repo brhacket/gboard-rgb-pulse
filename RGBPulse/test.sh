@@ -34,6 +34,11 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendTint.java test
 java -cp work/tests dev.rgbpulse.gboard.LegendTintTest
 javac -encoding UTF-8 -cp work/tests -d work/tests tests/stubs/android/view/*.java tests/stubs/android/widget/*.java tests/stubs/android/content/res/*.java src/dev/rgbpulse/gboard/NativeLegends.java tests/NativeLegendsTest.java
 java -cp work/tests dev.rgbpulse.gboard.NativeLegendsTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/RevisionGate.java tests/RevisionGateTest.java
+java -cp work/tests dev.rgbpulse.gboard.RevisionGateTest
+javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreferences.java src/dev/rgbpulse/gboard/SettingsStore.java tests/SettingsStoreTest.java
+java -cp work/tests dev.rgbpulse.gboard.SettingsStoreTest
+python3 tests/settings_transport_test.py
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py
 python3 tests/material_contract_test.py

@@ -257,3 +257,35 @@ draw call, leaving Canvas text/glyph hooks without key ownership.
 This addresses a concrete missing rendering path, not a device-confirmed root
 cause. If letter colors still fail, obtain the user's Gboard version and filtered
 legend diagnostics before attempting further renderer changes.
+
+
+## Settings transport and all-off follow-up (44.0 test)
+
+The previous editor equated an XML commit with runtime application. Gboard read
+cached XSharedPreferences, while the editor could fall back to private storage.
+There was no delivery acknowledgement. These are concrete transport weaknesses,
+not proof of the cause on the user's device.
+
+- Remove WORLD_READABLE/XSharedPreferences and xposedsharedprefs metadata. Editor
+  and provider share private settings in the module's default process.
+- Export a narrow read/ack provider; only own UID/Gboard UID can read, and only
+  Gboard can acknowledge. No query, file, insert, update or delete API. Large legacy
+  font blobs are excluded. Package visibility is explicit (forceQueryable).
+- A signature-permission-gated, package-targeted notification triggers an async
+  provider fetch. Coalesced generations discard superseded reads. Keyboard-open
+  also retries; no draw/UI-thread provider calls. Errors disable effects.
+- Apply a snapshot and restore old visuals on the Gboard main thread before
+  acknowledging its unique revision. The provider rejects stale acknowledgements;
+  the editor only labels matching revisions confirmed. This is receipt, not proof
+  of rendered pixels or a continuous liveness/heartbeat guarantee.
+- Serialize provider reads and saves. Failed commit restores the previous in-memory
+  preferences so Android's commit(false) cache mutation cannot publish failed edits.
+- Always restore styling, unbind panel, invalidate descendants and cancel callbacks
+  when applying off, including hidden/null-body controllers. Original Gboard native
+  press effects remain stock. The emergency off action is explicitly confirmed.
+
+Revision and failed-save rollback have Android-free executable tests. Security,
+coalescing and cleanup contracts have source assertions; compilation checks use
+Android API 34. These are not Android Binder/LSPosed integration tests. Real-device
+scope, provider access, runtime receipt and visuals still require verification.
+Reboot once after upgrading to unload pre-v44 injected code.

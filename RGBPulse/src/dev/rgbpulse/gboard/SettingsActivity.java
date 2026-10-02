@@ -18,7 +18,10 @@ public final class SettingsActivity extends Activity {
     private SharedPreferences applied, draft;
     private Config cfg;
     private float dp;
-    private boolean hooked, saving;
+    private boolean saving;
+    private int confirmationChecks;
+    private final android.os.Handler confirmationHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable confirmationTick=()->checkConfirmation();
     private TextView state, shaderStatus;
     private View backgroundPalette;
     private Button apply;
@@ -30,9 +33,7 @@ public final class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         dp=getResources().getDisplayMetrics().density;
-        hooked=true;
-        try { applied = getSharedPreferences(Config.PREFS,Context.MODE_WORLD_READABLE); }
-        catch(SecurityException e){hooked=false;applied=getSharedPreferences(Config.PREFS,Context.MODE_PRIVATE);}
+        applied=getSharedPreferences(Config.PREFS,Context.MODE_PRIVATE);
         draft=getSharedPreferences("settings_draft",Context.MODE_PRIVATE);
         if(saved==null){copySettings(applied.getAll(),draft).commit();prepareDraft();}
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
@@ -56,7 +57,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  43",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  44",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -130,12 +131,20 @@ public final class SettingsActivity extends Activity {
         Button help=button("Setup & troubleshooting  +",false);controls.addView(help);
         LinearLayout details=card(controls);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
-        details.addView(text(hooked?"Shared settings available. This does not confirm that Gboard is hooked.":"Enable this module in LSPosed / Vector and scope Gboard, then reopen this app.",13,MUTED));
+        details.addView(text("Settings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
         details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
         details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
         details.addView(text("If letter colors do not change: enable logs, Apply & restart, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
+        Button emergency=button("Turn everything off & apply",false);
+        emergency.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Disable all module effects?")
+            .setMessage("Saves both effects off and removes module tiles, overlays and letter tint when Gboard receives it. This does not disable Gboard’s own native key-press animation. No root restart is requested.")
+            .setPositiveButton("Disable & apply",(d,w)->{
+                draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
+                    .putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                render();persist(false);
+            }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button reset=button("Reset draft",false);reset.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until Apply.")
             .setPositiveButton("Reset",(d,w)->{draft.edit().clear().apply();prepareDraft();render();}).setNegativeButton("Cancel",null).show());details.addView(reset);
@@ -239,20 +248,15 @@ public final class SettingsActivity extends Activity {
     }
     private void updateState(){
         boolean dirty=!draft.getAll().equals(applied.getAll());
-        state.setText(saving?"Saving…":dirty?"Draft only · Gboard is unchanged":"Applied · no restart requested");
+        String revision=Config.string(applied,SettingsContract.REVISION,"");
+        String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
+        String savedState=RevisionGate.matches(revision,received)?
+            (Config.from(applied).enabled?"Gboard confirmed these settings":"Gboard confirmed: all module effects off"):
+            "Saved locally · NOT confirmed by Gboard";
+        state.setText(saving?"Saving…":dirty?"Draft only · press Apply to change Gboard":savedState);
         apply.setEnabled(!saving);apply.setAlpha(!saving?1f:.45f);
     }
-    private static SharedPreferences.Editor copySettings(Map<String,?> values,SharedPreferences target){
-        SharedPreferences.Editor editor=target.edit().clear();
-        for(Map.Entry<String,?> entry:values.entrySet()){
-            Object value=entry.getValue();String key=entry.getKey();
-            if(value instanceof Boolean)editor.putBoolean(key,(Boolean)value);
-            else if(value instanceof Integer)editor.putInt(key,(Integer)value);
-            else if(value instanceof String)editor.putString(key,(String)value);
-            else if(value instanceof Long)editor.putLong(key,(Long)value);
-            else if(value instanceof Float)editor.putFloat(key,(Float)value);
-        }return editor;
-    }
+    private static SharedPreferences.Editor copySettings(Map<String,?> values,SharedPreferences target){return SettingsStore.copy(values,target);}
     private void applySettings(){
         if(saving)return;
         new AlertDialog.Builder(this).setTitle("Apply settings / restart Gboard?")
@@ -263,25 +267,42 @@ public final class SettingsActivity extends Activity {
     }
     private void persist(boolean restart){
         if(saving)return;
-        final Map<String,?> snapshot=draft.getAll();saving=true;updateState();
+        final Map<String,Object> snapshot=new java.util.HashMap<>(draft.getAll());
+        final String revision=java.util.UUID.randomUUID().toString();snapshot.put(SettingsContract.REVISION,revision);
+        saving=true;updateState();
         state.setText(restart?"Saving, then waiting for root approval…":"Saving…");
         new Thread(()->{
             boolean saved;
-            try{saved=copySettings(snapshot,applied).commit();}catch(RuntimeException e){saved=false;}
+            try{saved=SettingsStore.save(snapshot,applied);}catch(RuntimeException e){saved=false;}
             final boolean ok=saved;
+            if(ok){
+                draft.edit().putString(SettingsContract.REVISION,revision).apply();
+                try{sendBroadcast(new android.content.Intent(SettingsContract.ACTION).setPackage(SettingsContract.GBOARD));}
+                catch(RuntimeException e){android.util.Log.w("RGBPulse","Gboard notification failed; reopen keyboard to retry",e);}
+            }
             boolean stopped=ok&&restart&&GboardRestart.stop();
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;saving=false;updateState();
                 if(!ok){state.setText("Save failed. Gboard was not stopped. Tap Apply to retry.");return;}
+                confirmationChecks=0;confirmationHandler.removeCallbacks(confirmationTick);confirmationHandler.postDelayed(confirmationTick,400);
                 if(restart){
                     state.setText(stopped?"Saved · Gboard stopped. Tap the test field to reopen it.":"Saved · automatic restart failed or root was denied.");
                     if(!stopped)new AlertDialog.Builder(this).setTitle("Restart Gboard manually")
-                        .setMessage("Your settings were saved. Root was unavailable, denied or timed out. You can open Gboard’s app settings and tap Force stop yourself.")
+                        .setMessage("Settings were saved locally; receipt is checked separately. Root was unavailable, denied or timed out. You can open Gboard’s app settings and tap Force stop yourself.")
                         .setPositiveButton("Open app settings",(d,w)->openGboardSettings()).setNegativeButton("Not now",null).show();
                 }
                 if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need Apply.");
             });
         },"Apply ripple").start();
+    }
+    private void checkConfirmation(){
+        if(isFinishing()||isDestroyed()||saving)return;
+        updateState();
+        String revision=Config.string(applied,SettingsContract.REVISION,"");
+        String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
+        if(RevisionGate.matches(revision,received))return;
+        if(++confirmationChecks<30)confirmationHandler.postDelayed(confirmationTick,400);
+        else state.append(". Reopen Gboard. If still unconfirmed, check module scope and reboot.");
     }
     private void openGboardSettings(){
         try{startActivity(new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -300,9 +321,9 @@ public final class SettingsActivity extends Activity {
     private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(px(radius));return d;}
     private LinearLayout card(LinearLayout parent){LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(px(16),px(14),px(16),px(14));c.setBackground(background(CARD,20));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=px(18);parent.addView(c,lp);return c;}
     private Button button(String name,boolean primary){Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextSize(14);b.setTextColor(primary?BG:INK);b.setMinHeight(px(48));b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primary?0xffd7e7dd:0xff292e31));return b;}
-    @Override protected void onPause(){if(preview!=null)preview.stop();super.onPause();}
-    @Override protected void onResume(){super.onResume();if(preview!=null){preview.running=true;preview.invalidate();}}
-    @Override protected void onDestroy(){if(preview!=null)preview.fx.dispose();super.onDestroy();}
+    @Override protected void onPause(){confirmationHandler.removeCallbacks(confirmationTick);if(preview!=null)preview.stop();super.onPause();}
+    @Override protected void onResume(){super.onResume();if(preview!=null){preview.running=true;preview.invalidate();}confirmationChecks=0;confirmationHandler.post(confirmationTick);}
+    @Override protected void onDestroy(){confirmationHandler.removeCallbacks(confirmationTick);if(preview!=null)preview.fx.dispose();super.onDestroy();}
 
     private final class Preview extends View {
         final Fx fx=new Fx(dp);

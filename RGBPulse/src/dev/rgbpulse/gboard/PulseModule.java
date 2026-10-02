@@ -16,23 +16,25 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
     static final String TARGET = "com.google.android.inputmethod.latin";
     static final String SELF = "dev.rgbpulse.gboard";
     private static final String SERVICE = "rgbpulse.v4.service", ROOT = "rgbpulse.v4.root", PANEL = "rgbpulse.v4.panel";
-    private static XSharedPreferences prefs;
+    private static final ArrayList<java.lang.ref.WeakReference<Controller>> controllers=new ArrayList<>();
     private static Config config = new Config();
     private static boolean loggedFailure;
 
     static void failure(Throwable t) {
-        if (!loggedFailure) { loggedFailure = true; XposedBridge.log("RGBPulse 33: " + android.util.Log.getStackTraceString(t)); }
+        if (!loggedFailure) { loggedFailure = true; XposedBridge.log("RGBPulse 44: " + android.util.Log.getStackTraceString(t)); }
     }
-    static void reload() {
-        try {
-            if (prefs == null) prefs = new XSharedPreferences(SELF, Config.PREFS);
-            prefs.reload(); config = Config.from(prefs);
-        } catch (Throwable t) { failure(t); }
+    private static void acceptSettings(Config next){
+        config=next;
+        for(java.util.Iterator<java.lang.ref.WeakReference<Controller>> it=controllers.iterator();it.hasNext();){
+            Controller controller=it.next().get();
+            if(controller==null||controller.disposed){it.remove();continue;}
+            controller.applyCurrentSettings();
+        }
     }
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!TARGET.equals(p.packageName)) return;
-        reload(); KeyStyle.installTextHooks();
-        XposedBridge.log("RGBPulse 33.0: loaded in " + p.processName);
+        KeyStyle.installTextHooks();
+        XposedBridge.log("RGBPulse 44.0: loaded in " + p.processName);
         XposedHelpers.findAndHookMethod(InputMethodService.class, "setInputView", View.class, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
                 try {
@@ -48,7 +50,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         XposedHelpers.findAndHookMethod(InputMethodService.class, "onStartInputView", EditorInfo.class, boolean.class, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
                 try {
-                    reload(); Controller c = get(p.thisObject);
+                    Controller c = get(p.thisObject);
                     if (c != null) c.show();
                 } catch (Throwable t) { failure(t); }
             }
@@ -195,6 +197,8 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         Controller(ViewGroup root) {
             this.root = root; fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
             XposedHelpers.setAdditionalInstanceField(root, ROOT, this);
+            controllers.add(new java.lang.ref.WeakReference<>(this));
+            SettingsClient.start(root.getContext(),PulseModule::acceptSettings);
             root.addOnAttachStateChangeListener(this); observe(); show();
         }
         void observe() {
@@ -202,11 +206,19 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             if (o.isAlive()) { o.removeOnPreDrawListener(this); o.addOnPreDrawListener(this); o.removeOnGlobalLayoutListener(this); o.addOnGlobalLayoutListener(this); }
         }
         void show() {
-            if (disposed) return;
-            KeyStyle.configure(config,root.getContext()); keyStyle.refresh();
-            visible = true; disabled = false; missedFrames = 0; fx.cfg = config; fx.clear(); keyStyle.clearRippleFades();
-            if (config.debug){lastLog="";CapHooks.traces=0;}
-            safeScan(true); root.removeCallbacks(scanLater); root.post(scanLater); kick();
+            if(disposed)return;
+            visible=true;SettingsClient.request();applyCurrentSettings();
+        }
+        void applyCurrentSettings(){
+            if(disposed)return;
+            // Off must clean up even if the panel is hidden or no longer bound.
+            root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);ticking=false;
+            fx.clear();keyStyle.restore();bind(null);
+            KeyStyle.configure(config,root.getContext());fx.cfg=config;
+            disabled=false;missedFrames=0;layoutDirty=true;
+            if(!config.enabled||!visible){root.invalidate();return;}
+            if(config.debug){lastLog="";CapHooks.traces=0;}
+            safeScan(true);kick();
         }
         void safeScan(boolean force) {
             try { scan(force); } catch (Throwable t) { bind(null); failure(t); }
@@ -233,7 +245,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             log("body="+body.getClass().getName()+"; size="+body.getWidth()+"x"+body.getHeight()+"; bg="+(body.getBackground()==null?"none":body.getBackground().getClass().getName())+"; keys="+keys.size()+"; clip="+s.box.toShortString()+"; layer="+config.layer);
         }
         void bind(ViewGroup next) {
-            if (body == next) return;
+            if (body == next && next != null) return;
             keyStyle.restore();
             if (body != null) { XposedHelpers.removeAdditionalInstanceField(body, PANEL); body.invalidate(); }
             body = next; recordedDraw=false; play.setEmpty(); keys.clear(); fx.clear(); missedFrames = 0;
@@ -241,7 +253,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         }
         void log(String text) {
             if (!text.equals(lastLog)) {
-                lastLog = text; XposedBridge.log("RGBPulse 33: "+text);
+                lastLog = text; XposedBridge.log("RGBPulse 44: "+text);
                 if (config.debug) dump(root, 0, new int[]{0});
             }
         }
@@ -335,7 +347,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             lastDraw=SystemClock.uptimeMillis();
             if(!recordedDraw) {
                 recordedDraw=true;
-                XposedBridge.log("RGBPulse 33: draw reached "+body.getClass().getName()+"; phase="+(config.glass||config.layer==0?"after panel paint / before children":"after children"));
+                XposedBridge.log("RGBPulse 44: draw reached "+body.getClass().getName()+"; phase="+(config.glass||config.layer==0?"after panel paint / before children":"after children"));
             }
             if (!body.getLocalVisibleRect(visibleRect)) return;
             if (!config.glass && !fx.active(lastDraw)) return;
@@ -347,7 +359,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 if(config.sideStyle>0)fx.side.draw(canvas,config,play,root.getResources().getDisplayMetrics().density,lastDraw);
 
                 if (!shaderIssueLogged && fx.shaderIssue()!=null) {
-                    shaderIssueLogged=true; XposedBridge.log("RGBPulse 33: shader disabled: "+fx.shaderIssue());
+                    shaderIssueLogged=true; XposedBridge.log("RGBPulse 44: shader disabled: "+fx.shaderIssue());
                 }
             } finally {
                 canvas.restoreToCount(save);rendering=false;
