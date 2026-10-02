@@ -13,6 +13,8 @@ public final class Config {
     public boolean enabled = false;
     public boolean tapEffects = false;
     public boolean ripple = false;
+    public boolean tiles = true;
+    public int rippleOpacity=70, backgroundOpacity=90;
     public boolean refined = false;
     public int effect = 0, colorMode = 0;
     public int hue1 = 290, hue2 = 190, sat = 100;
@@ -31,6 +33,9 @@ public final class Config {
         if (p == null) return c;
         try {
             c.refined = flag(p,"refined37",false);
+            c.tiles=flag(p,"tiles41",true);
+            c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
+            c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
             c.tapEffects = flag(p,"tapEffects36", false);
             // v6 catalog is intentionally new. First upgrade selects the user's favorite.

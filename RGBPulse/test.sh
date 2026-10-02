@@ -30,6 +30,8 @@ javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreference
 java -cp work/tests dev.rgbpulse.gboard.ConfigTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/BorderFade.java tests/BorderFadeTest.java
 java -cp work/tests dev.rgbpulse.gboard.BorderFadeTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendTint.java tests/LegendTintTest.java
+java -cp work/tests dev.rgbpulse.gboard.LegendTintTest
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py
 python3 tests/material_contract_test.py

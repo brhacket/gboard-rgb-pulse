@@ -55,7 +55,7 @@ assert 'waitFor(25,TimeUnit.SECONDS)' in restart and 'destroyForcibly()' in rest
 assert 'am force-stop --user current com.google.android.inputmethod.latin' in restart
 assert 'Open app settings' in ui and 'if(!ok)' in ui
 refined=key.split('private void applyRefined(',1)[1].split('private void clearOverlays',1)[0]
-assert 'setBackground(' not in refined and '.getOverlay().remove' in refined
+assert 'cfg.tiles &&' in refined and 'if(!refinedApplied)' in refined and '.getOverlay().remove' in refined
 print('PASS: confirmed save-before-restart, bounded root process, refined overlay lifecycle')
 
 assert 'c.enabled=c.ripple||c.tapEffects' in cfg
@@ -69,3 +69,15 @@ assert 'if(active||sideActive||fading) kick()' in module
 assert 'layer.fade.advance' in key and 'fade.value()' in key
 assert 'amount=fade.advance(amount,now);active|=fade.active()' in ui
 print('PASS: independent applied toggles and shared per-key fade lifecycle')
+
+assert 'putInt("opacity3",55)' not in ui and 'if(!draft.contains("duration3"))' in ui
+assert 'Ripple strength' in ui and 'Background brightness' in ui
+assert 'Keep key tiles visible' in ui and 'putBoolean("tiles41",value)' in ui
+assert 'cfg.refined?cfg.backgroundOpacity:cfg.opacity' in (src/'FieldFx.java').read_text()
+assert 'cfg.rippleOpacity/100f' in ui and 'cfg.rippleOpacity/100f' in key
+assert 'LegendTint.color' in ui and 'LegendTint.color(original.getColor(),layer.fade.value())' in key
+assert 'original.setColor' not in key
+assert 'refinedOriginalPaint' in key and 'refinedPreviousScope' in key
+assert 'if(stable)return;' in key
+assert 'Paint.Style.FILL' not in (src/'RipplePaint.java').read_text()
+print('PASS: independent brightness, stable tiles and scoped native text tint without face wash')

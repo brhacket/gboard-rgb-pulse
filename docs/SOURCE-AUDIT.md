@@ -183,3 +183,31 @@ independent, authoritative ripple preference.
 
 No Android device is available here; real Gboard rendering and settings sharing
 must still be verified on the user's framework/device combination.
+
+
+## Stable tiles, independent brightness and ripple legends (41.0 test)
+
+- The old shared opacity field no longer controls both refined effects. Ripple
+  strength and background brightness have independent saved keys/defaults (70%
+  and 90%). Legacy strength remains available to legacy rendering only. Draft
+  setup seeds absent duration instead of overwriting existing opacity/duration.
+- Keep key tiles visible is explicit and persisted. While either effect is on,
+  a reversible background wrapper paints a stable charcoal base underneath native
+  backgrounds/content; tiles do not appear/disappear with ripple alpha. Disabling
+  both effects restores originals. Native state/callback/padding forwarding remains.
+- Removed the white interior wash from ripple overlays. They now draw borders
+  only, avoiding unintended contrast changes over key faces/lettering.
+- Added narrowly scoped native Canvas text-paint tinting during verified key
+  recording/drawing. It reads no typed/editor text. It uses a copied paint and
+  restores arguments/scopes after drawing, without resizing/repositioning glyphs.
+  Idle light legends are 14% dimmer in RGB; ripple brightens toward white using
+  the border's existing per-key fade. Dark original legends stay dark on light
+  themes. Original alpha is preserved; shader-based text paints are left alone.
+- Preview uses the same LegendTint policy; text and overlays redraw together.
+  Tests cover independent brightness, persisted tiles, monotonic legend tint,
+  unchanged alpha, and dark-legend contrast.
+
+On-device rendering scope, native key themes, startup timing and performance
+remain unverified here. In particular, custom Gboard render paths may not use
+hooked Canvas text calls. These changes are not a claim that every dimming or
+startup variation has been reproduced and eliminated.

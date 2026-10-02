@@ -54,7 +54,7 @@ final class FieldFx {
                     }
                     shader.setFloatUniform("resolution",play.width(),play.height());
                     shader.setFloatUniform("time",(now-epoch)/1000f);
-                    shader.setFloatUniform("strength",cfg.opacity/100f);
+                    shader.setFloatUniform("strength",(cfg.refined?cfg.backgroundOpacity:cfg.opacity)/100f);
                     shader.setFloatUniform("effectSize",cfg.size/100f);
                     shader.setFloatUniform("thickness",cfg.thickness/100f);
                     shader.setFloatUniform("colorMode",(float)cfg.colorMode);

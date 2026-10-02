@@ -37,6 +37,14 @@ public final class ConfigTest {
         }
         p.remove("ripple40");p.put("enabled",false);p.put("tapEffects36",true);
         c=Config.from(p);check(c.enabled&&!c.ripple&&c.tapEffects); // upgrade background-only
+        p.put("opacity3",5);p.put("rippleStrength41",80);p.put("backgroundStrength41",95);
+        c=Config.from(p);check(c.rippleOpacity==80&&c.backgroundOpacity==95);
+        p.put("rippleStrength41",25);check(Config.from(p).backgroundOpacity==95);
+        p.put("backgroundStrength41",35);check(Config.from(p).rippleOpacity==25);
+        p.put("tiles41",false);check(!Config.from(p).tiles);
+        p.put("tiles41",true);check(Config.from(p).tiles);
+        p.remove("rippleStrength41");p.remove("backgroundStrength41");
+        c=Config.from(p);check(c.rippleOpacity==70&&c.backgroundOpacity==90); // no hidden legacy dim
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

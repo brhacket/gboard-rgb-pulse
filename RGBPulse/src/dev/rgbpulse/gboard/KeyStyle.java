@@ -20,6 +20,9 @@ final class KeyStyle {
     final CutoutTiles cutouts=new CutoutTiles();
     final CapHooks caps=new CapHooks();
     final IdentityHashMap<View,Drawable> originals=new IdentityHashMap<View,Drawable>();
+    static final ThreadLocal<RippleOverlay> refinedScope=new ThreadLocal<RippleOverlay>();
+    static final Set<Method> refinedDrawHooks=new HashSet<Method>();
+    boolean refinedApplied;
     final IdentityHashMap<View,RippleOverlay> overlays=new IdentityHashMap<View,RippleOverlay>();
     static void configure(Config c,android.content.Context context) {cfg=c;Typography.configure(c,context);face=Typography.face;}
     static boolean markedTree(View v){
@@ -36,20 +39,23 @@ final class KeyStyle {
             protected void beforeHookedMethod(MethodHookParam p){
                 if(Boolean.TRUE.equals(ownWrite.get()))return;
                 Object owner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TAG);
-                if(!(owner instanceof KeyStyle)||!cfg.enabled||!cfg.glass||p.args[0] instanceof Glass)return;
+                if(!(owner instanceof KeyStyle)||!cfg.enabled||p.args[0] instanceof Glass)return;
+                if(cfg.refined?!cfg.tiles:!cfg.glass)return;
                 View v=(View)p.thisObject;KeyStyle style=(KeyStyle)owner;
                 style.originals.put(v,(Drawable)p.args[0]);
-                p.args[0]=new Glass((View)p.thisObject, v.getResources().getDisplayMetrics().density, (Drawable)p.args[0]);
+                p.args[0]=new Glass((View)p.thisObject, v.getResources().getDisplayMetrics().density, (Drawable)p.args[0],cfg.refined);
             }
         });
         try {
             Method record=View.class.getDeclaredMethod("updateDisplayListIfDirty");
             XposedBridge.hookMethod(record,new XC_MethodHook(){
                 protected void beforeHookedMethod(MethodHookParam p){
+                    enterRefinedScope(p);
                     if(!markedTree((View)p.thisObject))return;
                     Integer n=scope.get();scope.set(n==null?1:n+1);p.setObjectExtra(TAG,true);
                 }
                 protected void afterHookedMethod(MethodHookParam p){
+                    leaveRefinedScope(p);
                     if(p.getObjectExtra(TAG)!=null){Integer n=scope.get();if(n==null||n<=1)scope.remove();else scope.set(n-1);}
                 }
             });
@@ -62,7 +68,8 @@ final class KeyStyle {
                 if(args.length==0 || args[args.length-1]!=Paint.class || !methods.add(m))continue;
                 XposedBridge.hookMethod(m,new XC_MethodHook(){
                     protected void beforeHookedMethod(MethodHookParam p){
-                        Integer depth=scope.get();if(depth==null||depth==0||!cfg.enabled||!cfg.glass||cfg.refined)return;
+                        if(cfg.refined){tintRefinedText(p);return;}
+                        Integer depth=scope.get();if(depth==null||depth==0||!cfg.enabled||!cfg.glass)return;
                         Integer nested=textDepth.get();textDepth.set(nested==null?1:nested+1);p.setObjectExtra("rgbText",true);
                         if(nested!=null&&nested>0)return;
                         try {
@@ -113,15 +120,55 @@ final class KeyStyle {
                         }catch(Throwable ignored){}
                     }
                     protected void afterHookedMethod(MethodHookParam p){
+                        if(p.getObjectExtra("refinedTint")!=null){
+                            p.args[p.args.length-1]=p.getObjectExtra("refinedOriginalPaint");textDepth.remove();
+                        }
                         if(p.getObjectExtra("rgbText")!=null){Integer n=textDepth.get();if(n==null||n<=1)textDepth.remove();else textDepth.set(n-1);}
                     }
                 });
             }}catch(Throwable ignored){}
         }
     }
+    private static void enterRefinedScope(XC_MethodHook.MethodHookParam p){
+        if(!cfg.refined||!cfg.enabled||!cfg.ripple)return;
+        Object owner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TAG);
+        if(!(owner instanceof KeyStyle))return;
+        RippleOverlay layer=((KeyStyle)owner).overlays.get((View)p.thisObject);
+        if(layer==null)return;
+        p.setObjectExtra("refinedKeyScope",true);p.setObjectExtra("refinedPreviousScope",refinedScope.get());
+        refinedScope.set(layer);
+    }
+    private static void leaveRefinedScope(XC_MethodHook.MethodHookParam p){
+        if(p.getObjectExtra("refinedKeyScope")==null)return;
+        RippleOverlay previous=(RippleOverlay)p.getObjectExtra("refinedPreviousScope");
+        if(previous==null)refinedScope.remove();else refinedScope.set(previous);
+    }
+    private static void tintRefinedText(XC_MethodHook.MethodHookParam p){
+        RippleOverlay layer=refinedScope.get();
+        Integer depth=textDepth.get();
+        if(!cfg.enabled||!cfg.ripple||layer==null||(depth!=null&&depth>0))return;
+        Paint original=(Paint)p.args[p.args.length-1];
+        if(original==null||original.getShader()!=null)return; // Preserve native gradient/color-glyph paints.
+        // No text extraction, repositioning, font substitution or original-Paint mutation.
+        layer.legendPaint.set(original);
+        layer.legendPaint.setColor(LegendTint.color(original.getColor(),layer.fade.value()));
+        p.setObjectExtra("refinedTint",true);p.setObjectExtra("refinedOriginalPaint",original);
+        textDepth.set(1);p.args[p.args.length-1]=layer.legendPaint;
+    }
+    private static void hookRefinedDraw(View key){
+        try{
+            Method draw=key.getClass().getMethod("draw",Canvas.class);
+            if(refinedDrawHooks.add(draw))XposedBridge.hookMethod(draw,new XC_MethodHook(){
+                @Override protected void beforeHookedMethod(MethodHookParam p){enterRefinedScope(p);}
+                @Override protected void afterHookedMethod(MethodHookParam p){leaveRefinedScope(p);}
+            });
+        }catch(Throwable e){android.util.Log.w("RGBPulse","Native key text scope unavailable",e);}
+    }
     void apply(java.util.List<View> keys,Config c) {
-        if(!c.enabled||!c.glass){restore();return;}
+        if(!c.enabled){restore();return;}
         if(c.refined){applyRefined(keys);return;}
+        if(refinedApplied)restore();
+        if(!c.glass){restore();return;}
         clearOverlays();
         for(Iterator<Map.Entry<View,Drawable>> it=originals.entrySet().iterator();it.hasNext();) {
             Map.Entry<View,Drawable> e=it.next();if(!keys.contains(e.getKey())){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());it.remove();}
@@ -150,7 +197,7 @@ final class KeyStyle {
     static void invalidateTree(View v){v.invalidate();if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)invalidateTree(g.getChildAt(i));}}
     void refresh(){for(View v:originals.keySet())invalidateTree(v);}
     static void setBackground(View v,Drawable d){int l=v.getPaddingLeft(),t=v.getPaddingTop(),r=v.getPaddingRight(),b=v.getPaddingBottom();try{ownWrite.set(true);v.setBackground(d);v.setPadding(l,t,r,b);}finally{ownWrite.remove();}}
-    void restore(){clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
+    void restore(){refinedApplied=false;clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
 
 
 
@@ -158,20 +205,35 @@ final class KeyStyle {
     // Draw above native key paint. A background wrapper can be painted over by
     // Gboard's own key fill; ViewOverlay remains in the key's local clipped space.
     private void applyRefined(java.util.List<View> keys){
-        if(!originals.isEmpty())restore();
+        if(!refinedApplied){restore();refinedApplied=true;}
         for(Iterator<Map.Entry<View,RippleOverlay>> it=overlays.entrySet().iterator();it.hasNext();){
-            Map.Entry<View,RippleOverlay> entry=it.next();
-            if(!keys.contains(entry.getKey())){entry.getKey().getOverlay().remove(entry.getValue());it.remove();}
+            Map.Entry<View,RippleOverlay> entry=it.next();View key=entry.getKey();
+            if(!keys.contains(key)){
+                key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
+                if(originals.containsKey(key)){Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);}
+                invalidateTree(key);it.remove();
+            }
         }
         for(View key:keys){
             RippleOverlay layer=overlays.get(key);
-            if(layer==null){layer=new RippleOverlay(key);overlays.put(key,layer);key.getOverlay().add(layer);}
+            if(layer==null){
+                layer=new RippleOverlay(key);overlays.put(key,layer);key.getOverlay().add(layer);
+                XposedHelpers.setAdditionalInstanceField(key,TAG,this);hookRefinedDraw(key);invalidateTree(key);
+            }
             layer.setBounds(0,0,key.getWidth(),key.getHeight());
+            if(cfg.tiles && !(key.getBackground() instanceof Glass)){
+                originals.put(key,key.getBackground());setBackground(key,new Glass(key,layer.dp,key.getBackground(),true));
+            }else if(!cfg.tiles && originals.containsKey(key)){
+                Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);
+            }
         }
         cutouts.studio.bind(keys);
     }
     private void clearOverlays(){
-        for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet())entry.getKey().getOverlay().remove(entry.getValue());
+        for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet()){
+            View key=entry.getKey();key.getOverlay().remove(entry.getValue());
+            XposedHelpers.removeAdditionalInstanceField(key,TAG);invalidateTree(key);
+        }
         overlays.clear();
     }
     boolean advanceRipples(long now){
@@ -184,17 +246,18 @@ final class KeyStyle {
         return active;
     }
     void clearRippleFades(){for(RippleOverlay layer:overlays.values())layer.fade.clear();}
-    void refreshRipples(){for(RippleOverlay layer:overlays.values())layer.invalidateSelf();}
+    void refreshRipples(){for(RippleOverlay layer:overlays.values()){layer.invalidateSelf();invalidateTree(layer.key);}}
     static final class RippleOverlay extends Drawable {
         final View key;final float dp;
         final RipplePaint ripple=new RipplePaint();final RectF bounds=new RectF();
         final BorderFade fade=new BorderFade();
+        final Paint legendPaint=new Paint();
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
             if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
             bounds.set(0,0,key.getWidth(),key.getHeight());
-            ripple.draw(canvas,bounds,dp,fade.value(),cfg.opacity/100f*alpha/255f,6*dp);
+            ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp);
         }
         @Override public void setAlpha(int value){alpha=value;invalidateSelf();}
         @Override public void setColorFilter(ColorFilter filter){} // White-only effect.
@@ -208,7 +271,10 @@ final class KeyStyle {
         final View view;
         final float dp;
         final Drawable orig;
-        Glass(View v,float d,Drawable o){view=v;dp=d;orig=o;if(orig!=null)orig.setCallback(this);}
+        final boolean stable;
+        final Paint tilePaint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        Glass(View v,float d,Drawable o){this(v,d,o,false);}
+        Glass(View v,float d,Drawable o,boolean stable){view=v;dp=d;orig=o;this.stable=stable;if(orig!=null)orig.setCallback(this);}
         Glass(View v,float d){this(v,d,null);}
         Glass(float d){this(null,d,null);}
         Glass(float d,Drawable o){this(null,d,o);}
@@ -221,16 +287,22 @@ final class KeyStyle {
             Rect b=getBounds();
             if(w<=0) w=b.width()>0?b.width():80;
             if(h<=0) h=b.height()>0?b.height():60;
+            if(stable && cfg.enabled && cfg.tiles){
+                rippleBounds.set(2*dp,2*dp,w-2*dp,h-2*dp);
+                tilePaint.setColor(0xff303538);tilePaint.setStyle(Paint.Style.FILL);
+                c.drawRoundRect(rippleBounds,6*dp,6*dp,tilePaint);
+            }
             if(orig!=null){
                 orig.setBounds(getBounds());
                 orig.draw(c);
             }
+            if(stable)return; // The permanent tile is never tied to ripple opacity.
             if(!cfg.enabled||!cfg.glass||cfg.sideStyle==0||!SideSweep.activeRow) return;
             float glowAlpha=SideSweep.computeGlowAlpha(view, dp);
             if(glowAlpha<=0.01f) return;
             if(cfg.refined){
                 rippleBounds.set(getBounds());
-                ripple.draw(c,rippleBounds,dp,glowAlpha,cfg.opacity/100f,6*dp);
+                ripple.draw(c,rippleBounds,dp,glowAlpha,cfg.rippleOpacity/100f,6*dp);
                 return;
             }
             int finalBorder=SideSweep.computeFinalBorder(view, 0xffe8e8ec, dp);

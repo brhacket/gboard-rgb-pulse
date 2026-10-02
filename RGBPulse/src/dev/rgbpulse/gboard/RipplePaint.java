@@ -11,9 +11,8 @@ final class RipplePaint {
         if(alpha<=.001f||bounds.width()<4*dp||bounds.height()<4*dp)return;
         inset.set(bounds);inset.inset(2*dp,2*dp);
         int save=canvas.save();canvas.clipRect(bounds);
-        paint.setColor(0xfff3f5f4);paint.setStyle(Paint.Style.FILL);paint.setAlpha(Math.round(28*alpha));
-        canvas.drawRoundRect(inset,radius,radius,paint);
-        paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(3*dp);paint.setAlpha(Math.round(24*alpha));
+        // Border only: never wash over/dim the native key face or its text.
+        paint.setColor(0xfff3f5f4);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(3*dp);paint.setAlpha(Math.round(24*alpha));
         canvas.drawRoundRect(inset,radius,radius,paint);
         paint.setStrokeWidth(.85f*dp);paint.setAlpha(Math.round(150*alpha));
         canvas.drawRoundRect(inset,radius,radius,paint);canvas.restoreToCount(save);

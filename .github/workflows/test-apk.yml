@@ -48,18 +48,18 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-40.0-test.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-41.0-test.apk
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-40.0-test.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-40.0-test.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-40.0-test.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-40.0-test.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-41.0-test.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-41.0-test.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-41.0-test.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-41.0-test.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-40.0-test.apk
+            Gboard-RGB-Pulse-41.0-test.apk
             APK-verification.txt
             SHA256SUMS.txt
       - name: Publish test download
@@ -67,13 +67,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'NOTES'
-          Test build: ripple and background animations now have independent persisted switches. Refined mode no longer forces ripple on, and backgrounds no longer depend on the ripple switch. Tests cover every on/off combination and migration from legacy settings. Each key's border now has an elapsed-time attack/release fade, shared with the preview; rendering continues through the release tail instead of abruptly removing the border at wave expiry.
+          Test build: independent ripple strength and background brightness; no strength reset on opening settings. Keep key tiles visible adds stable charcoal tile faces behind native key content while either effect is enabled. Ripple no longer draws a wash over the key face. With ripple on, native text paints are gently dimmed at rest and brighten using the same per-key border fade, without changing font, size, position, shaping or original paint alpha. Dark native legends retain dark contrast on light key faces. Both effects off restores the original Gboard appearance.
 
-          **Installation:** This APK uses a fresh test signing key. Uninstall the previous RGB Pulse module first (saved module settings will be lost). Keep a backup keyboard enabled. Install and enable the module in LSPosed/Vector with Gboard in scope. Set Enable ripple and Enable background animations independently, then Apply / restart > Save & restart and approve root, or use Save only and reopen Gboard manually. Test your keyboard uses applied settings; preview uses the draft. All effects remain off on a fresh install until explicitly enabled and applied.
+          **Installation:** This APK uses a fresh test signing key. Uninstall the previous RGB Pulse module first (saved module settings will be lost). Keep a backup keyboard enabled. Install and enable the module in LSPosed/Vector with Gboard in scope. Choose your ripple/background switches, brightness settings and Keep key tiles visible, then Apply / restart > Save & restart and approve root, or Save only and reopen Gboard manually. Settings are drafts until Apply. Fresh installs do not enable effects automatically.
 
           Requires Android 13+ and LSPosed/Vector. This is a test build, not device-verified. Automated policy tests, desktop Skia shader checks, archive checks and APK signature verification are required before publication. Each CI build uses a fresh key, so upgrades between test builds also require uninstalling the previous test build.
           NOTES
-          gh release create "test-40-${{ github.run_id }}-${{ github.run_attempt }}" \
-            Gboard-RGB-Pulse-40.0-test.apk APK-verification.txt SHA256SUMS.txt \
+          gh release create "test-41-${{ github.run_id }}-${{ github.run_attempt }}" \
+            Gboard-RGB-Pulse-41.0-test.apk APK-verification.txt SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false \
-            --title 'Gboard RGB Pulse 40.0 — test build' --notes-file release-notes.md
+            --title 'Gboard RGB Pulse 41.0 — test build' --notes-file release-notes.md

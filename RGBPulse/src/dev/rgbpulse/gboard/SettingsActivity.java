@@ -39,9 +39,8 @@ public final class SettingsActivity extends Activity {
     }
     // Migration is staged privately. Merely opening this screen never changes Gboard.
     private void prepareDraft(){
-        if(!Config.flag(draft,"refined37",false)){
-            draft.edit().putInt("duration3",720).putInt("opacity3",55).apply();
-        }
+        // Seed only absent values; opening settings must never lower saved strength.
+        if(!draft.contains("duration3"))draft.edit().putInt("duration3",720).apply();
         draft.edit().putBoolean("refined37",true)
             .putBoolean("ripple40",Config.flag(draft,"ripple40",Config.flag(draft,"enabled",false)))
             .putInt("trail19",0)
@@ -56,7 +55,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  40",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  41",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -81,8 +80,11 @@ public final class SettingsActivity extends Activity {
         Switch enabled=new Switch(this);enabled.setText("Enable ripple");enabled.setTextColor(INK);
         enabled.setTextSize(17);enabled.setMinHeight(px(52));enabled.setChecked(cfg.ripple);
         enabled.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("ripple40",value).apply();changed();});settings.addView(enabled);
-        settings.addView(text("Soft white light follows the tapped row, then disappears. Stock letters and icons stay intact.",13,MUTED));
-        slider(settings,"Strength",15,85,Config.clamp(cfg.opacity,15,85),false);
+        settings.addView(text("Soft white light follows the tapped row, then disappears. Letter size, position and font stay intact.",13,MUTED));
+        slider(settings,"Ripple strength",15,100,cfg.rippleOpacity,false);
+        Switch tiles=new Switch(this);tiles.setText("Keep key tiles visible");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.tiles);
+        tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("tiles41",value).apply();changed();});settings.addView(tiles);
+        settings.addView(text("Tile faces stay visible while either effect is enabled, even between taps. Ripple softly dims idle letters and brightens them with each wave. With both effects off, your original Gboard theme is restored.",12,MUTED));
         slider(settings,"Duration",400,1100,Config.clamp(cfg.duration,400,1100),true);
 
         Button backgrounds=button("Background animations  +",false);controls.addView(backgrounds);
@@ -92,7 +94,8 @@ public final class SettingsActivity extends Activity {
         Switch backgroundOn=new Switch(this);backgroundOn.setText("Enable background animations");backgroundOn.setTextColor(INK);
         backgroundOn.setMinHeight(px(48));backgroundOn.setChecked(cfg.tapEffects);
         backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
-        backgroundPanel.addView(text("Optional tap effects behind the stock keys. Uses the same strength and duration. Works independently of Enable ripple. Off means no background effects; choosing a style never enables it.",12,MUTED));
+        backgroundPanel.addView(text("Optional tap effects behind the stock keys. Uses its own brightness and the shared duration. Works independently of Enable ripple. Off means no background effects; choosing a style never enables it.",12,MUTED));
+        backgroundStrength(backgroundPanel);
         Button effect=button("Animation · "+Config.EFFECTS[cfg.effect],false);
         effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation")
             .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index)->{
@@ -139,9 +142,18 @@ public final class SettingsActivity extends Activity {
             public void onProgressChanged(SeekBar b,int progress,boolean user){if(!user)return;int n=min+progress;
                 label.setText(name+"  ·  "+n+(duration?" ms":"%"));
                 if(duration){cfg.duration=n;draft.edit().putInt("duration3",n).apply();}
-                else{cfg.opacity=n;draft.edit().putInt("opacity3",n).apply();}changed();}
+                else{cfg.rippleOpacity=n;draft.edit().putInt("rippleStrength41",n).apply();}changed();}
             public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
         });parent.addView(bar);
+    }
+    private void backgroundStrength(LinearLayout panel){
+        TextView label=text("Background brightness · "+cfg.backgroundOpacity+"%",14,INK);panel.addView(label);
+        SeekBar bar=new SeekBar(this);bar.setMax(95);bar.setProgress(cfg.backgroundOpacity-5);bar.setMinimumHeight(px(48));bar.setContentDescription("Background brightness");
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int n,boolean user){if(!user)return;
+                label.setText("Background brightness · "+(n+5)+"%");draft.edit().putInt("backgroundStrength41",n+5).apply();changed();}
+            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
+        });panel.addView(bar);
     }
     private void hueControl(LinearLayout panel,String title,String key,boolean primary){
         TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);panel.addView(value);
@@ -263,12 +275,13 @@ public final class SettingsActivity extends Activity {
             int save=canvas.save();canvas.clipRect(play);
             fx.drawFields(canvas,play,now);
             for(int row=0;row<rows.length;row++)for(int k=0;k<rows[row].length;k++){
-                keyRect(row,k);key.setColor(0xff303538);canvas.drawRoundRect(rect,6*dp,6*dp,key);
+                keyRect(row,k);key.setColor(0xff303538);if(cfg.tiles)canvas.drawRoundRect(rect,6*dp,6*dp,key);
                 float amount=sideActive?SideSweep.glowAt(rect.centerX(),(int)rect.top,dp,true):0;
                 BorderFade fade=fades[row][k];
                 if(!cfg.ripple)fade.clear();
                 amount=fade.advance(amount,now);active|=fade.active();
-                ripple.draw(canvas,rect,dp,amount,cfg.opacity/100f,6*dp);
+                ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp);
+                label.setColor(cfg.ripple?LegendTint.color(INK,amount):INK);
                 label.setTextSize((row==3?11:13)*dp);
                 canvas.drawText(rows[row][k],rect.centerX(),rect.centerY()-(label.ascent()+label.descent())/2,label);
             }
