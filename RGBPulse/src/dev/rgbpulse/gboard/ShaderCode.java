@@ -51,7 +51,24 @@ final class ShaderCode {
         "            float a=1.0-pow(1.0-age,2.0);\n" +
         "            float envelope=smoothstep(0.0,.055,age)*(1.0-smoothstep(.30,1.0,age));\n" +
         "            float3 color=float3(0.0);float intensity=0.0;\n" +
-        "            if(style<.5) {\n" +
+        "            if(style>11.5) {\n" +
+        "                // Material-inspired tonal light: broad surfaces, restrained detail.\n" +
+        "                float R=.035+.82*age;\n" +
+        "                float d=r-R;\n" +
+        "                color=palette(age*.16,taps[i].w);\n" +
+        "                envelope=softEase(age/.10)*(1.0-softEase((age-.45)/.55));\n" +
+        "                if(style<12.5) {\n" +
+        "                    // Material bloom: soft raised-surface illumination with a thin edge.\n" +
+        "                    intensity=.50*(1.0-smoothstep(max(0.0,R-.16),R+.06,r))+.22*crest(d,.025);\n" +
+        "                } else if(style<13.5) {\n" +
+        "                    // Diffused ring: feathered halo without a hard neon core.\n" +
+        "                    intensity=.65*crest(d,.065)+.16*crest(d,.15);\n" +
+        "                } else {\n" +
+        "                    // Tonal orbit: quiet broad arc, rotating once with a subtle full ring.\n" +
+        "                    float arc=.5+.5*cos(angle-age*3.14159);\n" +
+        "                    intensity=crest(d,.045)*(.20+.55*arc)+.12*crest(d,.12);\n" +
+        "                }\n" +
+        "            } else if(style<.5) {\n" +
         "                // Exact v5 Hologram tiles field, including original lifetime curve.\n" +
         "                float2 grid=p*8.0;\n" +
         "                float row=floor(grid.y/.8660254);\n" +

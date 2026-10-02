@@ -26,7 +26,7 @@ public final class Fx {
         init();
         if(fields==null||fields.issue()!=null)return; // Never resurrect a removed effect as fallback.
         int style=cfg.effect;
-        if(style==Config.LIQUID_SHUFFLE)style=1+rnd.nextInt(Config.GPU_COUNT-1);
+        if(style==Config.LIQUID_SHUFFLE){style=1+rnd.nextInt(Config.GPU_COUNT-2);if(style>=Config.LIQUID_SHUFFLE)style++;}
         float hue;
         if(cfg.colorMode==1)hue=rnd.nextFloat()*360;
         else if(cfg.colorMode==4)hue=(x-play.left)/Math.max(1,play.width())*360;

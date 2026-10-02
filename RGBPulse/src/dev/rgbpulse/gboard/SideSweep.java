@@ -8,7 +8,7 @@ final class SideSweep {
   float originX, originXParent;
   int rowTop, rowTopParent;
   long start;
-  float radius, progress;
+  float radius, progress;int style;
   Wave(float xp,int tp,long now,float xb,int tb){originXParent=xp;rowTopParent=tp;originX=xb;rowTop=tb;start=now;radius=0;}
  }
  static final List<Wave> waves=new ArrayList<Wave>();
@@ -55,6 +55,7 @@ final class SideSweep {
   synchronized(waves){
    if(waves.isEmpty())return;
    for(Wave w:waves){
+    w.style=cfg.rippleStyle;
     w.progress=WavePolicy.progress(now-w.start,cfg.duration);
     float maxToEdge=Math.max(w.originX-play.left,play.right-w.originX);
     w.radius=WavePolicy.radius(w.progress,Math.max(maxToEdge,play.width()*.60f));
@@ -81,7 +82,7 @@ final class SideSweep {
     Wave w=waves.get(i);
     int rt=body?w.rowTop:w.rowTopParent;
     float origin=body?w.originX:w.originXParent;
-    best=Math.max(best,WavePolicy.glow(cx,top,origin,rt,w.radius,dp,w.progress));
+    best=Math.max(best,WavePolicy.glowStyle(cx,top,origin,rt,w.radius,dp,w.progress,w.style));
    }
    return best;
   }

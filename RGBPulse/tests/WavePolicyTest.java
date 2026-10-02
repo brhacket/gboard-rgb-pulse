@@ -22,14 +22,12 @@ public final class WavePolicyTest {
                 if(!Float.isFinite(alpha)||alpha<0||alpha>1)throw new AssertionError("Unbounded opacity");
             }
         }
-        // Cubic ease-out must continuously decelerate and stop without overshoot.
-        float previous=0,previousDelta=Float.MAX_VALUE;
-        for(int step=1;step<=100;step++){
-            float r=WavePolicy.radius(step/100f,300),delta=r-previous;
-            if(delta<0||delta>previousDelta+.001f||r>300)throw new AssertionError("Not ease-out");
-            previous=r;previousDelta=delta;
+        // Ripple movement is linear at every progress sample, independent of fade.
+        for(int step=0;step<=100;step++)equal(step*3,WavePolicy.radius(step/100f,300));
+        for(int style=0;style<4;style++)for(int step=0;step<=100;step++){
+            float value=WavePolicy.glowStyle(100,0,0,0,WavePolicy.radius(step/100f,300),1,step/100f,style);
+            if(!Float.isFinite(value)||value<0||value>1)throw new AssertionError("Invalid style opacity");
         }
-        if(previousDelta>.001f)throw new AssertionError("Non-zero terminal velocity");
         // Traveling front lights a neighboring key, then leaves it dark.
         if(glow(WavePolicy.radius(.2f,300),0,.2f)<.8f)throw new AssertionError("Missing wavefront");
         equal(0,glow(100,0,.8f));

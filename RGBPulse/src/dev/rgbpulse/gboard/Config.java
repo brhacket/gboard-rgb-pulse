@@ -6,18 +6,22 @@ public final class Config {
     public static final String PREFS = "settings";
     public static final String[] EFFECTS = {"Hologram tiles", "Neon halo", "Liquid glass", "Aurora ring",
         "Liquid metaballs", "Gradient bloom", "Prism ring", "Sonar pulse", "Silk wave",
-        "Plasma burst", "Dual orbit", "Shuffle modern waves"};
-    public static final int GPU_COUNT = 11, LIQUID_SHUFFLE = 11;
+        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit"};
+    public static final int GPU_COUNT = 15, LIQUID_SHUFFLE = 11;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
     public boolean ripple = false;
+    public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse"};
+    public int rippleStyle=0,borderTenths=10;
+    public int rippleActive=0xffd0bcff,rippleInactive=0xff49454f;
+    public int letterActive=0xfff5efff,letterInactive=0xffb7b2be;
     public boolean tiles = true;
     public int rippleOpacity=70, backgroundOpacity=90;
     public boolean refined = false;
-    public int effect = 0, colorMode = 0;
-    public int hue1 = 290, hue2 = 190, sat = 100;
+    public int effect = 12, colorMode = 2;
+    public int hue1 = 270, hue2 = 195, sat = 30;
     public int opacity = 90, duration = 1700, size = 120, thickness = 100;
     public int layer = 0;
     public int accentColor=0xffa6f0c6,tileColor=0xfff5f5f3,trailStyle=0,trailWidth=2,trailLife=420,sideStyle=0;
@@ -34,6 +38,12 @@ public final class Config {
         try {
             c.refined = flag(p,"refined37",false);
             c.tiles=flag(p,"tiles41",true);
+            c.rippleStyle=clamp(number(p,"rippleStyle42",0),0,RIPPLES.length-1);
+            c.borderTenths=clamp(number(p,"borderWidth42",10),5,30);
+            c.rippleActive=number(p,"rippleActive42",c.rippleActive)|0xff000000;
+            c.rippleInactive=number(p,"rippleInactive42",c.rippleInactive)|0xff000000;
+            c.letterActive=number(p,"letterActive42",c.letterActive)|0xff000000;
+            c.letterInactive=number(p,"letterInactive42",c.letterInactive)|0xff000000;
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);

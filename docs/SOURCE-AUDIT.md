@@ -211,3 +211,27 @@ On-device rendering scope, native key themes, startup timing and performance
 remain unverified here. In particular, custom Gboard render paths may not use
 hooked Canvas text calls. These changes are not a claim that every dimming or
 startup variation has been reproduced and eliminated.
+
+
+## Material-tonal controls and expanded effects (42.0 test)
+
+- Ripple radius is strictly linear in progress. Per-key opacity attack/release is
+  unchanged. Row flow, Soft echo, Wide glow and Touch pulse have bounded intensity.
+- Four independent opaque colors cover active/inactive borders and letters.
+  Border width is 0.5–3dp. Every color row has a swatch; the picker previews the
+  candidate with hex input and tonal presets before Use in draft. Background hue
+  controls show their selected colors and the mode's palette. Apply is still required.
+- Added Material bloom, Diffused ring and Tonal orbit shaders at IDs 12–14, leaving
+  legacy IDs and shuffle ID 11 intact. Shuffle excludes its reserved ID. Fresh
+  defaults prefer a soft lavender Material bloom; existing saved selections remain.
+- Native letter tint now uses the requested state colors, handles drawGlyphs,
+  overrides copied shader/color filters, and includes a reversible TextView color
+  adapter for cached legends. It never replaces fonts, glyph positions or reads
+  editor text. Tests exercise the adapter with compile-only Android stubs, not a
+  device, including disable/detach and native theme updates.
+- Shader validation covers all 14 actual programs, including new effects.
+
+Visual fit, color contrast chosen by the user, native glyph caching paths, and
+Gboard framework behavior still require device checks. Material-inspired here
+means restrained tonal palettes, low-detail lighting and rounded controls—not a
+claim of Material library certification or a visually verified Android screenshot.

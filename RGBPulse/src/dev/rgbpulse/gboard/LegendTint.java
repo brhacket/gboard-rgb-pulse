@@ -2,6 +2,13 @@ package dev.rgbpulse.gboard;
 
 /** RGB-only tint: preserves native text opacity, size and shaping. */
 final class LegendTint {
+    static int color(int original,float wave,int inactive,int active){
+        float t=Math.max(0,Math.min(1,wave));
+        int r=Math.round(((inactive>>>16)&255)*(1-t)+((active>>>16)&255)*t);
+        int g=Math.round(((inactive>>>8)&255)*(1-t)+((active>>>8)&255)*t);
+        int b=Math.round((inactive&255)*(1-t)+(active&255)*t);
+        return (original&0xff000000)|(r<<16)|(g<<8)|b;
+    }
     static int color(int original,float wave){
         wave=Math.max(0,Math.min(1,wave));
         int r=(original>>>16)&255,g=(original>>>8)&255,b=original&255;

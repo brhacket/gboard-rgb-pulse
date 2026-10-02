@@ -63,7 +63,7 @@ final class KeyStyle {
         Set<Method> methods=new HashSet<Method>();
         for(String name:new String[]{"android.graphics.Canvas","android.graphics.BaseCanvas","android.graphics.BaseRecordingCanvas","android.graphics.RecordingCanvas"}) {
             try { for(Method m:Class.forName(name).getDeclaredMethods()) {
-                if(!(m.getName().equals("drawText")||m.getName().equals("drawTextRun")))continue;
+                if(!(m.getName().equals("drawText")||m.getName().equals("drawTextRun")||m.getName().equals("drawGlyphs")))continue;
                 Class<?>[] args=m.getParameterTypes();
                 if(args.length==0 || args[args.length-1]!=Paint.class || !methods.add(m))continue;
                 XposedBridge.hookMethod(m,new XC_MethodHook(){
@@ -148,10 +148,11 @@ final class KeyStyle {
         Integer depth=textDepth.get();
         if(!cfg.enabled||!cfg.ripple||layer==null||(depth!=null&&depth>0))return;
         Paint original=(Paint)p.args[p.args.length-1];
-        if(original==null||original.getShader()!=null)return; // Preserve native gradient/color-glyph paints.
+        if(original==null)return;
         // No text extraction, repositioning, font substitution or original-Paint mutation.
         layer.legendPaint.set(original);
-        layer.legendPaint.setColor(LegendTint.color(original.getColor(),layer.fade.value()));
+        layer.legendPaint.setShader(null);layer.legendPaint.setColorFilter(null);
+        layer.legendPaint.setColor(LegendTint.color(original.getColor(),layer.fade.value(),cfg.letterInactive,cfg.letterActive));
         p.setObjectExtra("refinedTint",true);p.setObjectExtra("refinedOriginalPaint",original);
         textDepth.set(1);p.args[p.args.length-1]=layer.legendPaint;
     }
@@ -209,7 +210,7 @@ final class KeyStyle {
         for(Iterator<Map.Entry<View,RippleOverlay>> it=overlays.entrySet().iterator();it.hasNext();){
             Map.Entry<View,RippleOverlay> entry=it.next();View key=entry.getKey();
             if(!keys.contains(key)){
-                key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
+                entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
                 if(originals.containsKey(key)){Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);}
                 invalidateTree(key);it.remove();
             }
@@ -221,6 +222,7 @@ final class KeyStyle {
                 XposedHelpers.setAdditionalInstanceField(key,TAG,this);hookRefinedDraw(key);invalidateTree(key);
             }
             layer.setBounds(0,0,key.getWidth(),key.getHeight());
+            layer.labels.bind(key);layer.labels.apply(cfg,layer.fade.value());
             if(cfg.tiles && !(key.getBackground() instanceof Glass)){
                 originals.put(key,key.getBackground());setBackground(key,new Glass(key,layer.dp,key.getBackground(),true));
             }else if(!cfg.tiles && originals.containsKey(key)){
@@ -231,7 +233,7 @@ final class KeyStyle {
     }
     private void clearOverlays(){
         for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet()){
-            View key=entry.getKey();key.getOverlay().remove(entry.getValue());
+            View key=entry.getKey();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());
             XposedHelpers.removeAdditionalInstanceField(key,TAG);invalidateTree(key);
         }
         overlays.clear();
@@ -239,28 +241,30 @@ final class KeyStyle {
     boolean advanceRipples(long now){
         boolean active=false;
         for(RippleOverlay layer:overlays.values()){
-            if(!cfg.ripple){layer.fade.clear();continue;}
+            if(!cfg.ripple){layer.fade.clear();layer.labels.restore();continue;}
             layer.fade.advance(SideSweep.activeRow?SideSweep.computeGlowAlpha(layer.key,layer.dp):0,now);
+            layer.labels.apply(cfg,layer.fade.value());
             active|=layer.fade.active();
         }
         return active;
     }
-    void clearRippleFades(){for(RippleOverlay layer:overlays.values())layer.fade.clear();}
+    void clearRippleFades(){for(RippleOverlay layer:overlays.values()){layer.fade.clear();layer.labels.apply(cfg,0);}}
     void refreshRipples(){for(RippleOverlay layer:overlays.values()){layer.invalidateSelf();invalidateTree(layer.key);}}
     static final class RippleOverlay extends Drawable {
         final View key;final float dp;
         final RipplePaint ripple=new RipplePaint();final RectF bounds=new RectF();
         final BorderFade fade=new BorderFade();
         final Paint legendPaint=new Paint();
+        final NativeLegends labels=new NativeLegends();
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
             if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
             bounds.set(0,0,key.getWidth(),key.getHeight());
-            ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp);
+            ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
         }
         @Override public void setAlpha(int value){alpha=value;invalidateSelf();}
-        @Override public void setColorFilter(ColorFilter filter){} // White-only effect.
+        @Override public void setColorFilter(ColorFilter filter){} // State colors are controlled by settings.
         @Override public int getOpacity(){return PixelFormat.TRANSLUCENT;}
     }
 

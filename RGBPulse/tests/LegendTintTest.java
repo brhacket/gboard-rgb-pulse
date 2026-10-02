@@ -17,6 +17,9 @@ public final class LegendTintTest {
         check(LegendTint.color(0xff111111,1)==0xff000000);
         check((LegendTint.color(0xff111111,0)&255)<50); // no white text on a light native theme
         check(LegendTint.color(original,-1)==idle&&LegendTint.color(original,2)==active);
+        check(LegendTint.color(0x7fabcdef,0,0xff112233,0xffddeeff)==0x7f112233);
+        check(LegendTint.color(0x7fabcdef,1,0xff112233,0xffddeeff)==0x7fddeeff);
+        check(LegendTint.color(0xff000000,.5f,0xff000000,0xffffffff)==0xff808080);
         System.out.println("PASS: subtle idle tint, monotonic ripple tint, native alpha and light-theme contrast preserved");
     }
 }

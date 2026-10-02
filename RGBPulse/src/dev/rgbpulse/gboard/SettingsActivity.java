@@ -20,6 +20,7 @@ public final class SettingsActivity extends Activity {
     private float dp;
     private boolean hooked, saving;
     private TextView state, shaderStatus;
+    private View backgroundPalette;
     private Button apply;
     private Preview preview;
     private LinearLayout controls;
@@ -55,7 +56,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  41",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  42",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -80,12 +81,28 @@ public final class SettingsActivity extends Activity {
         Switch enabled=new Switch(this);enabled.setText("Enable ripple");enabled.setTextColor(INK);
         enabled.setTextSize(17);enabled.setMinHeight(px(52));enabled.setChecked(cfg.ripple);
         enabled.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("ripple40",value).apply();changed();});settings.addView(enabled);
-        settings.addView(text("Soft white light follows the tapped row, then disappears. Letter size, position and font stay intact.",13,MUTED));
+        settings.addView(text("Constant-speed color travels across the tapped row. Letter size, position and font stay intact.",13,MUTED));
         slider(settings,"Ripple strength",15,100,cfg.rippleOpacity,false);
         Switch tiles=new Switch(this);tiles.setText("Keep key tiles visible");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.tiles);
         tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("tiles41",value).apply();changed();});settings.addView(tiles);
         settings.addView(text("Tile faces stay visible while either effect is enabled, even between taps. Ripple softly dims idle letters and brightens them with each wave. With both effects off, your original Gboard theme is restored.",12,MUTED));
         slider(settings,"Duration",400,1100,Config.clamp(cfg.duration,400,1100),true);
+        Button rippleStyle=button("Ripple · "+Config.RIPPLES[cfg.rippleStyle],false);
+        rippleStyle.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Ripple effect")
+            .setSingleChoiceItems(Config.RIPPLES,cfg.rippleStyle,(dialog,index)->{
+                draft.edit().putInt("rippleStyle42",index).apply();rippleStyle.setText("Ripple · "+Config.RIPPLES[index]);changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());settings.addView(rippleStyle);
+        Button appearance=button("Ripple colors & border  +",false);controls.addView(appearance);
+        LinearLayout appearancePanel=card(controls);appearancePanel.setVisibility(View.GONE);
+        appearance.setOnClickListener(v->{boolean open=appearancePanel.getVisibility()!=View.VISIBLE;
+            appearancePanel.setVisibility(open?View.VISIBLE:View.GONE);appearance.setText(open?"Ripple colors & border  −":"Ripple colors & border  +");});
+        appearancePanel.addView(text("Active = during the wave. Inactive = between taps. Letters and borders share a gradual fade, with independent colors. Choose colors with readable contrast against your key tiles.",12,MUTED));
+        borderWidth(appearancePanel);
+        colorControl(appearancePanel,"Border · active","rippleActive42",cfg.rippleActive);
+        colorControl(appearancePanel,"Border · inactive","rippleInactive42",cfg.rippleInactive);
+        colorControl(appearancePanel,"Letters · active","letterActive42",cfg.letterActive);
+        colorControl(appearancePanel,"Letters · inactive","letterInactive42",cfg.letterInactive);
+
 
         Button backgrounds=button("Background animations  +",false);controls.addView(backgrounds);
         LinearLayout backgroundPanel=card(controls);backgroundPanel.setVisibility(View.GONE);
@@ -106,6 +123,7 @@ public final class SettingsActivity extends Activity {
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
                 cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Color mode · "+Config.COLORS[index]);changed();dialog.dismiss();
             }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(colors);
+        backgroundPalette=new View(this);backgroundPalette.setContentDescription("Background palette preview");backgroundPanel.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
         hueControl(backgroundPanel,"Primary hue","hue1",true);
         hueControl(backgroundPanel,"Secondary hue","hue2",false);
 
@@ -146,6 +164,54 @@ public final class SettingsActivity extends Activity {
             public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
         });parent.addView(bar);
     }
+    private void borderWidth(LinearLayout panel){
+        TextView value=text("Border width · "+cfg.borderTenths/10f+" dp",14,INK);panel.addView(value);
+        SeekBar bar=new SeekBar(this);bar.setMax(25);bar.setProgress(cfg.borderTenths-5);bar.setMinimumHeight(px(48));bar.setContentDescription("Border width");
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int n,boolean user){if(!user)return;
+                value.setText("Border width · "+(n+5)/10f+" dp");draft.edit().putInt("borderWidth42",n+5).apply();changed();}
+            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
+        });panel.addView(bar);
+    }
+    private String hex(int color){return String.format(java.util.Locale.ROOT,"#%06X",color&0xffffff);}
+    private void swatch(TextView view,int color){
+        GradientDrawable chip=background(color,8);chip.setSize(px(28),px(28));chip.setStroke(px(1),0xff818781);
+        view.setCompoundDrawablesWithIntrinsicBounds(chip,null,null,null);view.setCompoundDrawablePadding(px(12));
+    }
+    private void colorControl(LinearLayout panel,String title,String key,int fallback){
+        Button select=button(title+"  "+hex(Config.number(draft,key,fallback)),false);swatch(select,Config.number(draft,key,fallback));
+        select.setOnClickListener(v->colorDialog(title,key,fallback,select));panel.addView(select);
+    }
+    private void colorDialog(String title,String key,int fallback,Button select){
+        LinearLayout content=new LinearLayout(this);content.setOrientation(1);content.setPadding(px(22),px(12),px(22),px(12));
+        TextView sample=text("Aa  ·  Color preview",22,INK);sample.setBackground(background(CARD,12));sample.setPadding(px(16),px(14),px(16),px(14));content.addView(sample);
+        EditText input=new EditText(this);input.setSingleLine(true);input.setHint("#RRGGBB");input.setText(hex(Config.number(draft,key,fallback)));content.addView(input);
+        LinearLayout palette=new LinearLayout(this);content.addView(palette);
+        for(int color:new int[]{0xffd0bcff,0xffa8c7fa,0xffa8dab5,0xffffb4ab,0xfff5efff,0xff49454f}){
+            Button chip=button("●",false);chip.setTextColor(color);chip.setContentDescription("Use "+hex(color));
+            chip.setOnClickListener(v->input.setText(hex(color)));palette.addView(chip,new LinearLayout.LayoutParams(0,px(48),1));
+        }
+        final int[] candidate={Config.number(draft,key,fallback)};sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);
+        input.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
+                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString());sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}}
+            public void afterTextChanged(android.text.Editable e){}
+        });
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Use in draft",null).setNegativeButton("Cancel",null).create();
+        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
+            if(!input.getText().toString().matches("#[0-9a-fA-F]{6}")){input.setError("Enter #RRGGBB");return;}
+            draft.edit().putInt(key,candidate[0]).apply();select.setText(title+"  "+hex(candidate[0]));swatch(select,candidate[0]);changed();dialog.dismiss();
+        }));dialog.show();
+    }
+    private void updatePalette(){
+        if(backgroundPalette==null)return;
+        int first=Color.HSVToColor(new float[]{cfg.hue1,cfg.sat/100f,1}),second=Color.HSVToColor(new float[]{cfg.hue2,cfg.sat/100f,1});
+        int[] colors;
+        if(cfg.colorMode==2)colors=new int[]{first,first};
+        else if(cfg.colorMode==3)colors=new int[]{first,second};
+        else{colors=new int[7];for(int i=0;i<7;i++)colors[i]=Color.HSVToColor(new float[]{i*60,cfg.sat/100f,1});}
+        GradientDrawable palette=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,colors);palette.setCornerRadius(px(8));backgroundPalette.setBackground(palette);
+    }
     private void backgroundStrength(LinearLayout panel){
         TextView label=text("Background brightness · "+cfg.backgroundOpacity+"%",14,INK);panel.addView(label);
         SeekBar bar=new SeekBar(this);bar.setMax(95);bar.setProgress(cfg.backgroundOpacity-5);bar.setMinimumHeight(px(48));bar.setContentDescription("Background brightness");
@@ -157,16 +223,17 @@ public final class SettingsActivity extends Activity {
     }
     private void hueControl(LinearLayout panel,String title,String key,boolean primary){
         TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);panel.addView(value);
+        swatch(value,Color.HSVToColor(new float[]{primary?cfg.hue1:cfg.hue2,cfg.sat/100f,1}));
         SeekBar hue=new SeekBar(this);hue.setMax(360);hue.setProgress(primary?cfg.hue1:cfg.hue2);hue.setMinimumHeight(px(48));hue.setContentDescription(title);
         hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar bar,int progress,boolean user){if(!user)return;
                 if(primary)cfg.hue1=progress;else cfg.hue2=progress;
-                value.setText(title+" · "+progress+"°");draft.edit().putInt(key,progress).apply();changed();}
+                value.setText(title+" · "+progress+"°");swatch(value,Color.HSVToColor(new float[]{progress,cfg.sat/100f,1}));draft.edit().putInt(key,progress).apply();changed();}
             public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}
         });panel.addView(hue);
     }
     private void changed(){
-        cfg=Config.from(draft);preview.fx.cfg=cfg;
+        cfg=Config.from(draft);preview.fx.cfg=cfg;updatePalette();
         preview.fx.clear();preview.clearFades();preview.invalidate();updateState();
     }
     private void updateState(){
@@ -280,13 +347,13 @@ public final class SettingsActivity extends Activity {
                 BorderFade fade=fades[row][k];
                 if(!cfg.ripple)fade.clear();
                 amount=fade.advance(amount,now);active|=fade.active();
-                ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp);
-                label.setColor(cfg.ripple?LegendTint.color(INK,amount):INK);
+                if(cfg.ripple)ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
+                label.setColor(cfg.ripple?LegendTint.color(INK,amount,cfg.letterInactive,cfg.letterActive):INK);
                 label.setTextSize((row==3?11:13)*dp);
                 canvas.drawText(rows[row][k],rect.centerX(),rect.centerY()-(label.ascent()+label.descent())/2,label);
             }
             canvas.restoreToCount(save);removeCallbacks(tick);
-            if(shaderStatus!=null&&fx.shaderIssue()!=null){shaderStatus.setText("Background shader unavailable on this device; the white ripple still works.");shaderStatus.setVisibility(View.VISIBLE);}
+            if(shaderStatus!=null&&fx.shaderIssue()!=null){shaderStatus.setText("Background shader unavailable on this device; the key ripple still works.");shaderStatus.setVisibility(View.VISIBLE);}
             if(running&&isShown()&&active)postOnAnimation(tick);
         }
         @Override protected void onDetachedFromWindow(){stop();super.onDetachedFromWindow();}

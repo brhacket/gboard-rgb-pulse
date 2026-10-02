@@ -7,7 +7,8 @@ from PIL import Image,ImageDraw
 ROOT=Path(__file__).resolve().parents[1]
 src=(ROOT/'shaders/field.agsl').read_text()
 effect=skia.RuntimeEffect.MakeForShader(src)
-names=['hologram','neon','glass','aurora','metaballs','bloom','prism','sonar','silk','plasma','orbit']
+names=['hologram','neon','glass','aurora','metaballs','bloom','prism','sonar','silk','plasma','orbit','shuffle-reserved','material-bloom','diffused-ring','tonal-orbit']
+styles=list(range(11))+[12,13,14]
 W,H=360,171
 
 def render(style,age,mode=3,origins=None,opacity=.9,phase=.4,size=1.1,w=W,h=H,padded=False,fx=None,special=False,thickness=1.0):
@@ -22,7 +23,7 @@ def render(style,age,mode=3,origins=None,opacity=.9,phase=.4,size=1.1,w=W,h=H,pa
     return surface.makeImageSnapshot().toarray(colorType=skia.ColorType.kRGBA_8888_ColorType)
 
 checks=0
-for style in range(11):
+for style in styles:
     for mode in range(5):
         for age in [-1,0,.03,.2,.5,.85,1]:
             ar=render(style,age,mode,padded=True)
@@ -36,7 +37,7 @@ for style in range(11):
     assert ar[:,:,3].max()>40;checks+=1
 print('PASS:',checks,'field/alpha/clip assertions')
 
-for style in range(11):
+for style in styles:
     special=skia.RuntimeEffect.MakeForShader(src.replace('uniform float style;',f'const float style={style}.0;'))
     ar=render(style,.35,fx=special,special=True)
     assert ar[:,:,3].max()>10
@@ -44,7 +45,7 @@ for style in range(11):
         for x,y in [(2,2),(W-2,2),(2,H-2),(W-2,H-2),(W/2,H/2)]:
             ar=render(style,.35,size=size,origins=[(x,y,.35,.7)],padded=True,fx=special,special=True)
             assert not ar[:6].any() and not ar[-6:].any() and not ar[:,:6].any() and not ar[:,-6:].any()
-print('PASS: 11 specialized programs + 110 edge/size clipping assertions')
+print('PASS: 14 specialized programs + 140 edge/size clipping assertions')
 
 # Verify fronts actually travel outwards, not just pulse opacity at fixed coordinates.
 w=h=256
@@ -86,7 +87,8 @@ def add_keys(bg):
     d.rounded_rectangle((90,129,270,165),radius=6,fill=(45,47,59),outline=(57,59,70))
     d.text((180,147),'space',anchor='mm',fill=(239,236,245),font_size=13)
     return bg
-for style,name in enumerate(names):
+for style in styles:
+    name=names[style]
     ages=[.16,.35,.52] if '--stills' in sys.argv else [(i+1)/33 for i in range(32)]
     frames=[]
     for age in ages:
@@ -95,8 +97,9 @@ for style,name in enumerate(names):
         frames.append(add_keys(bg).convert('RGB'))
     frames[len(frames)//3].save(folder/(name+'.png'))
     if '--stills' not in sys.argv:frames[0].save(folder/(name+'.gif'),save_all=True,append_images=frames[1:],duration=56,loop=0)
-review=Image.new('RGB',(W*3,(H+24)*4),(14,15,22));d=ImageDraw.Draw(review)
-for idx,name in enumerate(names):
+review=Image.new('RGB',(W*3,(H+24)*5),(14,15,22));d=ImageDraw.Draw(review)
+for idx,style in enumerate(styles):
+    name=names[style]
     x=(idx%3)*W;y=(idx//3)*(H+24)
     review.paste(Image.open(folder/(name+'.png')),(x,y));d.text((x+7,y+H+4),name,fill='white')
 review.save(folder/'review.jpg')

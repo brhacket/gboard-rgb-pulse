@@ -15,7 +15,7 @@ public final class ConfigTest {
         p.put("enabled",true);p.put("tapFx6","corrupt");p.put("duration3",800);
         p.put("fontData9",null);p.put("debug3",true);
         Config c=Config.from(p);
-        check(c.enabled&&c.effect==0&&c.duration==800&&c.debug&&c.fontData.equals(""));
+        check(c.enabled&&c.effect==12&&c.duration==800&&c.debug&&c.fontData.equals(""));
         p.put("refined37",true);p.put("tapEffects36",true);p.put("font11",8);
         p.put("duration3",3500);p.put("opacity3",100);p.put("trail19",3);
         c=Config.from(p);
@@ -45,6 +45,9 @@ public final class ConfigTest {
         p.put("tiles41",true);check(Config.from(p).tiles);
         p.remove("rippleStrength41");p.remove("backgroundStrength41");
         c=Config.from(p);check(c.rippleOpacity==70&&c.backgroundOpacity==90); // no hidden legacy dim
+        p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
+        c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
+        check(Config.EFFECTS[11].equals("Shuffle modern waves")&&Config.EFFECTS.length==15);
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

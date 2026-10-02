@@ -75,9 +75,17 @@ assert 'Ripple strength' in ui and 'Background brightness' in ui
 assert 'Keep key tiles visible' in ui and 'putBoolean("tiles41",value)' in ui
 assert 'cfg.refined?cfg.backgroundOpacity:cfg.opacity' in (src/'FieldFx.java').read_text()
 assert 'cfg.rippleOpacity/100f' in ui and 'cfg.rippleOpacity/100f' in key
-assert 'LegendTint.color' in ui and 'LegendTint.color(original.getColor(),layer.fade.value())' in key
+assert 'LegendTint.color' in ui and 'LegendTint.color(original.getColor(),layer.fade.value(),cfg.letterInactive,cfg.letterActive)' in key
 assert 'original.setColor' not in key
 assert 'refinedOriginalPaint' in key and 'refinedPreviousScope' in key
 assert 'if(stable)return;' in key
 assert 'Paint.Style.FILL' not in (src/'RipplePaint.java').read_text()
 print('PASS: independent brightness, stable tiles and scoped native text tint without face wash')
+
+assert 'Border width' in ui and 'colorControl(appearancePanel,"Letters · inactive"' in ui
+assert 'swatch(select,candidate[0])' in ui and 'updatePalette()' in ui
+assert 'm.getName().equals("drawGlyphs")' in key and 'layer.labels.apply' in key
+assert 'width*dp' in (src/'RipplePaint.java').read_text()
+assert 'return p*travel' in (src/'WavePolicy.java').read_text()
+assert 'void restore()' in (src/'NativeLegends.java').read_text()
+print('PASS: linear movement, custom state colors, swatch previews and native legend fallbacks')

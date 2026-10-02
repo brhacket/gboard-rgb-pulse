@@ -32,6 +32,8 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/BorderFade.java test
 java -cp work/tests dev.rgbpulse.gboard.BorderFadeTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendTint.java tests/LegendTintTest.java
 java -cp work/tests dev.rgbpulse.gboard.LegendTintTest
+javac -encoding UTF-8 -cp work/tests -d work/tests tests/stubs/android/view/*.java tests/stubs/android/widget/*.java tests/stubs/android/content/res/*.java src/dev/rgbpulse/gboard/NativeLegends.java tests/NativeLegendsTest.java
+java -cp work/tests dev.rgbpulse.gboard.NativeLegendsTest
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py
 python3 tests/material_contract_test.py
