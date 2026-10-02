@@ -51,7 +51,34 @@ final class ShaderCode {
         "            float a=1.0-pow(1.0-age,2.0);\n" +
         "            float envelope=smoothstep(0.0,.055,age)*(1.0-smoothstep(.30,1.0,age));\n" +
         "            float3 color=float3(0.0);float intensity=0.0;\n" +
-        "            if(style>11.5) {\n" +
+        "            if(style>14.5) {\n" +
+        "                // Four non-radial / non-ring geometries, all anchored to the touch.\n" +
+        "                envelope=softEase(age/.12)*(1.0-softEase((age-.5)/.5));\n" +
+        "                color=palette(age*.2+p.y*.15,taps[i].w);\n" +
+        "                if(style<15.5){\n" +
+        "                    // Lateral sweep: two broad vertical light sheets travel sideways.\n" +
+        "                    float front=age*1.8;\n" +
+        "                    intensity=.72*crest(abs(p.x)-front,.11)*exp(-p.y*p.y/ .25);\n" +
+        "                }else if(style<16.5){\n" +
+        "                    // Soft spotlight: stationary elliptical pool; breathes, never a ring.\n" +
+        "                    float width=.14+.18*sin(age*3.14159);\n" +
+        "                    intensity=.8*exp(-(p.x*p.x*.55+p.y*p.y)/(width*width));\n" +
+        "                }else if(style<17.5){\n" +
+        "                    // Crossing ribbons: two diagonal bands separate with a gentle sway.\n" +
+        "                    float offset=.08+.7*age;\n" +
+        "                    float bend=.06*sin(p.x*4.0-age*3.0);\n" +
+        "                    float a1=crest(p.y-.48*p.x-offset+bend,.055);\n" +
+        "                    float a2=crest(p.y+.48*p.x+offset-bend,.055);\n" +
+        "                    intensity=.62*(a1+a2)*exp(-p.x*p.x/.9);\n" +
+        "                    color=palette(p.x*.35+age*.2,taps[i].w);\n" +
+        "                }else{\n" +
+        "                    // Rising curtain: a wide horizontal wash climbs above the touch.\n" +
+        "                    float front=-age*.95;\n" +
+        "                    float edge=crest(p.y-front,.13);\n" +
+        "                    float trail=exp(-max(0.0,p.y-front)*8.0)*smoothstep(front-.03,front+.03,p.y);\n" +
+        "                    intensity=(.6*edge+.22*trail)*exp(-p.x*p.x/.5);\n" +
+        "                }\n" +
+        "            } else if(style>11.5) {\n" +
         "                // Material-inspired tonal light: broad surfaces, restrained detail.\n" +
         "                float R=.035+.82*age;\n" +
         "                float d=r-R;\n" +

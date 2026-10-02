@@ -42,12 +42,16 @@ public final class ConfigTest {
         p.put("rippleStrength41",25);check(Config.from(p).backgroundOpacity==95);
         p.put("backgroundStrength41",35);check(Config.from(p).rippleOpacity==25);
         p.put("tiles41",false);check(!Config.from(p).tiles);
-        p.put("tiles41",true);check(Config.from(p).tiles);
+        p.put("tiles41",true);check(!Config.from(p).tiles&&Config.from(p).hideTiles);
+        p.put("hideTiles45",false);check(Config.from(p).tiles);
+        p.put("hideTiles45",true);p.put("ripple40",false);p.put("tapEffects36",false);
+        check(!Config.from(p).enabled); // hiding tiles never silently enables effects
+        for(int style=15;style<19;style++){p.put("tapFx6",style);check(Config.from(p).effect==style);}
         p.remove("rippleStrength41");p.remove("backgroundStrength41");
         c=Config.from(p);check(c.rippleOpacity==70&&c.backgroundOpacity==90); // no hidden legacy dim
         p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
         c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
-        check(Config.EFFECTS[11].equals("Shuffle modern waves")&&Config.EFFECTS.length==15);
+        check(Config.EFFECTS[11].equals("Shuffle modern waves")&&Config.EFFECTS.length==19);
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

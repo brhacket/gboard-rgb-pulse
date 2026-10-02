@@ -57,7 +57,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  44",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  45",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -84,9 +84,9 @@ public final class SettingsActivity extends Activity {
         enabled.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("ripple40",value).apply();changed();});settings.addView(enabled);
         settings.addView(text("Constant-speed color travels across the tapped row. Letter size, position and font stay intact.",13,MUTED));
         slider(settings,"Ripple strength",15,100,cfg.rippleOpacity,false);
-        Switch tiles=new Switch(this);tiles.setText("Keep key tiles visible");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.tiles);
-        tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("tiles41",value).apply();changed();});settings.addView(tiles);
-        settings.addView(text("Tile faces stay visible while either effect is enabled, even between taps. Ripple softly dims idle letters and brightens them with each wave. With both effects off, your original Gboard theme is restored.",12,MUTED));
+        Switch tiles=new Switch(this);tiles.setText("Hide all key tiles");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.hideTiles);
+        tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("hideTiles45",value).apply();changed();});settings.addView(tiles);
+        settings.addView(text("Removes native key backgrounds, module faces and key outlines while either effect is on. Ripple animates letters without boxes. With both effects off, your original Gboard theme is restored.",12,MUTED));
         slider(settings,"Duration",400,1100,Config.clamp(cfg.duration,400,1100),true);
         Button rippleStyle=button("Ripple · "+Config.RIPPLES[cfg.rippleStyle],false);
         rippleStyle.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Ripple effect")
@@ -112,10 +112,10 @@ public final class SettingsActivity extends Activity {
         Switch backgroundOn=new Switch(this);backgroundOn.setText("Enable background animations");backgroundOn.setTextColor(INK);
         backgroundOn.setMinHeight(px(48));backgroundOn.setChecked(cfg.tapEffects);
         backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
-        backgroundPanel.addView(text("Optional tap effects behind the stock keys. Uses its own brightness and the shared duration. Works independently of Enable ripple. Off means no background effects; choosing a style never enables it.",12,MUTED));
+        backgroundPanel.addView(text("Optional tap effects behind the letters. Uses its own brightness and the shared duration. Works independently of Enable ripple. Off means no background effects; choosing a style never enables it.",12,MUTED));
         backgroundStrength(backgroundPanel);
         Button effect=button("Animation · "+Config.EFFECTS[cfg.effect],false);
-        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation")
+        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation · distinct motion")
             .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index)->{
                 cfg.effect=index;draft.edit().putInt("tapFx6",index).apply();effect.setText("Animation · "+Config.EFFECTS[index]);changed();dialog.dismiss();
             }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);
@@ -369,7 +369,7 @@ public final class SettingsActivity extends Activity {
                 BorderFade fade=fades[row][k];
                 if(!cfg.ripple)fade.clear();
                 amount=fade.advance(amount,now);active|=fade.active();
-                if(cfg.ripple)ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
+                if(cfg.ripple&&!cfg.hideTiles)ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
                 label.setColor(cfg.ripple?LegendTint.color(INK,amount,cfg.letterInactive,cfg.letterActive):INK);
                 label.setTextSize((row==3?11:13)*dp);
                 canvas.drawText(rows[row][k],rect.centerX(),rect.centerY()-(label.ascent()+label.descent())/2,label);

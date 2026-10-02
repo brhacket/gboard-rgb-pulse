@@ -48,18 +48,18 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-44.0-test.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-45.0-test.apk
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-44.0-test.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-44.0-test.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-44.0-test.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-44.0-test.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-45.0-test.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-45.0-test.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-45.0-test.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-45.0-test.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-44.0-test.apk
+            Gboard-RGB-Pulse-45.0-test.apk
             APK-verification.txt
             SHA256SUMS.txt
       - name: Publish test download
@@ -67,15 +67,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'NOTES'
-          Settings delivery and all-off cleanup test build. Replaces cached world-readable preferences with UID-restricted private settings IPC. Settings are fetched off the UI thread, applied on the keyboard thread and acknowledged by revision. The editor distinguishes local saves from Gboard-confirmed settings. Notifications are restricted to module-signed senders. Stale replies cannot confirm a newer save. Failed reads disable module effects instead of retaining an old configuration.
+          Tileless keys and distinct motion test build. Hide all key tiles defaults on while effects are enabled: suppresses native background drawables on verified keys and their descendants, removes module faces and ripple boxes, and leaves letters/icons and touch targets in place. Tracks live theme replacements, restores recycled views and restores stock backgrounds when both effects are off. Backgrounds painted directly by a custom renderer rather than a View background may need further device-specific work.
 
-          All-off restores native backgrounds/letter colors, removes module overlays, invalidates key drawing caches and cancels effect/scan callbacks, including when the keyboard is hidden or no panel is bound. Adds a confirmed Turn everything off & apply action. Gboard’s own native press animation is intentionally left intact. No automatic demos or unconfirmed restarts.
+          Adds four visibly different background motions: Lateral sweep (sideways light sheets), Soft spotlight (stationary breathing pool), Crossing ribbons (diagonal bands), and Rising curtain (upward wash). Existing styles remain available; shuffle includes the new styles. All effects remain explicit Apply, with Gboard revision confirmation. No automatic demos or restarts.
 
-          **Installation:** Fresh test signing key: uninstall the previous module first (saved settings are lost), install, enable in LSPosed/Vector with Gboard in scope, and reboot once to unload old injected hooks. Open the module, use Turn everything off & apply, then open the real test keyboard and look for Gboard confirmed: all module effects off. Next enable your desired effects and Apply / restart > Save only. If NOT confirmed persists, do not treat the settings as applied. Check module scope and reopen Gboard. Keep a backup keyboard enabled.
+          **Installation:** Fresh signing key: uninstall the previous test module first (saved settings are lost), install v45, enable for Gboard in LSPosed/Vector and reboot once. Enable ripple and/or background animations, keep Hide all key tiles on, then Apply / restart > Save only. Wait for Gboard confirmation. Under Background animation select one of the four new styles. Keep a backup keyboard enabled.
 
-          Requires Android 13+ and LSPosed/Vector. Automated policy tests, desktop Skia shader checks, archive checks and APK signature verification are required before publication. Android cross-process delivery, device rendering and letter tint remain device-unverified. This build addresses concrete transport/cleanup faults; it does not claim a confirmed phone fix. Each CI build uses a fresh signing key.
+          Android 13+ required. Policy/source tests, desktop Skia checks (including distinct alpha geometry for the four new styles), Android compilation and APK signature/archive verification run before publication. These checks do not verify rendering on your phone. Gboard toolbar controls are intentionally untouched.
           NOTES
-          gh release create "test-44-${{ github.run_id }}-${{ github.run_attempt }}" \
-            Gboard-RGB-Pulse-44.0-test.apk APK-verification.txt SHA256SUMS.txt \
+          gh release create "test-45-${{ github.run_id }}-${{ github.run_attempt }}" \
+            Gboard-RGB-Pulse-45.0-test.apk APK-verification.txt SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false \
-            --title 'Gboard RGB Pulse 44.0 — test build' --notes-file release-notes.md
+            --title 'Gboard RGB Pulse 45.0 — test build' --notes-file release-notes.md

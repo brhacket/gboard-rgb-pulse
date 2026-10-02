@@ -6,8 +6,8 @@ public final class Config {
     public static final String PREFS = "settings";
     public static final String[] EFFECTS = {"Hologram tiles", "Neon halo", "Liquid glass", "Aurora ring",
         "Liquid metaballs", "Gradient bloom", "Prism ring", "Sonar pulse", "Silk wave",
-        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit"};
-    public static final int GPU_COUNT = 15, LIQUID_SHUFFLE = 11;
+        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit", "Lateral sweep", "Soft spotlight", "Crossing ribbons", "Rising curtain"};
+    public static final int GPU_COUNT = 19, LIQUID_SHUFFLE = 11;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
@@ -18,6 +18,7 @@ public final class Config {
     public int rippleActive=0xffd0bcff,rippleInactive=0xff49454f;
     public int letterActive=0xfff5efff,letterInactive=0xffb7b2be;
     public boolean tiles = true;
+    public boolean hideTiles = true;
     public int rippleOpacity=70, backgroundOpacity=90;
     public boolean refined = false;
     public int effect = 12, colorMode = 2;
@@ -37,7 +38,8 @@ public final class Config {
         if (p == null) return c;
         try {
             c.refined = flag(p,"refined37",false);
-            c.tiles=flag(p,"tiles41",true);
+            c.hideTiles=flag(p,"hideTiles45",true);
+            c.tiles=flag(p,"tiles41",true)&&!c.hideTiles;
             c.rippleStyle=clamp(number(p,"rippleStyle42",0),0,RIPPLES.length-1);
             c.borderTenths=clamp(number(p,"borderWidth42",10),5,30);
             c.rippleActive=number(p,"rippleActive42",c.rippleActive)|0xff000000;

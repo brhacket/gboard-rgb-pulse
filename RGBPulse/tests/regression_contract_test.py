@@ -72,7 +72,7 @@ print('PASS: independent applied toggles and shared per-key fade lifecycle')
 
 assert 'putInt("opacity3",55)' not in ui and 'if(!draft.contains("duration3"))' in ui
 assert 'Ripple strength' in ui and 'Background brightness' in ui
-assert 'Keep key tiles visible' in ui and 'putBoolean("tiles41",value)' in ui
+assert 'Hide all key tiles' in ui and 'putBoolean("hideTiles45",value)' in ui
 assert 'cfg.refined?cfg.backgroundOpacity:cfg.opacity' in (src/'FieldFx.java').read_text()
 assert 'cfg.rippleOpacity/100f' in ui and 'cfg.rippleOpacity/100f' in key
 assert 'LegendTint.color' in ui and 'LegendTint.color(original.getColor(),layer.fade.value(),cfg.letterInactive,cfg.letterActive)' in key
@@ -97,3 +97,12 @@ assert '((KeyStyle)owner).overlays.get(layer.key)!=layer' in key
 assert 'RGBPulse legend bind keys=' in key and 'RGBPulse legend tint=' in key
 assert 'refinedScope.remove()' in key and 'refinedScope.set(previous)' in key
 print('PASS: child/onDraw text scopes, recycled-child cleanup and bounded legend diagnostics')
+
+assert 'syncHiddenBackgrounds(keys)' in key
+assert 'restoreHiddenBackgrounds();refinedApplied=false;' in key
+assert 'collectTileViews(g.getChildAt(i),live)' in key
+assert 'hiddenBackgrounds.put((View)p.thisObject,(Drawable)p.args[0])' in key
+assert 'if(!cfg.enabled||!cfg.refined||!cfg.ripple||cfg.hideTiles)return;' in key
+assert 'if(cfg.ripple&&!cfg.hideTiles)ripple.draw' in ui
+assert 'invalidateTree(v)' in key and 'setBackground(v,original)' in key
+print('PASS: verified key subtree backgrounds, theme replacement, recycling/off restoration and no tile outlines')

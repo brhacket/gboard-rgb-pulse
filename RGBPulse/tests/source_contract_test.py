@@ -4,8 +4,8 @@ import re,subprocess,sys
 root=Path(__file__).resolve().parents[1];src=root/'src/dev/rgbpulse/gboard'
 cfg=(src/'Config.java').read_text()
 effects=re.findall(r'"([^"]+)"',cfg.split('String[] EFFECTS = {',1)[1].split('};',1)[0])
-assert len(effects)==15 and len(set(effects))==15
-assert effects[0]=='Hologram tiles' and effects[11]=='Shuffle modern waves' and effects[-1]=='Tonal orbit'
+assert len(effects)==19 and len(set(effects))==19
+assert effects[0]=='Hologram tiles' and effects[11]=='Shuffle modern waves' and effects[-1]=='Rising curtain'
 assert 'tapFx6' in cfg and 'tapFx4' not in cfg
 assert 'effect = 12' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg
@@ -26,5 +26,5 @@ assert 'Detailed layout logs (no drawing)' in ui
 old=(src/'ShaderCode.java').read_text()
 subprocess.run([sys.executable,str(root/'embed_shader.py')],check=True)
 assert old==(src/'ShaderCode.java').read_text()
-assert 'GPU_COUNT = 15, LIQUID_SHUFFLE = 11' in cfg
-print('PASS: clean liquid-only catalog, migration, shuffle, no particles/idle/border, shader sync')
+assert 'GPU_COUNT = 19, LIQUID_SHUFFLE = 11' in cfg
+print('PASS: legacy plus directional animation catalog, migration, shuffle, no particles/idle/border, shader sync')

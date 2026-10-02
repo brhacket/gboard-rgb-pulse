@@ -11,6 +11,8 @@ import de.robv.android.xposed.*;
 final class KeyStyle {
     static final ThreadLocal<Integer> textDepth=new ThreadLocal<Integer>();
     static final ThreadLocal<Boolean> ownWrite=new ThreadLocal<Boolean>();
+    static final String TILELESS="rgbpulse.tileless.owner";
+    final IdentityHashMap<View,Drawable> hiddenBackgrounds=new IdentityHashMap<>();
     static final String TAG="rgbpulse.glass.key";
     static final String REFINED_CHILD="rgbpulse.refined.legend.owner";
     static final Set<Class<?>> refinedClasses=new HashSet<Class<?>>();
@@ -43,6 +45,11 @@ final class KeyStyle {
         XposedHelpers.findAndHookMethod(View.class,"setBackgroundDrawable",Drawable.class,new XC_MethodHook(){
             protected void beforeHookedMethod(MethodHookParam p){
                 if(Boolean.TRUE.equals(ownWrite.get()))return;
+                Object tileOwner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TILELESS);
+                if(tileOwner instanceof KeyStyle && cfg.enabled && cfg.hideTiles && !(p.args[0] instanceof EmptyBackground)){
+                    ((KeyStyle)tileOwner).hiddenBackgrounds.put((View)p.thisObject,(Drawable)p.args[0]);
+                    p.args[0]=new EmptyBackground((View)p.thisObject,(Drawable)p.args[0]);return;
+                }
                 Object owner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TAG);
                 if(!(owner instanceof KeyStyle)||!cfg.enabled||p.args[0] instanceof Glass)return;
                 if(cfg.refined?!cfg.tiles:!cfg.glass)return;
@@ -226,7 +233,7 @@ final class KeyStyle {
     static void invalidateTree(View v){v.invalidate();if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)invalidateTree(g.getChildAt(i));}}
     void refresh(){for(View v:originals.keySet())invalidateTree(v);}
     static void setBackground(View v,Drawable d){int l=v.getPaddingLeft(),t=v.getPaddingTop(),r=v.getPaddingRight(),b=v.getPaddingBottom();try{ownWrite.set(true);v.setBackground(d);v.setPadding(l,t,r,b);}finally{ownWrite.remove();}}
-    void restore(){refinedApplied=false;clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
+    void restore(){restoreHiddenBackgrounds();refinedApplied=false;clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
 
 
 
@@ -257,11 +264,44 @@ final class KeyStyle {
                 Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);
             }
         }
+        syncHiddenBackgrounds(keys);
         cutouts.studio.bind(keys);
         if(cfg.debug&&!legendBindingLogged){
             legendBindingLogged=true;int views=0;for(RippleOverlay layer:overlays.values())views+=layer.drawingViews.size();
             XposedBridge.log("RGBPulse legend bind keys="+keys.size()+" scopedViews="+views+" methods="+refinedDrawHooks.size()+" ripple="+cfg.ripple);
         }
+    }
+    // Only verified key subtrees, never the toolbar or keyboard panel. Keep padding,
+    // drawable state and the latest theme background so disable/recycling is reversible.
+    private void syncHiddenBackgrounds(java.util.List<View> keys){
+        Set<View> live=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        if(cfg.hideTiles)for(View key:keys)collectTileViews(key,live);
+        for(Iterator<Map.Entry<View,Drawable>> it=hiddenBackgrounds.entrySet().iterator();it.hasNext();){
+            Map.Entry<View,Drawable> e=it.next();if(!live.contains(e.getKey())){restoreHidden(e.getKey(),e.getValue());it.remove();}
+        }
+        for(View v:live){
+            if(!hiddenBackgrounds.containsKey(v)){
+                hiddenBackgrounds.put(v,v.getBackground());XposedHelpers.setAdditionalInstanceField(v,TILELESS,this);
+                setBackground(v,new EmptyBackground(v,v.getBackground()));invalidateTree(v);
+            }
+        }
+    }
+    private static void collectTileViews(View v,Set<View> live){
+        live.add(v);if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)collectTileViews(g.getChildAt(i),live);}
+    }
+    private void restoreHidden(View v,Drawable original){
+        if(XposedHelpers.getAdditionalInstanceField(v,TILELESS)!=this)return;
+        XposedHelpers.removeAdditionalInstanceField(v,TILELESS);
+        if(v.getBackground() instanceof EmptyBackground)setBackground(v,original);
+        invalidateTree(v);
+    }
+    private void restoreHiddenBackgrounds(){
+        for(Map.Entry<View,Drawable> e:hiddenBackgrounds.entrySet())restoreHidden(e.getKey(),e.getValue());
+        hiddenBackgrounds.clear();
+    }
+    static final class EmptyBackground extends Glass {
+        EmptyBackground(View view,Drawable original){super(view,view.getResources().getDisplayMetrics().density,original,true);}
+        @Override public void draw(Canvas canvas){} // No native face, press fill, or module tile.
     }
     private void clearOverlays(){
         for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet()){
@@ -317,7 +357,7 @@ final class KeyStyle {
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
-            if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
+            if(!cfg.enabled||!cfg.refined||!cfg.ripple||cfg.hideTiles)return;
             bounds.set(0,0,key.getWidth(),key.getHeight());
             ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
         }
@@ -327,7 +367,7 @@ final class KeyStyle {
     }
 
     /** v33 stock default always visible, border only during multi-wave, white one-color */
-    static final class Glass extends Drawable implements Drawable.Callback {
+    static class Glass extends Drawable implements Drawable.Callback {
         final RipplePaint ripple=new RipplePaint();
         final RectF rippleBounds=new RectF();
         final View view;

@@ -289,3 +289,23 @@ coalescing and cleanup contracts have source assertions; compilation checks use
 Android API 34. These are not Android Binder/LSPosed integration tests. Real-device
 scope, provider access, runtime receipt and visuals still require verification.
 Reboot once after upgrading to unload pre-v44 injected code.
+
+
+## Tileless keys and distinct motion (45.0 test)
+
+The v44 screenshot confirms revision delivery, and shows residual native fills
+on the bottom row. The previous tiles41 option only controlled module faces;
+it restored native backgrounds when off. hideTiles45 instead wraps backgrounds
+in verified key subtrees with a non-drawing drawable, preserving padding, state,
+latest theme replacements, text/image content and hit targets. Recycling and
+all-off restore originals. No broad Canvas shape suppression or toolbar changes.
+Ripple remains a letter-color wave without rectangular outlines in this mode.
+Direct custom-rendered key fills are not proven covered; phone testing remains
+necessary, especially space/Enter/language-switch and symbol layout transitions.
+
+Four new shader programs use sideways sheets, a stationary elliptical spotlight,
+diagonal ribbons and an upward curtain rather than radial ring variations.
+Desktop shader tests include lifecycle/clipping and pairwise alpha-geometry
+differences across three phases. These establish different output, not subjective
+visual quality or Android runtime correctness. Existing palettes/Apply/receipt
+semantics remain intact; both effects off still restores stock Gboard.
