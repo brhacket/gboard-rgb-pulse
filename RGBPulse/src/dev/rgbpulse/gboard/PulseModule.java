@@ -204,7 +204,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         void show() {
             if (disposed) return;
             KeyStyle.configure(config,root.getContext()); keyStyle.refresh();
-            visible = true; disabled = false; missedFrames = 0; fx.cfg = config; fx.clear();
+            visible = true; disabled = false; missedFrames = 0; fx.cfg = config; fx.clear(); keyStyle.clearRippleFades();
             if (config.debug){lastLog="";CapHooks.traces=0;}
             safeScan(true); root.removeCallbacks(scanLater); root.post(scanLater); kick();
         }
@@ -223,7 +223,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 return;
             }
             if (body != s.body) bind(s.body);
-            if (!play.equals(new RectF(s.box))) fx.clear();
+            if (!play.equals(new RectF(s.box))) {fx.clear();keyStyle.clearRippleFades();}
             play.set(s.box); keys.clear(); keys.addAll(s.keys); keyStyle.apply(keys,config);
             try{keyStyle.cutouts.studio.updateBody(s.body,keys);}catch(Throwable ignored){}
             if(config.glass){
@@ -322,12 +322,13 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             boolean active=fx.active(now);
             boolean sideActive=fx.side.active(now,config.duration);
             if(sideActive)fx.side.advance(config,play,now);
+            boolean fading=keyStyle.advanceRipples(now);
             // postOnAnimation already follows the display refresh rate. A fixed 16ms
             // gate skips 90/120Hz frames and can freeze cached key backgrounds.
             body.invalidate();
             for(View k:keys) k.invalidate();
             keyStyle.refreshRipples();
-            if(active||sideActive) kick();
+            if(active||sideActive||fading) kick();
         }
         void render(Canvas canvas) {
             if (rendering || disposed || disabled || !visible || !config.enabled || body==null || play.isEmpty() || !body.isShown()) return;
@@ -359,7 +360,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             }
         }
         void pause() {
-            visible=false; fx.clear(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
+            visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
             if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();keyStyle.refreshRipples();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }

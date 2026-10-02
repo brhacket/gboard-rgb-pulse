@@ -57,3 +57,15 @@ assert 'Open app settings' in ui and 'if(!ok)' in ui
 refined=key.split('private void applyRefined(',1)[1].split('private void clearOverlays',1)[0]
 assert 'setBackground(' not in refined and '.getOverlay().remove' in refined
 print('PASS: confirmed save-before-restart, bounded root process, refined overlay lifecycle')
+
+assert 'c.enabled=c.ripple||c.tapEffects' in cfg
+assert 'c.glass=c.ripple;c.sideStyle=c.ripple?1:0' in cfg
+assert 'enabled.setChecked(cfg.ripple)' in ui
+assert 'putBoolean("ripple40",value)' in ui and 'if(cfg.ripple)fx.side.tap' in ui
+assert 'main Enable ripple switch must be on' not in ui
+assert 'cfg=Config.from(draft);preview.fx.cfg=cfg' in ui
+assert 'boolean fading=keyStyle.advanceRipples(now)' in module
+assert 'if(active||sideActive||fading) kick()' in module
+assert 'layer.fade.advance' in key and 'fade.value()' in key
+assert 'amount=fade.advance(amount,now);active|=fade.active()' in ui
+print('PASS: independent applied toggles and shared per-key fade lifecycle')

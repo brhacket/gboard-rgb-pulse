@@ -25,6 +25,18 @@ public final class ConfigTest {
         check(!Config.from(p).tapEffects); // refined mode honors the background opt-out
         p.put("tapEffects36",true);
         check(Config.from(p).tapEffects); // and the explicit opt-in
+        // Explicit switches must beat stale legacy "enabled" / "side20" values.
+        for(boolean oldMaster:new boolean[]{false,true})for(boolean ripple:new boolean[]{false,true})for(boolean background:new boolean[]{false,true}){
+            p.put("enabled",oldMaster);p.put("ripple40",ripple);p.put("tapEffects36",background);
+            p.put("glass9",true);p.put("side20",1);
+            c=Config.from(p);
+            check(c.enabled==(ripple||background));
+            check(c.ripple==ripple&&c.glass==ripple&&c.sideStyle==(ripple?1:0));
+            check(c.tapEffects==background);
+            Config reopened=Config.from(p);check(reopened.ripple==ripple&&reopened.tapEffects==background);
+        }
+        p.remove("ripple40");p.put("enabled",false);p.put("tapEffects36",true);
+        c=Config.from(p);check(c.enabled&&!c.ripple&&c.tapEffects); // upgrade background-only
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

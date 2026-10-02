@@ -12,6 +12,7 @@ public final class Config {
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
+    public boolean ripple = false;
     public boolean refined = false;
     public int effect = 0, colorMode = 0;
     public int hue1 = 290, hue2 = 190, sat = 100;
@@ -54,8 +55,12 @@ public final class Config {
             c.glow=clamp(number(p,"glow9",35),0,100);c.fontData=string(p,"fontData9","");
             c.debug = flag(p,"debug3", false);
         } catch (RuntimeException ignored) { }
+        c.ripple=c.enabled&&c.glass&&c.sideStyle>0;
         if(c.refined){
-            c.glass=true;c.sideStyle=1;c.trailStyle=0;c.layer=0;
+            // Migrate the old mislabelled master switch only when ripple40 is absent.
+            c.ripple=flag(p,"ripple40",c.enabled);
+            c.enabled=c.ripple||c.tapEffects;
+            c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
         }

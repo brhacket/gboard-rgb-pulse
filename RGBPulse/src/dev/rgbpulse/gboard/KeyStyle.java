@@ -174,16 +174,27 @@ final class KeyStyle {
         for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet())entry.getKey().getOverlay().remove(entry.getValue());
         overlays.clear();
     }
+    boolean advanceRipples(long now){
+        boolean active=false;
+        for(RippleOverlay layer:overlays.values()){
+            if(!cfg.ripple){layer.fade.clear();continue;}
+            layer.fade.advance(SideSweep.activeRow?SideSweep.computeGlowAlpha(layer.key,layer.dp):0,now);
+            active|=layer.fade.active();
+        }
+        return active;
+    }
+    void clearRippleFades(){for(RippleOverlay layer:overlays.values())layer.fade.clear();}
     void refreshRipples(){for(RippleOverlay layer:overlays.values())layer.invalidateSelf();}
     static final class RippleOverlay extends Drawable {
         final View key;final float dp;
         final RipplePaint ripple=new RipplePaint();final RectF bounds=new RectF();
+        final BorderFade fade=new BorderFade();
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
-            if(!cfg.enabled||!cfg.refined||!SideSweep.activeRow)return;
+            if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
             bounds.set(0,0,key.getWidth(),key.getHeight());
-            ripple.draw(canvas,bounds,dp,SideSweep.computeGlowAlpha(key,dp),cfg.opacity/100f*alpha/255f,6*dp);
+            ripple.draw(canvas,bounds,dp,fade.value(),cfg.opacity/100f*alpha/255f,6*dp);
         }
         @Override public void setAlpha(int value){alpha=value;invalidateSelf();}
         @Override public void setColorFilter(ColorFilter filter){} // White-only effect.

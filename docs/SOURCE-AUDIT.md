@@ -159,3 +159,27 @@ validation (especially 60/90/120Hz, overlapping taps and layout changes).
 Idle stock keys are intentional. No permanent custom keyboard layout is created.
 Neither transition timing nor root access can be guaranteed without testing the
 user's Gboard build and framework/device combination.
+
+
+## Independent effect switches and per-key fades (40.0 test)
+
+Root cause in v39: the UI's ripple switch wrote `enabled`, which was also used as
+an overall effects gate, while refined mode forced `glass=true` and `sideStyle=1`.
+Backgrounds consequently depended on the mislabelled ripple switch. There was no
+independent, authoritative ripple preference.
+
+- `ripple40` now explicitly controls the ripple; `tapEffects36` controls the
+  background. In refined mode the controller's internal enabled state is their
+  OR, and key styling/side waves follow only ripple40. Existing preferences are
+  migrated without overwriting an explicitly saved ripple-off value.
+- UI callbacks reload configuration from the private draft so UI, preview and
+  hook all use the same derivation. Apply/restart consent remains unchanged.
+- New pure-Java BorderFade supplies independent time-based attack/release per key
+  (45ms/130ms time constants, not fixed completion times). The release continues
+  until visually negligible, including after waves expire. It is used in both
+  key overlays and preview, cleared on pause/layout reset and disabled effects.
+- Tests cover all four effect combinations against both stale legacy master
+  values, reopen/migration, gradual rise/fall, finite cleanup and frame-rate parity.
+
+No Android device is available here; real Gboard rendering and settings sharing
+must still be verified on the user's framework/device combination.
