@@ -134,3 +134,28 @@ Device visuals, performance and LSPosed compatibility remain unverified here.
 These are source-level causes of divergence/jank, not a measured guarantee of
 smoothness on every device. Actual Gboard/LSPosed frame times still need device
 validation (especially 60/90/120Hz, overlapping taps and layout changes).
+
+
+## Ease-out, layout transitions and confirmed restart (39.0 test)
+
+- Ripple travel is now cubic ease-out; its broader spatial band and fade use a
+  quintic smoothstep. Background wave styles (except the preserved hologram
+  favorite) also use cubic travel and a quintic lifetime envelope.
+- Refined keys no longer wrap/replace their original backgrounds: per-key
+  ViewOverlay drawables render the clipped ripple above native key paint. Layers
+  are explicitly invalidated each frame and removed on rebind/disable/dispose.
+  This addresses a plausible reason for invisible ripples; actual device
+  compatibility remains to be verified.
+- OnGlobalLayout marks discovery dirty, so pre-draw bypasses the 120ms idle
+  throttle for keyboard opening and alphabet/symbol layout swaps. It never
+  blocks a frame or hides an unsupported keyboard to mask a transition.
+- Apply is available even with no new edits and opens a confirmation with Save
+  only, Save & restart, and Cancel. Restart is a fixed Gboard-only command on a
+  worker thread, after successful persistence, with a 25-second timeout and
+  process cleanup. Root failure offers an explicit manual-settings action.
+- Desktop Skia shader compile/render/clip tests are now part of the test APK
+  workflow, in addition to Java/source checks, build and APK verification.
+
+Idle stock keys are intentional. No permanent custom keyboard layout is created.
+Neither transition timing nor root access can be guaranteed without testing the
+user's Gboard build and framework/device combination.

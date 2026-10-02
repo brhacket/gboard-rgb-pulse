@@ -31,6 +31,11 @@ final class ShaderCode {
         "    if(colorMode>0.5)return hueRgb(h+0.11*sin(f*4.0));\n" +
         "    return hueRgb(h+0.19*f+0.035*time);\n" +
         "}\n" +
+        "// Quintic envelope: zero first and second derivatives at the endpoints.\n" +
+        "float softEase(float value) {\n" +
+        "    float t=clamp(value,0.0,1.0);\n" +
+        "    return t*t*t*(t*(t*6.0-15.0)+10.0);\n" +
+        "}\n" +
         "float bell(float v,float width) { return exp(-v*v/width); }\n" +
         "float crest(float d,float width) { float w=width*thickness; return exp(-d*d/(w*w)); }\n" +
         "\n" +
@@ -60,12 +65,12 @@ final class ShaderCode {
         "                color=mix(palette(row*.22+floor(grid.x)*.18,taps[i].w),float3(1.0),border*.28);\n" +
         "                intensity=active*(.25*flash+border*.75);\n" +
         "            } else {\n" +
-        "                // Near-linear outward travel. A broad wake stays visible behind each crest.\n" +
-        "                float progress=1.0-pow(1.0-age,1.30);\n" +
+        "                // Cubic ease-out travel with a soft attack and a long, smooth release.\n" +
+        "                float progress=1.0-pow(1.0-age,3.0);\n" +
         "                float R=.025+1.02*progress;\n" +
         "                float d=r-R;\n" +
-        "                float attack=smoothstep(0.0,.035,age);\n" +
-        "                envelope=attack*(1.0-smoothstep(.58,1.0,age));\n" +
+        "                float attack=softEase(age/.07);\n" +
+        "                envelope=attack*(1.0-softEase((age-.48)/.52));\n" +
         "                float hue=taps[i].w;\n" +
         "                // Modern, soft styles: thin bright cores, deep bloom, gradient hues.\n" +
         "                float sweep=angle*.15915+.5; // 0..1 around the circle\n" +

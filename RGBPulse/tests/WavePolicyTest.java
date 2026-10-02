@@ -22,8 +22,16 @@ public final class WavePolicyTest {
                 if(!Float.isFinite(alpha)||alpha<0||alpha>1)throw new AssertionError("Unbounded opacity");
             }
         }
+        // Cubic ease-out must continuously decelerate and stop without overshoot.
+        float previous=0,previousDelta=Float.MAX_VALUE;
+        for(int step=1;step<=100;step++){
+            float r=WavePolicy.radius(step/100f,300),delta=r-previous;
+            if(delta<0||delta>previousDelta+.001f||r>300)throw new AssertionError("Not ease-out");
+            previous=r;previousDelta=delta;
+        }
+        if(previousDelta>.001f)throw new AssertionError("Non-zero terminal velocity");
         // Traveling front lights a neighboring key, then leaves it dark.
-        if(glow(100,0,.2f)<.8f)throw new AssertionError("Missing wavefront");
+        if(glow(WavePolicy.radius(.2f,300),0,.2f)<.8f)throw new AssertionError("Missing wavefront");
         equal(0,glow(100,0,.8f));
         if(glow(0,0,.04f)<=0)throw new AssertionError("Missing initial response");
         equal(0,glow(0,0,.5f));

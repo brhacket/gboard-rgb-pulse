@@ -20,6 +20,7 @@ final class KeyStyle {
     final CutoutTiles cutouts=new CutoutTiles();
     final CapHooks caps=new CapHooks();
     final IdentityHashMap<View,Drawable> originals=new IdentityHashMap<View,Drawable>();
+    final IdentityHashMap<View,RippleOverlay> overlays=new IdentityHashMap<View,RippleOverlay>();
     static void configure(Config c,android.content.Context context) {cfg=c;Typography.configure(c,context);face=Typography.face;}
     static boolean markedTree(View v){
         if(!cfg.enabled||!cfg.glass||cfg.refined)return false;
@@ -120,6 +121,8 @@ final class KeyStyle {
     }
     void apply(java.util.List<View> keys,Config c) {
         if(!c.enabled||!c.glass){restore();return;}
+        if(c.refined){applyRefined(keys);return;}
+        clearOverlays();
         for(Iterator<Map.Entry<View,Drawable>> it=originals.entrySet().iterator();it.hasNext();) {
             Map.Entry<View,Drawable> e=it.next();if(!keys.contains(e.getKey())){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());it.remove();}
         }
@@ -147,10 +150,45 @@ final class KeyStyle {
     static void invalidateTree(View v){v.invalidate();if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)invalidateTree(g.getChildAt(i));}}
     void refresh(){for(View v:originals.keySet())invalidateTree(v);}
     static void setBackground(View v,Drawable d){int l=v.getPaddingLeft(),t=v.getPaddingTop(),r=v.getPaddingRight(),b=v.getPaddingBottom();try{ownWrite.set(true);v.setBackground(d);v.setPadding(l,t,r,b);}finally{ownWrite.remove();}}
-    void restore(){cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
+    void restore(){clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
 
 
 
+
+    // Draw above native key paint. A background wrapper can be painted over by
+    // Gboard's own key fill; ViewOverlay remains in the key's local clipped space.
+    private void applyRefined(java.util.List<View> keys){
+        if(!originals.isEmpty())restore();
+        for(Iterator<Map.Entry<View,RippleOverlay>> it=overlays.entrySet().iterator();it.hasNext();){
+            Map.Entry<View,RippleOverlay> entry=it.next();
+            if(!keys.contains(entry.getKey())){entry.getKey().getOverlay().remove(entry.getValue());it.remove();}
+        }
+        for(View key:keys){
+            RippleOverlay layer=overlays.get(key);
+            if(layer==null){layer=new RippleOverlay(key);overlays.put(key,layer);key.getOverlay().add(layer);}
+            layer.setBounds(0,0,key.getWidth(),key.getHeight());
+        }
+        cutouts.studio.bind(keys);
+    }
+    private void clearOverlays(){
+        for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet())entry.getKey().getOverlay().remove(entry.getValue());
+        overlays.clear();
+    }
+    void refreshRipples(){for(RippleOverlay layer:overlays.values())layer.invalidateSelf();}
+    static final class RippleOverlay extends Drawable {
+        final View key;final float dp;
+        final RipplePaint ripple=new RipplePaint();final RectF bounds=new RectF();
+        private int alpha=255;
+        RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
+        @Override public void draw(Canvas canvas){
+            if(!cfg.enabled||!cfg.refined||!SideSweep.activeRow)return;
+            bounds.set(0,0,key.getWidth(),key.getHeight());
+            ripple.draw(canvas,bounds,dp,SideSweep.computeGlowAlpha(key,dp),cfg.opacity/100f*alpha/255f,6*dp);
+        }
+        @Override public void setAlpha(int value){alpha=value;invalidateSelf();}
+        @Override public void setColorFilter(ColorFilter filter){} // White-only effect.
+        @Override public int getOpacity(){return PixelFormat.TRANSLUCENT;}
+    }
 
     /** v33 stock default always visible, border only during multi-wave, white one-color */
     static final class Glass extends Drawable implements Drawable.Callback {

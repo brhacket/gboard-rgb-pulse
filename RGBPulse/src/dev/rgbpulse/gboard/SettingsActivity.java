@@ -55,7 +55,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  38",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  39",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -109,7 +109,7 @@ public final class SettingsActivity extends Activity {
         LinearLayout details=card(controls);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
         details.addView(text(hooked?"Shared settings available. This does not confirm that Gboard is hooked.":"Enable this module in LSPosed / Vector and scope Gboard, then reopen this app.",13,MUTED));
-        details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. No root requests, forced restarts, font changes or gesture trails.",13,MUTED));
+        details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
         details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
@@ -125,7 +125,7 @@ public final class SettingsActivity extends Activity {
             .setMessage("Reload your last applied settings. Gboard will not be changed.")
             .setPositiveButton("Discard",(d,w)->{copySettings(applied.getAll(),draft).commit();prepareDraft();render();}).setNegativeButton("Cancel",null).show());
         actions.addView(discard,new LinearLayout.LayoutParams(0,px(52),1));
-        apply=button("Apply changes",true);apply.setOnClickListener(v->applySettings());
+        apply=button("Apply / restart",true);apply.setOnClickListener(v->applySettings());
         LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,px(52),2);ap.leftMargin=px(10);actions.addView(apply,ap);
         footer.addView(actions);shell.addView(footer);setContentView(shell);updateState();
     }
@@ -156,7 +156,7 @@ public final class SettingsActivity extends Activity {
     private void updateState(){
         boolean dirty=!draft.getAll().equals(applied.getAll());
         state.setText(saving?"Saving…":dirty?"Draft only · Gboard is unchanged":"Applied · no restart requested");
-        apply.setEnabled(!saving&&dirty);apply.setAlpha(!saving&&dirty?1f:.45f);
+        apply.setEnabled(!saving);apply.setAlpha(!saving?1f:.45f);
     }
     private static SharedPreferences.Editor copySettings(Map<String,?> values,SharedPreferences target){
         SharedPreferences.Editor editor=target.edit().clear();
@@ -171,18 +171,38 @@ public final class SettingsActivity extends Activity {
     }
     private void applySettings(){
         if(saving)return;
-        if(!Config.flag(applied,"refined37",false)){
-            new AlertDialog.Builder(this).setTitle("Apply refined ripple?")
-                .setMessage("This uses the refined ripple and your selected background settings. Custom fonts and gesture trails stay off. Gboard will not be restarted.")
-                .setPositiveButton("Apply",(d,w)->persist()).setNegativeButton("Cancel",null).show();
-        }else persist();
+        new AlertDialog.Builder(this).setTitle("Apply settings / restart Gboard?")
+            .setMessage("Save only keeps Gboard running. Save & restart requests root to force-stop Gboard after saving. The keyboard will close; tap a text field to reopen it. Keep a backup keyboard enabled. No restart happens without this confirmation.")
+            .setPositiveButton("Save & restart",(d,w)->persist(true))
+            .setNeutralButton("Save only",(d,w)->persist(false))
+            .setNegativeButton("Cancel",null).show();
     }
-    private void persist(){
+    private void persist(boolean restart){
+        if(saving)return;
         final Map<String,?> snapshot=draft.getAll();saving=true;updateState();
-        new Thread(()->{boolean ok=copySettings(snapshot,applied).commit();runOnUiThread(()->{
-            if(isFinishing()||isDestroyed())return;saving=false;updateState();
-            if(!ok){state.setText("Save failed. Tap Apply to retry.");apply.setEnabled(true);apply.setAlpha(1f);}
-        });},"Apply ripple").start();
+        state.setText(restart?"Saving, then waiting for root approval…":"Saving…");
+        new Thread(()->{
+            boolean saved;
+            try{saved=copySettings(snapshot,applied).commit();}catch(RuntimeException e){saved=false;}
+            final boolean ok=saved;
+            boolean stopped=ok&&restart&&GboardRestart.stop();
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;saving=false;updateState();
+                if(!ok){state.setText("Save failed. Gboard was not stopped. Tap Apply to retry.");return;}
+                if(restart){
+                    state.setText(stopped?"Saved · Gboard stopped. Tap the test field to reopen it.":"Saved · automatic restart failed or root was denied.");
+                    if(!stopped)new AlertDialog.Builder(this).setTitle("Restart Gboard manually")
+                        .setMessage("Your settings were saved. Root was unavailable, denied or timed out. You can open Gboard’s app settings and tap Force stop yourself.")
+                        .setPositiveButton("Open app settings",(d,w)->openGboardSettings()).setNegativeButton("Not now",null).show();
+                }
+                if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need Apply.");
+            });
+        },"Apply ripple").start();
+    }
+    private void openGboardSettings(){
+        try{startActivity(new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.parse("package:com.google.android.inputmethod.latin")));}
+        catch(RuntimeException e){Toast.makeText(this,"Open Android Settings > Apps > Gboard > Force stop.",Toast.LENGTH_LONG).show();}
     }
     @Override public void onBackPressed(){
         if(saving){Toast.makeText(this,"Please wait for saving to finish.",Toast.LENGTH_SHORT).show();return;}

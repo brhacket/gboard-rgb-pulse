@@ -26,6 +26,11 @@ float3 palette(float f,float h) {
     if(colorMode>0.5)return hueRgb(h+0.11*sin(f*4.0));
     return hueRgb(h+0.19*f+0.035*time);
 }
+// Quintic envelope: zero first and second derivatives at the endpoints.
+float softEase(float value) {
+    float t=clamp(value,0.0,1.0);
+    return t*t*t*(t*(t*6.0-15.0)+10.0);
+}
 float bell(float v,float width) { return exp(-v*v/width); }
 float crest(float d,float width) { float w=width*thickness; return exp(-d*d/(w*w)); }
 
@@ -55,12 +60,12 @@ half4 main(float2 frag) {
                 color=mix(palette(row*.22+floor(grid.x)*.18,taps[i].w),float3(1.0),border*.28);
                 intensity=active*(.25*flash+border*.75);
             } else {
-                // Near-linear outward travel. A broad wake stays visible behind each crest.
-                float progress=1.0-pow(1.0-age,1.30);
+                // Cubic ease-out travel with a soft attack and a long, smooth release.
+                float progress=1.0-pow(1.0-age,3.0);
                 float R=.025+1.02*progress;
                 float d=r-R;
-                float attack=smoothstep(0.0,.035,age);
-                envelope=attack*(1.0-smoothstep(.58,1.0,age));
+                float attack=softEase(age/.07);
+                envelope=attack*(1.0-softEase((age-.48)/.52));
                 float hue=taps[i].w;
                 // Modern, soft styles: thin bright cores, deep bloom, gradient hues.
                 float sweep=angle*.15915+.5; // 0..1 around the circle
