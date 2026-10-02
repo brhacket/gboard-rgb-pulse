@@ -89,3 +89,11 @@ assert 'width*dp' in (src/'RipplePaint.java').read_text()
 assert 'return p*travel' in (src/'WavePolicy.java').read_text()
 assert 'void restore()' in (src/'NativeLegends.java').read_text()
 print('PASS: linear movement, custom state colors, swatch previews and native legend fallbacks')
+
+assert 'type.getDeclaredMethod("onDraw",Canvas.class)' in key
+assert 'layer.bindDrawingScopes()' in key and 'trackDrawingViews(group.getChildAt(i),depth+1)' in key
+assert 'REFINED_CHILD' in key and 'clearDrawingScopes()' in key
+assert '((KeyStyle)owner).overlays.get(layer.key)!=layer' in key
+assert 'RGBPulse legend bind keys=' in key and 'RGBPulse legend tint=' in key
+assert 'refinedScope.remove()' in key and 'refinedScope.set(previous)' in key
+print('PASS: child/onDraw text scopes, recycled-child cleanup and bounded legend diagnostics')

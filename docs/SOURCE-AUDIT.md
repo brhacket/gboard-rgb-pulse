@@ -235,3 +235,25 @@ Visual fit, color contrast chosen by the user, native glyph caching paths, and
 Gboard framework behavior still require device checks. Material-inspired here
 means restrained tonal palettes, low-detail lighting and rounded controls—not a
 claim of Material library certification or a visually verified Android screenshot.
+
+
+## Native legend draw scope follow-up (43.0 test)
+
+v42 registered only each key root's public draw method. The refined path did not
+register child onDraw methods, unlike the legacy CapHooks implementation. Android
+HWUI can record custom child views through onDraw without the parent's public
+draw call, leaving Canvas text/glyph hooks without key ownership.
+
+- Register verified key descendants, their draw methods and declared onDraw
+  methods throughout the View inheritance chain; retain the existing recording
+  hook. Scope nesting restores previous ownership and cleanup removes recycled
+  child registrations without clobbering ownership assigned to another key.
+- Text tinting remains restricted to verified key descendants. No editor text,
+  font metrics or glyph positions are extracted or changed.
+- Opt-in, bounded RGBPulse legend diagnostics report binding counts, the first
+  scope/tint invocation and observed bitmap/render-node operations. Diagnostic
+  observations do not themselves identify bitmap contents as letters.
+
+This addresses a concrete missing rendering path, not a device-confirmed root
+cause. If letter colors still fail, obtain the user's Gboard version and filtered
+legend diagnostics before attempting further renderer changes.

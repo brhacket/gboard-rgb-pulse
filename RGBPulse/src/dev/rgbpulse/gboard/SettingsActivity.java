@@ -56,7 +56,7 @@ public final class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(22),px(20),px(22),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView eyebrow=text("RGB PULSE  /  42",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
+        TextView eyebrow=text("RGB PULSE  /  43",11,MUTED);eyebrow.setLetterSpacing(.16f);controls.addView(eyebrow);
         TextView title=text("Quiet by design.",30,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);controls.addView(title);
         controls.addView(text("Smooth ripples. Optional background light.",14,MUTED));
 
@@ -135,6 +135,7 @@ public final class SettingsActivity extends Activity {
         details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
+        details.addView(text("If letter colors do not change: enable logs, Apply & restart, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
         Button reset=button("Reset draft",false);reset.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until Apply.")
             .setPositiveButton("Reset",(d,w)->{draft.edit().clear().apply();prepareDraft();render();}).setNegativeButton("Cancel",null).show());details.addView(reset);

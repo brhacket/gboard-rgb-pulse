@@ -3,6 +3,7 @@ package dev.rgbpulse.gboard;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.view.View;
+import android.view.ViewGroup;
 import java.util.*;
 import java.lang.reflect.Method;
 import de.robv.android.xposed.*;
@@ -11,6 +12,10 @@ final class KeyStyle {
     static final ThreadLocal<Integer> textDepth=new ThreadLocal<Integer>();
     static final ThreadLocal<Boolean> ownWrite=new ThreadLocal<Boolean>();
     static final String TAG="rgbpulse.glass.key";
+    static final String REFINED_CHILD="rgbpulse.refined.legend.owner";
+    static final Set<Class<?>> refinedClasses=new HashSet<Class<?>>();
+    static int legendScopes,legendPaints,legendBitmaps,legendNodes;
+    static boolean legendBindingLogged;
     static final ThreadLocal<Canvas> scopedCanvas=new ThreadLocal<Canvas>();
     static final Map<Paint,Boolean> copies=Collections.synchronizedMap(new WeakHashMap<Paint,Boolean>());
     static final ThreadLocal<Integer> scope=new ThreadLocal<Integer>();
@@ -24,7 +29,7 @@ final class KeyStyle {
     static final Set<Method> refinedDrawHooks=new HashSet<Method>();
     boolean refinedApplied;
     final IdentityHashMap<View,RippleOverlay> overlays=new IdentityHashMap<View,RippleOverlay>();
-    static void configure(Config c,android.content.Context context) {cfg=c;Typography.configure(c,context);face=Typography.face;}
+    static void configure(Config c,android.content.Context context) {cfg=c;legendScopes=legendPaints=legendBitmaps=legendNodes=0;legendBindingLogged=false;Typography.configure(c,context);face=Typography.face;}
     static boolean markedTree(View v){
         if(!cfg.enabled||!cfg.glass||cfg.refined)return false;
         for(int i=0;i<12 && v!=null;i++){
@@ -63,6 +68,17 @@ final class KeyStyle {
         Set<Method> methods=new HashSet<Method>();
         for(String name:new String[]{"android.graphics.Canvas","android.graphics.BaseCanvas","android.graphics.BaseRecordingCanvas","android.graphics.RecordingCanvas"}) {
             try { for(Method m:Class.forName(name).getDeclaredMethods()) {
+                if(m.getName().equals("drawBitmap")||m.getName().equals("drawRenderNode")){
+                    if(methods.add(m))XposedBridge.hookMethod(m,new XC_MethodHook(){
+                        @Override protected void beforeHookedMethod(MethodHookParam p){
+                            if(!cfg.debug||refinedScope.get()==null)return;
+                            boolean bitmap=p.method.getName().equals("drawBitmap");
+                            int count=bitmap?++legendBitmaps:++legendNodes;
+                            if(count==1)XposedBridge.log("RGBPulse legend observed="+p.method.getName()+" (not recolored)");
+                        }
+                    });
+                    continue;
+                }
                 if(!(m.getName().equals("drawText")||m.getName().equals("drawTextRun")||m.getName().equals("drawGlyphs")))continue;
                 Class<?>[] args=m.getParameterTypes();
                 if(args.length==0 || args[args.length-1]!=Paint.class || !methods.add(m))continue;
@@ -131,10 +147,13 @@ final class KeyStyle {
     }
     private static void enterRefinedScope(XC_MethodHook.MethodHookParam p){
         if(!cfg.refined||!cfg.enabled||!cfg.ripple)return;
-        Object owner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TAG);
-        if(!(owner instanceof KeyStyle))return;
-        RippleOverlay layer=((KeyStyle)owner).overlays.get((View)p.thisObject);
-        if(layer==null)return;
+        Object candidate=XposedHelpers.getAdditionalInstanceField(p.thisObject,REFINED_CHILD);
+        if(!(candidate instanceof RippleOverlay))return;
+        RippleOverlay layer=(RippleOverlay)candidate;
+        Object owner=XposedHelpers.getAdditionalInstanceField(layer.key,TAG);
+        // Recycled/removed descendants must never inherit stale key ownership.
+        if(!(owner instanceof KeyStyle)||((KeyStyle)owner).overlays.get(layer.key)!=layer)return;
+        if(cfg.debug&&++legendScopes==1)XposedBridge.log("RGBPulse legend scope="+p.method.getName()+" view="+p.thisObject.getClass().getName());
         p.setObjectExtra("refinedKeyScope",true);p.setObjectExtra("refinedPreviousScope",refinedScope.get());
         refinedScope.set(layer);
     }
@@ -149,6 +168,7 @@ final class KeyStyle {
         if(!cfg.enabled||!cfg.ripple||layer==null||(depth!=null&&depth>0))return;
         Paint original=(Paint)p.args[p.args.length-1];
         if(original==null)return;
+        if(cfg.debug&&++legendPaints==1)XposedBridge.log("RGBPulse legend tint="+p.method.getName()+" active="+Integer.toHexString(cfg.letterActive)+" inactive="+Integer.toHexString(cfg.letterInactive));
         // No text extraction, repositioning, font substitution or original-Paint mutation.
         layer.legendPaint.set(original);
         layer.legendPaint.setShader(null);layer.legendPaint.setColorFilter(null);
@@ -156,14 +176,22 @@ final class KeyStyle {
         p.setObjectExtra("refinedTint",true);p.setObjectExtra("refinedOriginalPaint",original);
         textDepth.set(1);p.args[p.args.length-1]=layer.legendPaint;
     }
-    private static void hookRefinedDraw(View key){
+    private static void hookRefinedMethod(Method method){
+        if(!refinedDrawHooks.add(method))return;
         try{
-            Method draw=key.getClass().getMethod("draw",Canvas.class);
-            if(refinedDrawHooks.add(draw))XposedBridge.hookMethod(draw,new XC_MethodHook(){
+            XposedBridge.hookMethod(method,new XC_MethodHook(){
                 @Override protected void beforeHookedMethod(MethodHookParam p){enterRefinedScope(p);}
                 @Override protected void afterHookedMethod(MethodHookParam p){leaveRefinedScope(p);}
             });
-        }catch(Throwable e){android.util.Log.w("RGBPulse","Native key text scope unavailable",e);}
+        }catch(Throwable e){refinedDrawHooks.remove(method);android.util.Log.w("RGBPulse","Legend method hook unavailable: "+method.getName(),e);}
+    }
+    private static void hookRefinedDraw(View view){
+        if(!refinedClasses.add(view.getClass()))return;
+        try{hookRefinedMethod(view.getClass().getMethod("draw",Canvas.class));}catch(NoSuchMethodException ignored){}
+        // HWUI can record a custom child using onDraw without calling public draw.
+        for(Class<?> type=view.getClass();type!=null&&View.class.isAssignableFrom(type);type=type.getSuperclass()){
+            try{hookRefinedMethod(type.getDeclaredMethod("onDraw",Canvas.class));}catch(NoSuchMethodException ignored){}
+        }
     }
     void apply(java.util.List<View> keys,Config c) {
         if(!c.enabled){restore();return;}
@@ -210,7 +238,7 @@ final class KeyStyle {
         for(Iterator<Map.Entry<View,RippleOverlay>> it=overlays.entrySet().iterator();it.hasNext();){
             Map.Entry<View,RippleOverlay> entry=it.next();View key=entry.getKey();
             if(!keys.contains(key)){
-                entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
+                entry.getValue().clearDrawingScopes();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
                 if(originals.containsKey(key)){Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);}
                 invalidateTree(key);it.remove();
             }
@@ -222,7 +250,7 @@ final class KeyStyle {
                 XposedHelpers.setAdditionalInstanceField(key,TAG,this);hookRefinedDraw(key);invalidateTree(key);
             }
             layer.setBounds(0,0,key.getWidth(),key.getHeight());
-            layer.labels.bind(key);layer.labels.apply(cfg,layer.fade.value());
+            layer.bindDrawingScopes();layer.labels.bind(key);layer.labels.apply(cfg,layer.fade.value());
             if(cfg.tiles && !(key.getBackground() instanceof Glass)){
                 originals.put(key,key.getBackground());setBackground(key,new Glass(key,layer.dp,key.getBackground(),true));
             }else if(!cfg.tiles && originals.containsKey(key)){
@@ -230,10 +258,14 @@ final class KeyStyle {
             }
         }
         cutouts.studio.bind(keys);
+        if(cfg.debug&&!legendBindingLogged){
+            legendBindingLogged=true;int views=0;for(RippleOverlay layer:overlays.values())views+=layer.drawingViews.size();
+            XposedBridge.log("RGBPulse legend bind keys="+keys.size()+" scopedViews="+views+" methods="+refinedDrawHooks.size()+" ripple="+cfg.ripple);
+        }
     }
     private void clearOverlays(){
         for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet()){
-            View key=entry.getKey();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());
+            View key=entry.getKey();entry.getValue().clearDrawingScopes();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());
             XposedHelpers.removeAdditionalInstanceField(key,TAG);invalidateTree(key);
         }
         overlays.clear();
@@ -256,6 +288,32 @@ final class KeyStyle {
         final BorderFade fade=new BorderFade();
         final Paint legendPaint=new Paint();
         final NativeLegends labels=new NativeLegends();
+        final Set<View> drawingViews=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        final Set<View> liveDrawingViews=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        void bindDrawingScopes(){
+            liveDrawingViews.clear();trackDrawingViews(key,0);
+            for(Iterator<View> it=drawingViews.iterator();it.hasNext();){
+                View view=it.next();if(!liveDrawingViews.contains(view)){
+                    if(XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)==this)XposedHelpers.removeAdditionalInstanceField(view,REFINED_CHILD);
+                    view.invalidate();it.remove();
+                }
+            }
+        }
+        private void trackDrawingViews(View view,int depth){
+            if(depth>12)return;
+            liveDrawingViews.add(view);
+            if(drawingViews.add(view)||XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)!=this){
+                XposedHelpers.setAdditionalInstanceField(view,REFINED_CHILD,this);hookRefinedDraw(view);view.invalidate();
+            }
+            if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)trackDrawingViews(group.getChildAt(i),depth+1);}
+        }
+        void clearDrawingScopes(){
+            for(View view:drawingViews){
+                if(XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)==this)XposedHelpers.removeAdditionalInstanceField(view,REFINED_CHILD);
+                view.invalidate();
+            }
+            drawingViews.clear();liveDrawingViews.clear();
+        }
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
