@@ -10,7 +10,7 @@ assert 'XSharedPreferences' not in module and 'prefs.reload()' not in module
 assert 'MODE_WORLD_READABLE' not in ui
 assert 'Binder.getCallingUid()' in provider and 'getPackagesForUid' in provider
 assert 'Only Gboard may acknowledge settings' in provider
-assert 'RevisionGate.matches(current,received)' in provider
+assert 'RevisionGate.accepts(current,received,SettingsContract.RUNTIME_VERSION' in provider
 assert 'SettingsContract.PERMISSION' in client and 'Context.RECEIVER_EXPORTED' in client
 assert 'Config next=new Config()' in client and 'request!=generation.get()' in client
 assert client.index('listener.apply(next)') < client.index('"ack",null,receipt')
@@ -24,3 +24,9 @@ assert 'if (body == next && next != null) return;' in module
 assert 'synchronized(SettingsStore.LOCK)' in provider
 assert 'SettingsStore.save(snapshot,applied)' in ui
 print('PASS: UID-restricted settings IPC, permission-gated notification, revision receipt, fail-closed read and unconditional off cleanup')
+
+assert 'registerContentObserver(SettingsContract.URI' in client
+assert 'notifyChange(SettingsContract.URI,null)' in ui
+assert 'receipt.putInt("runtimeVersion",SettingsContract.RUNTIME_VERSION)' in client
+assert 'saving=false;' in ui and 'Couldn’t save. Tap Apply changes' in ui
+print('PASS: independent notification fallback, version-aware receipt and Apply completion state')

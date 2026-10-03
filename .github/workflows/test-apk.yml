@@ -48,18 +48,18 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-46.0-test.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-47.0-test.apk
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-46.0-test.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-46.0-test.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-46.0-test.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-46.0-test.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-47.0-test.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-47.0-test.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-47.0-test.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-47.0-test.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-46.0-test.apk
+            Gboard-RGB-Pulse-47.0-test.apk
             APK-verification.txt
             SHA256SUMS.txt
       - name: Publish test download
@@ -67,17 +67,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'NOTES'
-          Pulse Studio: pinned, collapsible, height-responsive preview; Ripple / Pulse / Keyboard navigation; coordinated dark surfaces and mint controls; direct Apply changes with no root prompt. Restart is tucked into troubleshooting and still requires confirmation. Settings receipt is shown as up to date or waiting for Gboard, never assumed from a local save.
+          A curated set of exactly ten pulse animations: Edge runner, Corner snap, Underline, Prism swipe, Four sparks, Drop ring, Split shutters, Soft press, Wide orbit and Wide aurora. The first eight use the actual tapped-key rectangle, with a finite local footprint. Pulses default to 220 ms with a separate 120–360 ms length control. At most three local pulses coexist; wide pulses replace each other. Combined opacity is capped (48% local / 28% wide before the brightness setting), instead of stacking toward white.
 
-          Fix: hiding key fills no longer hides ripple borders. Adds four ripple styles (Full keyboard, Rightward chase, Inward sweep, Heartbeat) and three pulse styles (Diamond echo, Velvet tide, Split horizon). Existing styles remain available.
+          Removes Rightward chase, Inward sweep and Heartbeat. Full keyboard remains; new Diamond field, Cross bloom, Diagonal weave and Checker reveal patterns cross multiple rows without pretending extra taps occurred. Native key fills and ripple borders remain independent. The praised Studio layout stays intact.
 
-          Optional opening/closing lighting: Soft glow, Light sweep or Edge glow, independently Off by default. Explicit preview buttons. Keys never slide or scale. Closing is best-effort during Android dismissal; it never holds the keyboard open and may be very brief or not visible when Android immediately removes the window. Turning everything off cancels lighting and restores stock styling.
+          Apply adds a ContentObserver notification path alongside broadcasts, retries notification while waiting, always releases the save-button busy state after handled errors, and confirms both settings revision and runtime version. An older injected build can no longer acknowledge current settings as up to date. The cause on the user's device is not yet confirmed.
 
-          **Installation:** This test uses a fresh signing key: uninstall the previous module first (settings are lost), install v46, enable for Gboard in LSPosed/Vector and reboot once. Choose your options and press Apply changes; wait for Gboard confirmation. Opening/closing controls are under Keyboard. Keep a backup keyboard enabled.
+          Dramatic optional opening/closing lighting: Ignition, Stage curtains and Horizon rise, with stronger fronts, broader geometry and 520/260 ms timing. Typing cancels the opening spectacle immediately. Closing starts visibly but Android can still dismiss the window before rendering; no forced delay or key movement is introduced.
 
-          Android 13+ required. Policy/source tests, desktop shader checks, Android compilation and APK signature/archive verification run before publication. Android layout/accessibility, native rendering and lifecycle timing still need phone verification; no device verification is claimed.
+          **Install:** Fresh test signing key: uninstall the previous module (settings are lost), install v47, enable for Gboard in LSPosed/Vector, then reboot once to load the current injected code. Press Apply changes and open the real test keyboard; wait for Gboard confirmation. All effects remain opt-in. Keep a backup keyboard enabled.
+
+          Automated Java/source checks, production shader clipping/footprint/opacity-cap checks, Android compilation and APK signature/archive verification precede publication. These do not prove phone behavior or subjective animation quality. Apply delivery and lifecycle timing remain device-unverified.
           NOTES
-          gh release create "test-46-${{ github.run_id }}-${{ github.run_attempt }}" \
-            Gboard-RGB-Pulse-46.0-test.apk APK-verification.txt SHA256SUMS.txt \
+          gh release create "test-47-${{ github.run_id }}-${{ github.run_attempt }}" \
+            Gboard-RGB-Pulse-47.0-test.apk APK-verification.txt SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false \
-            --title 'Gboard RGB Pulse 46.0 — test build' --notes-file release-notes.md
+            --title 'Gboard RGB Pulse 47.0 — test build' --notes-file release-notes.md

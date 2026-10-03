@@ -12,7 +12,7 @@ assert 'SideSweep.glowAt' in ui and 'fx.side.active(now,cfg.duration)' in ui
 assert 'lastAuto' not in ui and 'postDelayed(tick' not in ui
 assert 'ProcessBuilder' not in ui  # root work is isolated from the UI thread
 assert 'Save & restart' in ui and 'Save only' in ui and 'persist(true)' in ui
-assert 'ok&&restart&&GboardRestart.stop()' in ui
+assert 'if(saved)' in ui and 'stopped=restart&&GboardRestart.stop()' in ui
 assert 'Browse animations' not in ui and 'Import TTF' not in ui
 assert 'Ripple on tap' in ui and 'Setup & troubleshooting' in ui
 assert ui.count('slider(settings,')==2
@@ -32,7 +32,7 @@ print('PASS: simple UI, explicit Apply, stock text, drawable state, shared clipp
 
 assert 'Test your keyboard' in ui and 'EditText test=new EditText(this)' in ui
 assert 'test.setSaveEnabled(false)' in ui
-assert 'fx.drawFields(canvas,play,now)' in ui and 'fx.tap(rect.centerX(),rect.centerY(),play,now)' in ui
+assert 'fx.drawFields(canvas,play,now)' in ui and 'fx.tap(rect.centerX(),rect.centerY(),play,rect,now)' in ui
 assert 'Pulse on tap' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
 assert 'putBoolean("refined37",true).putBoolean("tapEffects36",false)' not in ui
 module=(src/'PulseModule.java').read_text()

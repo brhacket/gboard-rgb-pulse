@@ -335,3 +335,33 @@ semantics remain intact; both effects off still restores stock Gboard.
 Java policy and shader geometry checks cover added motions; source contracts
 cover UI structure, independent borders and lifecycle cancellation. Compilation
 uses Android API 34. No emulator or physical-phone UI/render verification yet.
+
+
+## Fast key-local pulses and delivery follow-up (47.0 test)
+
+- Replace the overlapping 22-entry pulse catalog with ten genuinely different
+  geometries: eight local and two explicitly wide. Local coordinates use the real
+  hit key's rectangle in the same verified panel coordinate space as the touch.
+  Footprint ends at 1.2 times the key half-extents (10% beyond each edge), independent
+  of panel dimensions. Preview passes its own actual key rectangle through the
+  identical Fx/FieldFx path. Space and function keys retain their actual geometry.
+- Pulse lifetime is independently 120–360 ms, default 220. Limit to three concurrent
+  local pulses, replace old wide pulses on each tap, cap summed shader alpha at
+  .48 local / .28 wide before user brightness. No new off-state animation or demos.
+- Fresh pulse47 indices avoid accidentally remapping an old selected effect. The
+  removed ripple indices map to Full keyboard; new patterns use ripplePattern47.
+  Broad patterns change per-key distance/front geometry, not extra synthetic taps.
+- Apply: the old button is wired to persist(false), but no phone trace identifies
+  its failure. Add independent observer notifications, bounded notification retries,
+  handled-error busy-state release, and visible saved/waiting feedback. Require both
+  matching revision and runtime build receipt so an old injected APK cannot falsely
+  confirm compatibility. Reads/ack remain UID-restricted, async and fail-closed.
+- Lifecycle overlays use stronger, geometric full-panel reveals. Closing starts
+  at nonzero intensity; 520 ms opening and 260 ms closing. First actual key tap
+  cancels the intro. No keyboard transform or hide delay; Android may still provide
+  no visible closing frames. The limitation remains disclosed.
+
+Checks include executable revision/build matching, config migration and ripple
+bounds/cross-row reach; desktop production-shader tests prove local support bounds,
+aggregate alpha caps under four simultaneous taps, specializations and different
+local alpha geometry. These are not real Binder/IME or phone rendering tests.

@@ -35,9 +35,9 @@ public final class SettingsProvider extends ContentProvider {
             if(!gboard)throw new SecurityException("Only Gboard may acknowledge settings");
             String received=extras==null?null:extras.getString(SettingsContract.REVISION);
             String current=Config.string(prefs,SettingsContract.REVISION,"");
-            boolean accepted=RevisionGate.matches(current,received);
+            boolean accepted=RevisionGate.accepts(current,received,SettingsContract.RUNTIME_VERSION,extras==null?0:extras.getInt("runtimeVersion",0));
             if(accepted)getContext().getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE).edit()
-                .putString(SettingsContract.REVISION,received).putLong("receivedAt",System.currentTimeMillis()).apply();
+                .putString(SettingsContract.REVISION,received).putInt("runtimeVersion",SettingsContract.RUNTIME_VERSION).putLong("receivedAt",System.currentTimeMillis()).apply();
             Bundle reply=new Bundle();reply.putBoolean("accepted",accepted);return reply;
         }
         throw new IllegalArgumentException("Unsupported settings operation");

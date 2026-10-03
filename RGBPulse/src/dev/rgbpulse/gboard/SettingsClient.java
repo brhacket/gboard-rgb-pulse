@@ -14,7 +14,7 @@ final class SettingsClient {
     private static final AtomicBoolean scheduled=new AtomicBoolean();
     private static Context context;
     private static Listener listener;
-    private static boolean registered;
+    private static boolean registered,observing;
     static void start(Context ctx,Listener callback){
         context=ctx.getApplicationContext()==null?ctx:ctx.getApplicationContext();listener=callback;
         if(!registered){
@@ -24,6 +24,13 @@ final class SettingsClient {
                 },new IntentFilter(SettingsContract.ACTION),SettingsContract.PERMISSION,null,Context.RECEIVER_EXPORTED);
                 registered=true;
             }catch(RuntimeException e){android.util.Log.w("RGBPulse","Live settings notification unavailable; reload on keyboard open",e);}
+        }
+        if(!observing){
+            try{
+                context.getContentResolver().registerContentObserver(SettingsContract.URI,false,new android.database.ContentObserver(MAIN){
+                    @Override public void onChange(boolean selfChange){request();}
+                });observing=true;
+            }catch(RuntimeException e){android.util.Log.w("RGBPulse","Settings observer unavailable; using notifications",e);}
         }
         request();
     }
@@ -48,7 +55,7 @@ final class SettingsClient {
                     if(data!=null&&!revision.isEmpty()){
                         final String appliedRevision=revision;
                         IO.execute(()->{
-                            Bundle receipt=new Bundle();receipt.putString(SettingsContract.REVISION,appliedRevision);
+                            Bundle receipt=new Bundle();receipt.putString(SettingsContract.REVISION,appliedRevision);receipt.putInt("runtimeVersion",SettingsContract.RUNTIME_VERSION);
                             try{ctx.getContentResolver().call(SettingsContract.URI,"ack",null,receipt);}
                             catch(RuntimeException e){android.util.Log.w("RGBPulse","Settings applied but acknowledgement failed",e);}
                         });

@@ -6,6 +6,10 @@ public final class RevisionGateTest {
         check(!RevisionGate.matches("revision-new","revision-old"));
         check(!RevisionGate.matches("",""));check(!RevisionGate.matches(null,null));
         check(!RevisionGate.matches("revision-new",null));check(!RevisionGate.matches(null,"revision-new"));
+        check(RevisionGate.accepts("new","new",47,47));
+        check(!RevisionGate.accepts("new","new",47,46));
+        check(!RevisionGate.accepts("new","new",47,0));
+        check(!RevisionGate.accepts("new","old",47,47));
         System.out.println("PASS: only nonempty current revision receipts are accepted");
     }
 }

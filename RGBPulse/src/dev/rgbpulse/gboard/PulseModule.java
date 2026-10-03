@@ -331,7 +331,8 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             }
             if (!hit || !play.contains(px,py)) return;
             long now=SystemClock.uptimeMillis();
-            fx.cfg=config; fx.tap(px, py, play, now);
+            light.cancel(); // Give typing priority over a dramatic opening reveal.
+            fx.cfg=config; fx.tap(px, py, play, new RectF(r), now);
             if(config.glass && config.sideStyle>0){
                 int rowTopBody=0, rowTopParent=0; float parentCx=0;
                 for(View k:keys){Rect rr=new Rect(0,0,k.getWidth(),k.getHeight()); body.offsetDescendantRectToMyCoords(k,rr); if(rr.contains((int)px,(int)py)){rowTopBody=rr.top; rowTopParent=k.getTop(); parentCx=k.getLeft()+k.getWidth()/2f; break;}}

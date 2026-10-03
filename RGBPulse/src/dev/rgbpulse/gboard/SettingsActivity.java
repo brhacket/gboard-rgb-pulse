@@ -97,7 +97,7 @@ public final class SettingsActivity extends Activity {
         ripplePage.addView(text("Light that follows your touch",20,INK));
         ripplePage.addView(text("Color moves through letters and outlines. Key fills are a separate choice.",13,MUTED));
         pulsePage.addView(text("A little atmosphere",20,INK));
-        pulsePage.addView(text("Soft light behind the keys. Pick a motion, then tap the preview to try it.",13,MUTED));
+        pulsePage.addView(text("Eight quick effects around one key. Two wide effects when you want more atmosphere.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
@@ -114,7 +114,7 @@ public final class SettingsActivity extends Activity {
         Switch enabled=new Switch(this);enabled.setText("Ripple on tap");enabled.setTextColor(INK);
         enabled.setTextSize(17);enabled.setMinHeight(px(52));enabled.setChecked(cfg.ripple);
         enabled.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("ripple40",value).apply();changed();});settings.addView(enabled);
-        settings.addView(text("Choose a row wave, a full-keyboard ripple, or a two-beat glow. Your letters never move.",13,MUTED));
+        settings.addView(text("Explore full-keyboard circles, diamonds, crosses and diagonals. One tap, one wave. Your letters never move.",13,MUTED));
         slider(settings,"Ripple strength",15,100,cfg.rippleOpacity,false);
         Switch tiles=new Switch(this);tiles.setText("Hide key fills");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.hideTiles);
         tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("hideTiles45",value).apply();changed();});settings.addView(tiles);
@@ -123,7 +123,7 @@ public final class SettingsActivity extends Activity {
         Button rippleStyle=button("Ripple · "+Config.RIPPLES[cfg.rippleStyle],false);
         rippleStyle.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Ripple effect")
             .setSingleChoiceItems(Config.RIPPLES,cfg.rippleStyle,(dialog,index)->{
-                draft.edit().putInt("rippleStyle42",index).apply();rippleStyle.setText("Ripple · "+Config.RIPPLES[index]);changed();dialog.dismiss();
+                draft.edit().putInt("ripplePattern47",index).apply();rippleStyle.setText("Ripple · "+Config.RIPPLES[index]);changed();dialog.dismiss();
             }).setNegativeButton("Cancel",null).show());settings.addView(rippleStyle);
         Button appearance=button("Ripple colors & border  +",false);ripplePage.addView(appearance);
         LinearLayout appearancePanel=card(ripplePage);appearancePanel.setVisibility(View.GONE);
@@ -146,12 +146,13 @@ public final class SettingsActivity extends Activity {
         backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
         backgroundPanel.addView(text("Works with or without Ripple. Choosing a style won’t turn it on. Tap the preview after enabling it to try your draft.",12,MUTED));
         backgroundStrength(backgroundPanel);
-        slider(backgroundPanel,"Motion duration",400,1100,cfg.duration,true);
+        slider(backgroundPanel,"Pulse length",120,360,cfg.pulseDuration,true);
+        TextView effectHint=text(Config.EFFECT_HINTS[cfg.effect],13,MUTED);
         Button effect=button("Animation · "+Config.EFFECTS[cfg.effect],false);
         effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Choose your pulse")
             .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index)->{
-                cfg.effect=index;draft.edit().putInt("tapFx6",index).apply();effect.setText("Animation · "+Config.EFFECTS[index]);changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);
+                cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);backgroundPanel.addView(effectHint);
         Button colors=button("Color mode · "+Config.COLORS[cfg.colorMode],false);
         colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
@@ -163,13 +164,13 @@ public final class SettingsActivity extends Activity {
 
         LinearLayout transitions=card(keyboardPage);
         transitions.addView(text("Hello & goodbye",18,INK));
-        transitions.addView(text("Optional light when the keyboard appears or leaves. Keys stay still. Closing light may be brief because Android controls dismissal.",13,MUTED));
+        transitions.addView(text("A dramatic reveal or exit, with the keys firmly in place. Closing depends on Android’s dismissal timing and may be cut short.",13,MUTED));
         transitionControl(transitions,"Opening light","opening46",false);
         transitionControl(transitions,"Closing light","closing46",true);
         Button help=button("Setup & troubleshooting  +",false);keyboardPage.addView(help);
         LinearLayout details=card(keyboardPage);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
-        details.addView(text("Pulse Studio · version 46\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
+        details.addView(text("Pulse Studio · version 47\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
         details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
         details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
@@ -183,6 +184,7 @@ public final class SettingsActivity extends Activity {
                     .putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
                 render();persist(false);
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
+        Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
         Button restartKeyboard=button("Save & restart keyboard…",false);restartKeyboard.setOnClickListener(v->applySettings());details.addView(restartKeyboard);
         Button reset=button("Reset draft",false);reset.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until Apply.")
@@ -239,7 +241,8 @@ public final class SettingsActivity extends Activity {
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar b,int progress,boolean user){if(!user)return;int n=min+progress;
                 label.setText(name+"  ·  "+n+(duration?" ms":"%"));
-                if(duration){cfg.duration=n;draft.edit().putInt("duration3",n).apply();}
+                if(duration&&name.equals("Pulse length")){cfg.pulseDuration=n;draft.edit().putInt("pulseDuration47",n).apply();}
+                else if(duration){cfg.duration=n;draft.edit().putInt("duration3",n).apply();}
                 else{cfg.rippleOpacity=n;draft.edit().putInt("rippleStrength41",n).apply();}changed();}
             public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
         });parent.addView(bar);
@@ -320,7 +323,7 @@ public final class SettingsActivity extends Activity {
         boolean dirty=!draft.getAll().equals(applied.getAll());
         String revision=Config.string(applied,SettingsContract.REVISION,"");
         String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
-        String savedState=RevisionGate.matches(revision,received)?
+        String savedState=confirmed(revision,received)?
             (Config.from(applied).enabled?"You’re all set · Gboard is up to date":"Gboard confirmed: all module effects off"):
             "Saved · waiting for Gboard";
         state.setText(saving?"Saving…":dirty?"Unsaved changes · preview only":savedState);
@@ -342,37 +345,50 @@ public final class SettingsActivity extends Activity {
         saving=true;updateState();
         state.setText(restart?"Saving, then waiting for root approval…":"Saving…");
         new Thread(()->{
-            boolean saved;
-            try{saved=SettingsStore.save(snapshot,applied);}catch(RuntimeException e){saved=false;}
-            final boolean ok=saved;
-            if(ok){
-                draft.edit().putString(SettingsContract.REVISION,revision).apply();
-                try{sendBroadcast(new android.content.Intent(SettingsContract.ACTION).setPackage(SettingsContract.GBOARD));}
-                catch(RuntimeException e){android.util.Log.w("RGBPulse","Gboard notification failed; reopen keyboard to retry",e);}
-            }
-            boolean stopped=ok&&restart&&GboardRestart.stop();
-            runOnUiThread(()->{
-                if(isFinishing()||isDestroyed())return;saving=false;updateState();
-                if(!ok){state.setText("Save failed. Gboard was not stopped. Tap Apply changes to retry.");return;}
-                confirmationChecks=0;confirmationHandler.removeCallbacks(confirmationTick);confirmationHandler.postDelayed(confirmationTick,400);
-                if(restart){
-                    state.setText(stopped?"Saved · Gboard stopped. Tap the test field to reopen it.":"Saved · automatic restart failed or root was denied.");
-                    if(!stopped)new AlertDialog.Builder(this).setTitle("Restart Gboard manually")
-                        .setMessage("Settings were saved locally; receipt is checked separately. Root was unavailable, denied or timed out. You can open Gboard’s app settings and tap Force stop yourself.")
-                        .setPositiveButton("Open app settings",(d,w)->openGboardSettings()).setNegativeButton("Not now",null).show();
+            boolean saved=false,stopped=false;String failure=null;
+            try{
+                saved=SettingsStore.save(snapshot,applied);
+                if(saved){
+                    draft.edit().putString(SettingsContract.REVISION,revision).apply();
+                    notifyKeyboard();
+                    stopped=restart&&GboardRestart.stop();
                 }
+            }catch(RuntimeException e){failure=e.getClass().getSimpleName();android.util.Log.w("RGBPulse","Apply did not complete",e);}
+            final boolean ok=saved,didStop=stopped;final String problem=failure;
+            runOnUiThread(()->{
+                saving=false;
+                if(isFinishing()||isDestroyed())return;
+                updateState();
+                if(!ok){state.setText("Couldn’t save. Tap Apply changes to try again.");return;}
+                confirmationChecks=0;confirmationHandler.removeCallbacks(confirmationTick);confirmationHandler.postDelayed(confirmationTick,300);
+                if(problem!=null)state.setText("Saved, but connection needs a retry. Open Gboard to sync.");
+                else if(restart)state.setText(didStop?"Saved · tap the test field to reopen Gboard.":"Saved · restart was not approved. Open Gboard to sync.");
+                else state.setText("Saved · checking Gboard…");
+                Toast.makeText(this,"Saved. Waiting for Gboard to confirm.",Toast.LENGTH_SHORT).show();
                 if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need Apply.");
             });
         },"Apply ripple").start();
+    }
+    private void notifyKeyboard(){
+        // Independent transports: a broadcast failure must not skip the observer notification.
+        try{sendBroadcast(new android.content.Intent(SettingsContract.ACTION).setPackage(SettingsContract.GBOARD));}
+        catch(RuntimeException e){android.util.Log.w("RGBPulse","Settings broadcast unavailable",e);}
+        try{getContentResolver().notifyChange(SettingsContract.URI,null);}
+        catch(RuntimeException e){android.util.Log.w("RGBPulse","Settings observer notification unavailable",e);}
+    }
+    private boolean confirmed(String revision,String received){
+        return RevisionGate.accepts(revision,received,SettingsContract.RUNTIME_VERSION,getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE)
+            .getInt("runtimeVersion",0));
     }
     private void checkConfirmation(){
         if(isFinishing()||isDestroyed()||saving)return;
         updateState();
         String revision=Config.string(applied,SettingsContract.REVISION,"");
         String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
-        if(RevisionGate.matches(revision,received))return;
+        if(confirmed(revision,received))return;
+        if(confirmationChecks==3||confirmationChecks==10)notifyKeyboard();
         if(++confirmationChecks<30)confirmationHandler.postDelayed(confirmationTick,400);
-        else state.append(". Reopen Gboard. If still unconfirmed, check module scope and reboot.");
+        else state.append(". Open the test keyboard to sync. Still waiting? Reboot once to load version 47.");
     }
     private void openGboardSettings(){
         try{startActivity(new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -424,7 +440,7 @@ public final class SettingsActivity extends Activity {
             if(e.getActionMasked()==MotionEvent.ACTION_DOWN||e.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){
                 int pointer=e.getActionIndex();
                 if(cfg.enabled)for(int row=0;row<rows.length;row++)for(int k=0;k<rows[row].length;k++){
-                    keyRect(row,k);if(rect.contains(e.getX(pointer),e.getY(pointer))){long now=SystemClock.uptimeMillis();fx.tap(rect.centerX(),rect.centerY(),play,now);if(cfg.ripple)fx.side.tap(rect.centerX(),(int)rect.top,now);invalidate();return true;}}
+                    keyRect(row,k);if(rect.contains(e.getX(pointer),e.getY(pointer))){if(previewLight!=null)previewLight.cancel();long now=SystemClock.uptimeMillis();fx.tap(rect.centerX(),rect.centerY(),play,rect,now);if(cfg.ripple)fx.side.tap(rect.centerX(),(int)rect.top,now);invalidate();return true;}}
                 return true;
             }
             if(e.getActionMasked()==MotionEvent.ACTION_UP)performClick();return true;

@@ -24,14 +24,21 @@ public final class WavePolicyTest {
         }
         // Ripple movement is linear at every progress sample, independent of fade.
         for(int step=0;step<=100;step++)equal(step*3,WavePolicy.radius(step/100f,300));
-        for(int style=0;style<8;style++)for(int step=0;step<=100;step++){
+        for(int style=0;style<9;style++)for(int step=0;step<=100;step++){
             float value=WavePolicy.glowStyle(100,0,0,0,WavePolicy.radius(step/100f,300),1,step/100f,style);
             if(!Float.isFinite(value)||value<0||value>1)throw new AssertionError("Invalid style opacity");
         }
         if(WavePolicy.glowStyle(0,60,0,0,60,1,.2f,4)<=.8f)throw new AssertionError("Full keyboard must reach other rows");
-        equal(0,WavePolicy.glowStyle(-60,0,0,0,60,1,.2f,5));
-        if(WavePolicy.glowStyle(60,0,0,0,60,1,.2f,5)<=.8f)throw new AssertionError("Rightward chase missing");
-        for(int style=0;style<8;style++){
+        for(int style=4;style<9;style++){
+            float best=0;
+            for(int step=1;step<80;step++)best=Math.max(best,WavePolicy.glowStyle(0,60,0,0,300*step/100f,1,step/100f,style));
+            if(best<.1f)throw new AssertionError("Pattern confined to one row: "+style);
+        }
+        for(int style=0;style<9;style++)for(int y=-150;y<=150;y+=30)for(int x=-300;x<=300;x+=30)for(int step=0;step<=100;step++){
+            float value=WavePolicy.glowStyle(x,y,0,0,3*step,1,step/100f,style);
+            if(!Float.isFinite(value)||value<0||value>1)throw new AssertionError("Unbounded multi-row pattern");
+        }
+        for(int style=0;style<9;style++){
             equal(0,WavePolicy.glowStyle(60,0,0,0,0,1,0,style));
             equal(0,WavePolicy.glowStyle(60,0,0,0,300,1,1,style));
         }

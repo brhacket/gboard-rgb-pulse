@@ -4,26 +4,31 @@ import android.content.SharedPreferences;
 
 public final class Config {
     public static final String PREFS = "settings";
-    public static final String[] EFFECTS = {"Hologram tiles", "Neon halo", "Liquid glass", "Aurora ring",
-        "Liquid metaballs", "Gradient bloom", "Prism ring", "Sonar pulse", "Silk wave",
-        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit", "Lateral sweep", "Soft spotlight", "Crossing ribbons", "Rising curtain", "Diamond echo", "Velvet tide", "Split horizon"};
-    public static final int GPU_COUNT = 22, LIQUID_SHUFFLE = 11;
+    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Wide orbit", "Wide aurora"};
+    public static final String[] EFFECT_HINTS={
+        "A quick highlight runs around the tapped key.","Four small brackets snap toward the key corners.",
+        "A short line sweeps beneath the tapped letter.","A narrow diagonal gleam crosses one key.",
+        "Four tiny diamond sparks lift from the key edges.","One compact ring expands inside the key.",
+        "Two soft slivers separate toward the key edges.","A soft, single glow responds beneath your finger.",
+        "Wide effect · one fine ring travels across the keyboard.","Wide effect · one flowing ribbon crosses the keyboard."};
+    public static final int GPU_COUNT = 10;
+    public int pulseDuration=220;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
     public boolean ripple = false;
-    public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Rightward chase", "Inward sweep", "Heartbeat"};
-    public static final String[] TRANSITIONS={"Off", "Soft glow", "Light sweep", "Edge glow"};
+    public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
+    public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
     public int opening=0,closing=0;
-    public int rippleStyle=0,borderTenths=10;
+    public int rippleStyle=4,borderTenths=10;
     public int rippleActive=0xffd0bcff,rippleInactive=0xff49454f;
     public int letterActive=0xfff5efff,letterInactive=0xffb7b2be;
     public boolean tiles = true;
     public boolean hideTiles = true;
     public int rippleOpacity=70, backgroundOpacity=90;
     public boolean refined = false;
-    public int effect = 12, colorMode = 2;
+    public int effect = 0, colorMode = 2;
     public int hue1 = 270, hue2 = 195, sat = 30;
     public int opacity = 90, duration = 1700, size = 120, thickness = 100;
     public int layer = 0;
@@ -44,7 +49,8 @@ public final class Config {
             c.refined = flag(p,"refined37",false);
             c.hideTiles=flag(p,"hideTiles45",true);
             c.tiles=flag(p,"tiles41",true)&&!c.hideTiles;
-            c.rippleStyle=clamp(number(p,"rippleStyle42",0),0,RIPPLES.length-1);
+            int legacyRipple=number(p,"rippleStyle42",4);
+            c.rippleStyle=clamp(number(p,"ripplePattern47",legacyRipple>=0&&legacyRipple<=4?legacyRipple:4),0,RIPPLES.length-1);
             c.borderTenths=clamp(number(p,"borderWidth42",10),5,30);
             c.rippleActive=number(p,"rippleActive42",c.rippleActive)|0xff000000;
             c.rippleInactive=number(p,"rippleInactive42",c.rippleInactive)|0xff000000;
@@ -54,8 +60,9 @@ public final class Config {
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
             c.tapEffects = flag(p,"tapEffects36", false);
-            // v6 catalog is intentionally new. First upgrade selects the user's favorite.
-            c.effect = clamp(number(p,"tapFx6", c.effect), 0, EFFECTS.length - 1);
+            // New curated catalog: never reinterpret an obsolete index as a different effect.
+            c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
+            c.pulseDuration=clamp(number(p,"pulseDuration47",220),120,360);
             c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
             c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);
             c.hue2 = clamp(number(p,"hue2", c.hue2), 0, 360);
