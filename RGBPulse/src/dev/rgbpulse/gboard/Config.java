@@ -6,14 +6,16 @@ public final class Config {
     public static final String PREFS = "settings";
     public static final String[] EFFECTS = {"Hologram tiles", "Neon halo", "Liquid glass", "Aurora ring",
         "Liquid metaballs", "Gradient bloom", "Prism ring", "Sonar pulse", "Silk wave",
-        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit", "Lateral sweep", "Soft spotlight", "Crossing ribbons", "Rising curtain"};
-    public static final int GPU_COUNT = 19, LIQUID_SHUFFLE = 11;
+        "Plasma burst", "Dual orbit", "Shuffle modern waves", "Material bloom", "Diffused ring", "Tonal orbit", "Lateral sweep", "Soft spotlight", "Crossing ribbons", "Rising curtain", "Diamond echo", "Velvet tide", "Split horizon"};
+    public static final int GPU_COUNT = 22, LIQUID_SHUFFLE = 11;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
     public boolean ripple = false;
-    public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse"};
+    public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Rightward chase", "Inward sweep", "Heartbeat"};
+    public static final String[] TRANSITIONS={"Off", "Soft glow", "Light sweep", "Edge glow"};
+    public int opening=0,closing=0;
     public int rippleStyle=0,borderTenths=10;
     public int rippleActive=0xffd0bcff,rippleInactive=0xff49454f;
     public int letterActive=0xfff5efff,letterInactive=0xffb7b2be;
@@ -37,6 +39,8 @@ public final class Config {
         Config c = new Config();
         if (p == null) return c;
         try {
+            c.opening=clamp(number(p,"opening46",0),0,3);
+            c.closing=clamp(number(p,"closing46",0),0,3);
             c.refined = flag(p,"refined37",false);
             c.hideTiles=flag(p,"hideTiles45",true);
             c.tiles=flag(p,"tiles41",true)&&!c.hideTiles;
@@ -76,7 +80,7 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects;
+            c.enabled=c.ripple||c.tapEffects||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);

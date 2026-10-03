@@ -357,7 +357,7 @@ final class KeyStyle {
         private int alpha=255;
         RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
         @Override public void draw(Canvas canvas){
-            if(!cfg.enabled||!cfg.refined||!cfg.ripple||cfg.hideTiles)return;
+            if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
             bounds.set(0,0,key.getWidth(),key.getHeight());
             ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
         }

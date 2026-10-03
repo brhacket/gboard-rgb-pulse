@@ -60,6 +60,16 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 try { Controller c = get(p.thisObject); if (c != null) c.show(); } catch (Throwable t) { failure(t); }
             }
         });
+        XposedHelpers.findAndHookMethod(InputMethodService.class,"requestHideSelf",int.class,new XC_MethodHook(){
+            @Override protected void beforeHookedMethod(MethodHookParam p){
+                try{Controller c=get(p.thisObject);if(c!=null)c.closingLight();}catch(Throwable t){failure(t);}
+            }
+        });
+        XposedHelpers.findAndHookMethod(InputMethodService.class,"onFinishInputView",boolean.class,new XC_MethodHook(){
+            @Override protected void beforeHookedMethod(MethodHookParam p){
+                try{Controller c=get(p.thisObject);if(c!=null&&Boolean.FALSE.equals(p.args[0]))c.closingLight();}catch(Throwable t){failure(t);}
+            }
+        });
         XposedHelpers.findAndHookMethod(InputMethodService.class, "onWindowHidden", new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
                 try { Controller c = get(p.thisObject); if (c != null) c.pause(); } catch (Throwable t) { failure(t); }
@@ -181,6 +191,8 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
     static final class Controller implements ViewTreeObserver.OnPreDrawListener, ViewTreeObserver.OnGlobalLayoutListener, View.OnAttachStateChangeListener, Runnable {
         final ViewGroup root;
         final Fx fx;
+        final LifecycleLight light;
+        boolean opened,openPending;
         final KeyStyle keyStyle=new KeyStyle();
 
         final RectF play = new RectF();
@@ -195,7 +207,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         final Runnable scanLater = new Runnable() { public void run() { safeScan(true); kick(); } };
 
         Controller(ViewGroup root) {
-            this.root = root; fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
+            this.root = root; light=new LifecycleLight(root); fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
             XposedHelpers.setAdditionalInstanceField(root, ROOT, this);
             controllers.add(new java.lang.ref.WeakReference<>(this));
             SettingsClient.start(root.getContext(),PulseModule::acceptSettings);
@@ -207,18 +219,26 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         }
         void show() {
             if(disposed)return;
+            if(!opened||!visible){openPending=true;opened=true;}
             visible=true;SettingsClient.request();applyCurrentSettings();
         }
         void applyCurrentSettings(){
             if(disposed)return;
             // Off must clean up even if the panel is hidden or no longer bound.
             root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);ticking=false;
+            if(!config.enabled||!visible)light.cancel();
             fx.clear();keyStyle.restore();bind(null);
             KeyStyle.configure(config,root.getContext());fx.cfg=config;
             disabled=false;missedFrames=0;layoutDirty=true;
             if(!config.enabled||!visible){root.invalidate();return;}
             if(config.debug){lastLog="";CapHooks.traces=0;}
             safeScan(true);kick();
+        }
+        void openingLight(){light.play(config.opening,false,config.rippleActive,lightArea());}
+        void closingLight(){if(visible&&config.enabled)light.play(config.closing,true,config.rippleActive,lightArea());}
+        RectF lightArea(){
+            Rect r=new Rect();if(body!=null){r.set(0,0,body.getWidth(),body.getHeight());root.offsetDescendantRectToMyCoords(body,r);}
+            return new RectF(r);
         }
         void safeScan(boolean force) {
             try { scan(force); } catch (Throwable t) { bind(null); failure(t); }
@@ -242,6 +262,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 if(keyStyle.caps.retryPending){keyStyle.caps.retryPending=false;keyStyle.refresh();}
                 if(keyStyle.caps.geometryPending){keyStyle.caps.geometryPending=false;body.invalidate();}
             }
+            if(openPending){openPending=false;openingLight();}
             log("body="+body.getClass().getName()+"; size="+body.getWidth()+"x"+body.getHeight()+"; bg="+(body.getBackground()==null?"none":body.getBackground().getClass().getName())+"; keys="+keys.size()+"; clip="+s.box.toShortString()+"; layer="+config.layer);
         }
         void bind(ViewGroup next) {
@@ -372,7 +393,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             }
         }
         void pause() {
-            visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
+            light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
             if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();keyStyle.refreshRipples();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }

@@ -309,3 +309,29 @@ Desktop shader tests include lifecycle/clipping and pairwise alpha-geometry
 differences across three phases. These establish different output, not subjective
 visual quality or Android runtime correctness. Existing palettes/Apply/receipt
 semantics remain intact; both effects off still restores stock Gboard.
+
+
+## Pulse Studio and motion options (46.0 test)
+
+- Separate key fills from ripple strokes: hideTiles45 continues suppressing native
+  fills but no longer gates the preview or native RippleOverlay border renderer.
+- Add full-keyboard distance propagation, rightward chase, inward sweep and a
+  two-beat local ripple. Linear travel and soft envelopes remain shared with preview.
+- Add diamond-front, undulating-tide and split-horizontal-plane pulse programs.
+- Sticky preview is outside the weighted settings ScrollView, can be minimized,
+  and adapts height to remaining window space. Three pages split Ripple, Pulse
+  and Keyboard controls. Primary Apply saves directly; restart remains confirmed
+  under troubleshooting. Consistent dark surfaces, mint controls and 48dp targets.
+- Independent optional opening/closing light overlays (Off by default), driven by
+  a bounded ValueAnimator on the main thread, restricted to the verified panel.
+  Preview buttons are explicit. No key transforms or interception/delay of hide.
+  Closing starts at requestHideSelf / non-finishing onFinishInputView and is
+  cancelled when hidden: Android can remove the window before any light is drawn.
+  This limitation is exposed in the UI, not treated as a guaranteed exit animation.
+- Off clears lifecycle options as well as tap/ripple toggles. Read failures, hide,
+  detach/dispose and preview pause remove lifecycle overlays. New options never
+  start a demo just by selecting a style.
+
+Java policy and shader geometry checks cover added motions; source contracts
+cover UI structure, independent borders and lifecycle cancellation. Compilation
+uses Android API 34. No emulator or physical-phone UI/render verification yet.

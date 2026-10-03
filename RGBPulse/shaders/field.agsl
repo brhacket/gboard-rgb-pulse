@@ -46,7 +46,22 @@ half4 main(float2 frag) {
             float a=1.0-pow(1.0-age,2.0);
             float envelope=smoothstep(0.0,.055,age)*(1.0-smoothstep(.30,1.0,age));
             float3 color=float3(0.0);float intensity=0.0;
-            if(style>14.5) {
+            if(style>18.5){
+                envelope=softEase(age/.10)*(1.0-softEase((age-.45)/.55));
+                color=palette(p.x*.25+age*.2,taps[i].w);
+                if(style<19.5){
+                    // Diamond echo: a geometric front rather than a circular wave.
+                    float diamond=abs(p.x)+abs(p.y);
+                    intensity=.65*crest(diamond-age*1.4,.055)+.25*crest(diamond-age*.85,.075);
+                }else if(style<20.5){
+                    // Velvet tide: broad, undulating horizontal fabric sweeps upward.
+                    float tide=p.y+age*.9-.10*sin(p.x*5.0+age*4.0);
+                    intensity=.65*crest(tide,.16)*exp(-p.x*p.x/.9);
+                }else{
+                    // Split horizon: two horizontal planes move away from the touch.
+                    intensity=.65*crest(abs(p.y)-age*.65,.06)*exp(-p.x*p.x/1.2);
+                }
+            }else if(style>14.5) {
                 // Four non-radial / non-ring geometries, all anchored to the touch.
                 envelope=softEase(age/.12)*(1.0-softEase((age-.5)/.5));
                 color=palette(age*.2+p.y*.15,taps[i].w);

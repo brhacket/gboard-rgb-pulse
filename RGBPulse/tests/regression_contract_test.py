@@ -14,7 +14,7 @@ assert 'ProcessBuilder' not in ui  # root work is isolated from the UI thread
 assert 'Save & restart' in ui and 'Save only' in ui and 'persist(true)' in ui
 assert 'ok&&restart&&GboardRestart.stop()' in ui
 assert 'Browse animations' not in ui and 'Import TTF' not in ui
-assert 'Enable ripple' in ui and 'Setup & troubleshooting' in ui
+assert 'Ripple on tap' in ui and 'Setup & troubleshooting' in ui
 assert ui.count('slider(settings,')==2
 assert 'SettingsStore.save(snapshot,applied)' in ui
 assert 'getSharedPreferences("settings_draft",Context.MODE_PRIVATE)' in ui
@@ -33,7 +33,7 @@ print('PASS: simple UI, explicit Apply, stock text, drawable state, shared clipp
 assert 'Test your keyboard' in ui and 'EditText test=new EditText(this)' in ui
 assert 'test.setSaveEnabled(false)' in ui
 assert 'fx.drawFields(canvas,play,now)' in ui and 'fx.tap(rect.centerX(),rect.centerY(),play,now)' in ui
-assert 'Enable background animations' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
+assert 'Pulse on tap' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
 assert 'putBoolean("refined37",true).putBoolean("tapEffects36",false)' not in ui
 module=(src/'PulseModule.java').read_text()
 assert 'now-lastDraw>=16' not in module
@@ -72,7 +72,7 @@ print('PASS: independent applied toggles and shared per-key fade lifecycle')
 
 assert 'putInt("opacity3",55)' not in ui and 'if(!draft.contains("duration3"))' in ui
 assert 'Ripple strength' in ui and 'Background brightness' in ui
-assert 'Hide all key tiles' in ui and 'putBoolean("hideTiles45",value)' in ui
+assert 'Hide key fills' in ui and 'putBoolean("hideTiles45",value)' in ui
 assert 'cfg.refined?cfg.backgroundOpacity:cfg.opacity' in (src/'FieldFx.java').read_text()
 assert 'cfg.rippleOpacity/100f' in ui and 'cfg.rippleOpacity/100f' in key
 assert 'LegendTint.color' in ui and 'LegendTint.color(original.getColor(),layer.fade.value(),cfg.letterInactive,cfg.letterActive)' in key
@@ -102,7 +102,20 @@ assert 'syncHiddenBackgrounds(keys)' in key
 assert 'restoreHiddenBackgrounds();refinedApplied=false;' in key
 assert 'collectTileViews(g.getChildAt(i),live)' in key
 assert 'hiddenBackgrounds.put((View)p.thisObject,(Drawable)p.args[0])' in key
-assert 'if(!cfg.enabled||!cfg.refined||!cfg.ripple||cfg.hideTiles)return;' in key
-assert 'if(cfg.ripple&&!cfg.hideTiles)ripple.draw' in ui
+assert 'if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;' in key
+assert 'if(!cfg.enabled||!cfg.refined||!cfg.ripple||cfg.hideTiles)return;' not in key
+assert 'if(cfg.ripple)ripple.draw' in ui
 assert 'invalidateTree(v)' in key and 'setBackground(v,original)' in key
 print('PASS: verified key subtree backgrounds, theme replacement, recycling/off restoration and no tile outlines')
+
+light=(src/'LifecycleLight.java').read_text()
+assert 'shell.addView(pinned)' in ui and 'demo=card(pinned)' in ui
+assert 'shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1))' in ui
+assert 'private void selectPage(int index)' in ui and 'previewCollapsed' in ui
+assert 'apply.setOnClickListener(v->persist(false))' in ui
+assert 'transitionControl(transitions,"Opening light"' in ui and 'transitionControl(transitions,"Closing light"' in ui
+assert 'onFinishInputView' in module and 'closingLight()' in module
+assert 'host.getOverlay().remove' in light and 'animator.cancel()' in light
+assert 'setTranslation' not in light and 'setScale' not in light
+assert '.putInt("opening46",0).putInt("closing46",0)' in ui
+print('PASS: sticky responsive preview, independent borders, grouped controls and cancellable light-only transitions')

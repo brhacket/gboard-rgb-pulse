@@ -51,7 +51,12 @@ public final class ConfigTest {
         c=Config.from(p);check(c.rippleOpacity==70&&c.backgroundOpacity==90); // no hidden legacy dim
         p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
         c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
-        check(Config.EFFECTS[11].equals("Shuffle modern waves")&&Config.EFFECTS.length==19);
+        check(Config.EFFECTS[11].equals("Shuffle modern waves")&&Config.EFFECTS.length==22);
+        p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
+        p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);
+        p.put("closing46",0);check(!Config.from(p).enabled);
+        p.put("opening46",999);p.put("closing46",-2);check(Config.from(p).opening==3&&Config.from(p).closing==0);
+        check(Config.RIPPLES.length==8);
         check(((Integer)p.get("font11"))==8); // loading never mutates preferences
         System.out.println("PASS: opt-in defaults, malformed preference isolation, refined constraints and read-only loading");
     }

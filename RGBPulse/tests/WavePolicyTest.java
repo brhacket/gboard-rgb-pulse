@@ -24,9 +24,16 @@ public final class WavePolicyTest {
         }
         // Ripple movement is linear at every progress sample, independent of fade.
         for(int step=0;step<=100;step++)equal(step*3,WavePolicy.radius(step/100f,300));
-        for(int style=0;style<4;style++)for(int step=0;step<=100;step++){
+        for(int style=0;style<8;style++)for(int step=0;step<=100;step++){
             float value=WavePolicy.glowStyle(100,0,0,0,WavePolicy.radius(step/100f,300),1,step/100f,style);
             if(!Float.isFinite(value)||value<0||value>1)throw new AssertionError("Invalid style opacity");
+        }
+        if(WavePolicy.glowStyle(0,60,0,0,60,1,.2f,4)<=.8f)throw new AssertionError("Full keyboard must reach other rows");
+        equal(0,WavePolicy.glowStyle(-60,0,0,0,60,1,.2f,5));
+        if(WavePolicy.glowStyle(60,0,0,0,60,1,.2f,5)<=.8f)throw new AssertionError("Rightward chase missing");
+        for(int style=0;style<8;style++){
+            equal(0,WavePolicy.glowStyle(60,0,0,0,0,1,0,style));
+            equal(0,WavePolicy.glowStyle(60,0,0,0,300,1,1,style));
         }
         // Traveling front lights a neighboring key, then leaves it dark.
         if(glow(WavePolicy.radius(.2f,300),0,.2f)<.8f)throw new AssertionError("Missing wavefront");

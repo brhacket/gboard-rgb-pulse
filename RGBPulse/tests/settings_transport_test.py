@@ -15,9 +15,9 @@ assert 'SettingsContract.PERMISSION' in client and 'Context.RECEIVER_EXPORTED' i
 assert 'Config next=new Config()' in client and 'request!=generation.get()' in client
 assert client.index('listener.apply(next)') < client.index('"ack",null,receipt')
 assert 'Config.from(new BundlePreferences(data))' in client
-assert 'Turn everything off & apply' in ui and 'NOT confirmed by Gboard' in ui
+assert 'Turn everything off & apply' in ui and 'Saved · waiting for Gboard' in ui
 cleanup=module.split('void applyCurrentSettings(){',1)[1].split('void safeScan(',1)[0]
-assert cleanup.index('keyStyle.restore()') < cleanup.index('if(!config.enabled||!visible)')
+assert cleanup.index('keyStyle.restore()') < cleanup.index('if(!config.enabled||!visible){root.invalidate();return;}')
 for callback in ['this','scanLater','settleScan']:
     assert 'root.removeCallbacks('+callback+')' in cleanup
 assert 'if (body == next && next != null) return;' in module

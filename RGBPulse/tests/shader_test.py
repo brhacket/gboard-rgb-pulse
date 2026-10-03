@@ -7,8 +7,8 @@ from PIL import Image,ImageDraw
 ROOT=Path(__file__).resolve().parents[1]
 src=(ROOT/'shaders/field.agsl').read_text()
 effect=skia.RuntimeEffect.MakeForShader(src)
-names=['hologram','neon','glass','aurora','metaballs','bloom','prism','sonar','silk','plasma','orbit','shuffle-reserved','material-bloom','diffused-ring','tonal-orbit','lateral-sweep','soft-spotlight','crossing-ribbons','rising-curtain']
-styles=list(range(11))+list(range(12,19))
+names=['hologram','neon','glass','aurora','metaballs','bloom','prism','sonar','silk','plasma','orbit','shuffle-reserved','material-bloom','diffused-ring','tonal-orbit','lateral-sweep','soft-spotlight','crossing-ribbons','rising-curtain','diamond-echo','velvet-tide','split-horizon']
+styles=list(range(11))+list(range(12,22))
 W,H=360,171
 
 def render(style,age,mode=3,origins=None,opacity=.9,phase=.4,size=1.1,w=W,h=H,padded=False,fx=None,special=False,thickness=1.0):
@@ -45,7 +45,7 @@ for style in styles:
         for x,y in [(2,2),(W-2,2),(2,H-2),(W-2,H-2),(W/2,H/2)]:
             ar=render(style,.35,size=size,origins=[(x,y,.35,.7)],padded=True,fx=special,special=True)
             assert not ar[:6].any() and not ar[-6:].any() and not ar[:,:6].any() and not ar[:,-6:].any()
-print('PASS: 18 specialized programs + 180 edge/size clipping assertions')
+print('PASS: 21 specialized programs + 210 edge/size clipping assertions')
 
 # Verify fronts actually travel outwards, not just pulse opacity at fixed coordinates.
 w=h=256
@@ -67,6 +67,9 @@ for a in range(15,19):
             aa=render(a,age)[:,:,3].astype(float);bb=render(b,age)[:,:,3].astype(float)
             differences.append(np.abs(aa-bb).mean())
         assert np.mean(differences)>3,(a,b,differences)
+for a,b in [(19,13),(20,18),(21,15),(19,20),(20,21)]:
+    difference=np.mean([np.abs(render(a,age)[:,:,3].astype(float)-render(b,age)[:,:,3].astype(float)).mean() for age in [.2,.4,.6]])
+    assert difference>2,(a,b,difference)
 print('PASS: new motion geometries differ across three animation phases')
 
 # Optional parity check against supplied v5: exact favorite at the same settings.
@@ -107,7 +110,7 @@ for style in styles:
         frames.append(add_keys(bg).convert('RGB'))
     frames[len(frames)//3].save(folder/(name+'.png'))
     if '--stills' not in sys.argv:frames[0].save(folder/(name+'.gif'),save_all=True,append_images=frames[1:],duration=56,loop=0)
-review=Image.new('RGB',(W*3,(H+24)*6),(14,15,22));d=ImageDraw.Draw(review)
+review=Image.new('RGB',(W*3,(H+24)*7),(14,15,22));d=ImageDraw.Draw(review)
 for idx,style in enumerate(styles):
     name=names[style]
     x=(idx%3)*W;y=(idx//3)*(H+24)
