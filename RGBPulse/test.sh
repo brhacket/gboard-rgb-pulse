@@ -38,6 +38,8 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/RevisionGate.java te
 java -cp work/tests dev.rgbpulse.gboard.RevisionGateTest
 javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreferences.java src/dev/rgbpulse/gboard/SettingsStore.java tests/SettingsStoreTest.java
 java -cp work/tests dev.rgbpulse.gboard.SettingsStoreTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/QuietPolicy.java tests/QuietPolicyTest.java
+java -cp work/tests dev.rgbpulse.gboard.QuietPolicyTest
 python3 tests/settings_transport_test.py
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py

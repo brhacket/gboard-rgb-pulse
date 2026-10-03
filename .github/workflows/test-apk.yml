@@ -48,18 +48,18 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-47.0-test.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-48.0-test.apk
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-47.0-test.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-47.0-test.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-47.0-test.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-47.0-test.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-48.0-test.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-48.0-test.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-48.0-test.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-48.0-test.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-47.0-test.apk
+            Gboard-RGB-Pulse-48.0-test.apk
             APK-verification.txt
             SHA256SUMS.txt
       - name: Publish test download
@@ -67,19 +67,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'NOTES'
-          A curated set of exactly ten pulse animations: Edge runner, Corner snap, Underline, Prism swipe, Four sparks, Drop ring, Split shutters, Soft press, Wide orbit and Wide aurora. The first eight use the actual tapped-key rectangle, with a finite local footprint. Pulses default to 220 ms with a separate 120–360 ms length control. At most three local pulses coexist; wide pulses replace each other. Combined opacity is capped (48% local / 28% wide before the brightness setting), instead of stacking toward white.
+          Settings delivery is no longer dependent on Gboard opening the module ContentProvider. Apply sends a signature-permission-protected snapshot directly to the live Gboard receiver. Gboard acknowledges only after applying it via an immutable, one-shot PendingIntent to a non-exported receipt receiver. Bootstrap requests send only the module's own applied settings to the fixed Gboard package; caller payloads are ignored and requests are rate-limited. Stale snapshots are rejected. A missing reply disables effects after a bounded timeout and the UI distinguishes no live module response from missing confirmation. This is a transport redesign, not a device-confirmed fix.
 
-          Removes Rightward chase, Inward sweep and Heartbeat. Full keyboard remains; new Diamond field, Cross bloom, Diagonal weave and Checker reveal patterns cross multiple rows without pretending extra taps occurred. Native key fills and ripple borders remain independent. The praised Studio layout stays intact.
+          Restart is again in the sticky footer, separately confirmed. If root force-stop fails, an explicit dialog explains it and offers Android app settings. Apply alone never force-stops Gboard.
 
-          Apply adds a ContentObserver notification path alongside broadcasts, retries notification while waiting, always releases the save-button busy state after handled errors, and confirms both settings revision and runtime version. An older injected build can no longer acknowledge current settings as up to date. The cause on the user's device is not yet confirmed.
+          Touch separates tap feedback from Quiet background. The new background is one fixed-size, low-contrast pool near the key, with a maximum 40dp radius and 12% peak opacity before the strength control. It replaces itself on fast typing, never grows across the keyboard or accumulates. Soft press / 160ms is the default feedback selection; effects stay opt-in. Try everyday setup stages key feedback plus quiet background, with traveling ripple and opening/closing spectacles off. It does not apply or play a demo automatically. Existing expressive/wide choices remain optional.
 
-          Dramatic optional opening/closing lighting: Ignition, Stage curtains and Horizon rise, with stronger fronts, broader geometry and 520/260 ms timing. Typing cancels the opening spectacle immediately. Closing starts visibly but Android can still dismiss the window before rendering; no forced delay or key movement is introduced.
+          **Install:** Fresh signing key: uninstall the previous test module (settings are lost), install v48, enable for Gboard in LSPosed/Vector, then reboot once. Open the actual test keyboard and Apply changes. Check the connection status. A no-live-module-reply message means this build's receiver did not answer; check module scope/reboot rather than assuming the settings applied. Keep a backup keyboard enabled.
 
-          **Install:** Fresh test signing key: uninstall the previous module (settings are lost), install v47, enable for Gboard in LSPosed/Vector, then reboot once to load the current injected code. Press Apply changes and open the real test keyboard; wait for Gboard confirmation. All effects remain opt-in. Keep a backup keyboard enabled.
-
-          Automated Java/source checks, production shader clipping/footprint/opacity-cap checks, Android compilation and APK signature/archive verification precede publication. These do not prove phone behavior or subjective animation quality. Apply delivery and lifecycle timing remain device-unverified.
+          Automated Java/source tests, pulse shader checks, Android compilation, archive and signature verification run before publication. Android transport/LSPosed integration, force-stop permissions and phone rendering remain unverified on a device.
           NOTES
-          gh release create "test-47-${{ github.run_id }}-${{ github.run_attempt }}" \
-            Gboard-RGB-Pulse-47.0-test.apk APK-verification.txt SHA256SUMS.txt \
+          gh release create "test-48-${{ github.run_id }}-${{ github.run_attempt }}" \
+            Gboard-RGB-Pulse-48.0-test.apk APK-verification.txt SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false \
-            --title 'Gboard RGB Pulse 47.0 — test build' --notes-file release-notes.md
+            --title 'Gboard RGB Pulse 48.0 — test build' --notes-file release-notes.md

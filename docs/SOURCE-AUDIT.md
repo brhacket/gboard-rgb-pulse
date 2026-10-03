@@ -365,3 +365,40 @@ Checks include executable revision/build matching, config migration and ripple
 bounds/cross-row reach; desktop production-shader tests prove local support bounds,
 aggregate alpha caps under four simultaneous taps, specializations and different
 local alpha geometry. These are not real Binder/IME or phone rendering tests.
+
+
+## Delivery redesign and everyday separation (48.0 test)
+
+The user confirms v47 stays waiting for Gboard, so this is a delivery blocker,
+not evidence that animation parsing/rendering ignores a confirmed configuration.
+No phone logs identify which hop failed. Instead of adding another provider retry,
+v48 uses a signed, package-targeted broadcast containing the actual applied
+snapshot. The injected receiver requires the module-defined signature permission.
+Successful main-thread application sends an immutable, one-shot PendingIntent to
+a non-exported module receipt receiver, which checks revision/build against the
+current saved settings. No exported acknowledgement endpoint is added.
+
+A small exported bootstrap receiver accepts only a fixed request action, ignores
+all extras, throttles requests and sends only private applied settings to the fixed
+Gboard package. It returns no data to the caller and cannot change preferences.
+A caller can trigger a bounded refresh, not inject configuration or capture it.
+Monotonic elapsedRealtimeNanos stamps reject out-of-order snapshots; unchanged
+revisions acknowledge without resetting live effects. A 3s missing-response timeout
+restores off, rather than indefinitely using stale visuals. Ordered broadcast
+status distinguishes no live receiver reply from a missing application receipt.
+The older UID-restricted provider remains for compatibility, but the new Gboard
+client does not depend on it. Real Android delivery still needs device validation.
+
+The footer exposes Restart with confirmation, independently of Apply. Root failure
+gets a dedicated dialog, not a transient status overwritten by acknowledgement.
+
+Quiet background is a separate toggle/renderer from tap feedback and traveling
+ripple. One fixed-radius pool (<=40dp), <=12% opacity times intensity, single smooth
+240ms response, newest tap replaces old. No expanding front or global sweep.
+The everyday preset only stages Soft press / 160ms + quiet background, disabling
+ripple and entrance/exit lighting. No application/demo/restart occurs from preset
+selection. Both independent effects can run without ripple or without each other.
+
+Tests cover quiet geometry/envelope, opt-in combinations and existing policy/render
+contracts. Security/lifecycle transport contracts are source checks plus executable
+revision/build tests, not proof of Android broadcast/IME behavior.

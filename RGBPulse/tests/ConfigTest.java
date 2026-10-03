@@ -15,7 +15,7 @@ public final class ConfigTest {
         p.put("enabled",true);p.put("tapFx6","corrupt");p.put("duration3",800);
         p.put("fontData9",null);p.put("debug3",true);
         Config c=Config.from(p);
-        check(c.enabled&&c.effect==0&&c.duration==800&&c.debug&&c.fontData.equals(""));
+        check(c.enabled&&c.effect==7&&c.duration==800&&c.debug&&c.fontData.equals(""));
         p.put("refined37",true);p.put("tapEffects36",true);p.put("font11",8);
         p.put("duration3",3500);p.put("opacity3",100);p.put("trail19",3);
         c=Config.from(p);
@@ -47,8 +47,8 @@ public final class ConfigTest {
         p.put("hideTiles45",true);p.put("ripple40",false);p.put("tapEffects36",false);
         check(!Config.from(p).enabled); // hiding tiles never silently enables effects
         for(int style=0;style<10;style++){p.put("pulse47",style);check(Config.from(p).effect==style);}
-        p.remove("pulse47");p.put("tapFx6",19);check(Config.from(p).effect==0);
-        check(Config.from(p).pulseDuration==220);p.put("pulseDuration47",999);check(Config.from(p).pulseDuration==360);
+        p.remove("pulse47");p.put("tapFx6",19);check(Config.from(p).effect==7);
+        check(Config.from(p).pulseDuration==160);p.put("pulseDuration47",999);check(Config.from(p).pulseDuration==360);
         p.put("pulseDuration47",1);check(Config.from(p).pulseDuration==120);
         p.put("rippleStyle42",5);check(Config.from(p).rippleStyle==4);
         p.remove("rippleStrength41");p.remove("backgroundStrength41");
@@ -56,6 +56,8 @@ public final class ConfigTest {
         p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
         c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
         check(Config.EFFECTS.length==10&&Config.EFFECT_HINTS.length==10);
+        p.put("quietBackground48",true);c=Config.from(p);check(c.enabled&&c.quietBackground&&!c.ripple&&!c.tapEffects);
+        p.put("quietBackground48",false);check(!Config.from(p).enabled);
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
         p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);
         p.put("closing46",0);check(!Config.from(p).enabled);

@@ -7,7 +7,7 @@ effects=re.findall(r'"([^"]+)"',cfg.split('String[] EFFECTS = {',1)[1].split('};
 assert len(effects)==10 and len(set(effects))==10
 assert effects[0]=='Edge runner' and effects[-1]=='Wide aurora'
 assert 'pulse47' in cfg and 'tapFx6' not in cfg
-assert 'effect = 0' in cfg
+assert 'effect = 7' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg
 ui=(src/'SettingsActivity.java').read_text();fx=(src/'Fx.java').read_text()
 # Legacy catalog remains loadable, but the simplified UI intentionally exposes one effect.

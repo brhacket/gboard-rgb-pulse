@@ -33,7 +33,7 @@ print('PASS: simple UI, explicit Apply, stock text, drawable state, shared clipp
 assert 'Test your keyboard' in ui and 'EditText test=new EditText(this)' in ui
 assert 'test.setSaveEnabled(false)' in ui
 assert 'fx.drawFields(canvas,play,now)' in ui and 'fx.tap(rect.centerX(),rect.centerY(),play,rect,now)' in ui
-assert 'Pulse on tap' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
+assert 'Tap feedback' in ui and '.setSingleChoiceItems(Config.EFFECTS' in ui
 assert 'putBoolean("refined37",true).putBoolean("tapEffects36",false)' not in ui
 module=(src/'PulseModule.java').read_text()
 assert 'now-lastDraw>=16' not in module
@@ -58,7 +58,7 @@ refined=key.split('private void applyRefined(',1)[1].split('private void clearOv
 assert 'cfg.tiles &&' in refined and 'if(!refinedApplied)' in refined and '.getOverlay().remove' in refined
 print('PASS: confirmed save-before-restart, bounded root process, refined overlay lifecycle')
 
-assert 'c.enabled=c.ripple||c.tapEffects' in cfg
+assert 'c.enabled=c.ripple||c.tapEffects||c.quietBackground' in cfg
 assert 'c.glass=c.ripple;c.sideStyle=c.ripple?1:0' in cfg
 assert 'enabled.setChecked(cfg.ripple)' in ui
 assert 'putBoolean("ripple40",value)' in ui and 'if(cfg.ripple)fx.side.tap' in ui
@@ -119,3 +119,7 @@ assert 'host.getOverlay().remove' in light and 'animator.cancel()' in light
 assert 'setTranslation' not in light and 'setScale' not in light
 assert '.putInt("opening46",0).putInt("closing46",0)' in ui
 print('PASS: sticky responsive preview, independent borders, grouped controls and cancellable light-only transitions')
+
+assert 'Try everyday setup' in ui and 'quietBackground48' in ui
+assert 'restart=button("Restart…",false)' in ui and 'Gboard was not stopped' in ui
+assert 'quiet.clear()' in fx and 'cfg.quietBackground' in fx

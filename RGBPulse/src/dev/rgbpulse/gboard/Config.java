@@ -12,11 +12,13 @@ public final class Config {
         "Two soft slivers separate toward the key edges.","A soft, single glow responds beneath your finger.",
         "Wide effect · one fine ring travels across the keyboard.","Wide effect · one flowing ribbon crosses the keyboard."};
     public static final int GPU_COUNT = 10;
-    public int pulseDuration=220;
+    public int pulseDuration=160;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
+    public boolean quietBackground=false;
+    public int quietStrength=65;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -28,7 +30,7 @@ public final class Config {
     public boolean hideTiles = true;
     public int rippleOpacity=70, backgroundOpacity=90;
     public boolean refined = false;
-    public int effect = 0, colorMode = 2;
+    public int effect = 7, colorMode = 2;
     public int hue1 = 270, hue2 = 195, sat = 30;
     public int opacity = 90, duration = 1700, size = 120, thickness = 100;
     public int layer = 0;
@@ -59,10 +61,12 @@ public final class Config {
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
+            c.quietBackground=flag(p,"quietBackground48",false);
+            c.quietStrength=clamp(number(p,"quietStrength48",65),10,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
             c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
-            c.pulseDuration=clamp(number(p,"pulseDuration47",220),120,360);
+            c.pulseDuration=clamp(number(p,"pulseDuration47",160),120,360);
             c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
             c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);
             c.hue2 = clamp(number(p,"hue2", c.hue2), 0, 360);
@@ -87,7 +91,7 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.opening>0||c.closing>0;
+            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
