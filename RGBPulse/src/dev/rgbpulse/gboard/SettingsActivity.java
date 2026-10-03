@@ -40,6 +40,7 @@ public final class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         dp=getResources().getDisplayMetrics().density;
+        if(saved!=null){selectedPage=Config.clamp(saved.getInt("page46",0),0,2);previewCollapsed=saved.getBoolean("previewCollapsed46",false);}
         applied=getSharedPreferences(Config.PREFS,Context.MODE_PRIVATE);
         draft=getSharedPreferences("settings_draft",Context.MODE_PRIVATE);
         if(saved==null){copySettings(applied.getAll(),draft).commit();prepareDraft();}
@@ -378,6 +379,9 @@ public final class SettingsActivity extends Activity {
             android.net.Uri.parse("package:com.google.android.inputmethod.latin")));}
         catch(RuntimeException e){Toast.makeText(this,"Open Android Settings > Apps > Gboard > Force stop.",Toast.LENGTH_LONG).show();}
     }
+    @Override protected void onSaveInstanceState(Bundle state){
+        state.putInt("page46",selectedPage);state.putBoolean("previewCollapsed46",previewCollapsed);super.onSaveInstanceState(state);
+    }
     @Override public void onBackPressed(){
         if(saving){Toast.makeText(this,"Please wait for saving to finish.",Toast.LENGTH_SHORT).show();return;}
         if(!draft.getAll().equals(applied.getAll()))new AlertDialog.Builder(this).setTitle("Leave without applying?")
@@ -440,7 +444,7 @@ public final class SettingsActivity extends Activity {
                 amount=fade.advance(amount,now);active|=fade.active();
                 if(cfg.ripple)ripple.draw(canvas,rect,dp,amount,cfg.rippleOpacity/100f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
                 label.setColor(cfg.ripple?LegendTint.color(INK,amount,cfg.letterInactive,cfg.letterActive):INK);
-                label.setTextSize((row==3?11:13)*dp);
+                label.setTextSize(Math.min((row==3?11:13)*dp,rect.height()*.72f));
                 canvas.drawText(rows[row][k],rect.centerX(),rect.centerY()-(label.ascent()+label.descent())/2,label);
             }
             canvas.restoreToCount(save);removeCallbacks(tick);
