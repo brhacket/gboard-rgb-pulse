@@ -30,7 +30,8 @@ assert 'static final String FLUID' not in old and not (root/'shaders/fluid.agsl'
 print('PASS: curated pulse catalog, migration, no idle animation and shader sync')
 
 field=(src/'FieldFx.java').read_text()
-assert 'next=(next+1)%3' in field and 'if(style>=8)clear()' in field
+assert 'next=(next+1)%3' in field and 'int style=pass==0?cfg.effect:7+cfg.background;' in field
+assert 'boolean on=pass==0?cfg.tapEffects:cfg.background>0;' in field
 assert 'RectF key' in fx and 'keyBounds' in field and 'keyBounds[4]' in shader
 assert 'float cap=style<7.5?.48:.40' in shader
 assert 'Rightward chase' not in cfg and 'Heartbeat' not in cfg and 'Inward sweep' not in cfg

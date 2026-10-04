@@ -17,6 +17,7 @@ public final class Config {
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
+    public int background=0;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -59,9 +60,10 @@ public final class Config {
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
+            c.background=clamp(number(p,"background51",0),0,2);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
-            c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
+            c.effect = clamp(number(p,"pulse47", c.effect), 0, 7);
             c.pulseDuration=clamp(number(p,"pulseDuration47",160),120,360);
             c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
             c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);
@@ -87,7 +89,7 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.opening>0||c.closing>0;
+            c.enabled=c.ripple||c.tapEffects||c.background>0||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,150,1100);c.opacity=clamp(c.opacity,15,85);

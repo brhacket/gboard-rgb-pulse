@@ -23,22 +23,22 @@ public final class Fx {
         if(issue!=null)return issue;
         return fields!=null?fields.issue():null;
     }
-    public boolean active(long now){return cfg.enabled&&((cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
+    public boolean active(long now){return cfg.enabled&&(((cfg.tapEffects||cfg.background>0)&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
     public void tap(float x,float y,RectF play,RectF key,long now) {
-        if(!cfg.enabled||!cfg.tapEffects)return;
+        if(!cfg.enabled)return;
+        if(!cfg.tapEffects&&cfg.background<=0)return;
         init();
         if(fields==null||fields.issue()!=null)return; // Never resurrect a removed effect as fallback.
-        int style=cfg.effect;
         float hue;
         if(cfg.colorMode==1)hue=rnd.nextFloat()*360;
         else if(cfg.colorMode==4)hue=(x-play.left)/Math.max(1,play.width())*360;
         else hue=(now%4000L)*.09f;
-        fields.tap(style,x,y,play,key,hue,now);
+        fields.tap(x,y,play,key,hue,now);
     }
     final java.util.ArrayList<RectF> lensBoxes=new java.util.ArrayList<RectF>();
     public void lenses(java.util.List<RectF> boxes,float dp){lensBoxes.clear();lensBoxes.addAll(boxes);}
     public void drawFields(Canvas canvas,RectF play,long now){
-        if(cfg.enabled&&cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))fields.draw(canvas,play,cfg,now);
+        if(cfg.enabled&&(cfg.tapEffects||cfg.background>0)&&fields!=null&&fields.active(now,cfg.pulseDuration))fields.draw(canvas,play,cfg,now);
     }
     public void clear(){glide.points.clear();side.clear();if(fields!=null)fields.clear();}
     public void dispose(){clear();fields=null;attempted=false;issue=null;}

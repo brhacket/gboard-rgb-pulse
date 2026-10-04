@@ -18,7 +18,7 @@ final class LifecycleLight extends Drawable {
         cancel();if(style==0||area.isEmpty()||!host.isShown())return;
         this.style=style;this.closing=closing;this.color=color;this.area.set(area);progress=0;
         host.getOverlay().add(this);setBounds(0,0,host.getWidth(),host.getHeight());
-        animator=ValueAnimator.ofFloat(0,1);animator.setDuration(closing?300:620);
+        animator=ValueAnimator.ofFloat(0,1);animator.setDuration(closing?420:900);
         animator.setInterpolator(new android.view.animation.LinearInterpolator());
         animator.addUpdateListener(a->{progress=(Float)a.getAnimatedValue();invalidateSelf();});
         animator.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){host.getOverlay().remove(LifecycleLight.this);}});
@@ -41,8 +41,10 @@ final class LifecycleLight extends Drawable {
         float dp=host.getResources().getDisplayMetrics().density;
         int save=canvas.save();canvas.clipRect(area);
         paint.setStyle(Paint.Style.FILL);
+        float cx=area.centerX(),cy=area.centerY();
         if(style==1){
-            // Ignition: core flash, hot expanding crest with chromatic fringe, wide halo.
+            // Ignition: core flash, hot expanding crest with chromatic fringe, wide halo
+            // and rotating light spokes.
             float radius=Math.max(1,(float)Math.hypot(area.width(),area.height())*(.05f+te*.72f));
             paint.setShader(new RadialGradient(area.centerX(),area.centerY(),Math.max(1,radius*.55f),
                 new int[]{withAlpha(hot,envelope*.65f*(1-te)),withAlpha(base,envelope*.30f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));
@@ -51,11 +53,18 @@ final class LifecycleLight extends Drawable {
                 new int[]{withAlpha(base,0),withAlpha(base,envelope*.45f),withAlpha(base,0)},new float[]{.55f,.84f,1},Shader.TileMode.CLAMP));
             canvas.drawRect(area,paint);
             paint.setShader(null);paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(2.6f*dp);paint.setColor(withAlpha(hot,envelope*.9f));
-            canvas.drawCircle(area.centerX(),area.centerY(),radius*.86f,paint);
-            paint.setStrokeWidth(1.4f*dp);paint.setColor(withAlpha(base,envelope*.4f));
-            canvas.drawCircle(area.centerX(),area.centerY(),radius*.86f+4*dp,paint);
-            canvas.drawCircle(area.centerX(),area.centerY(),Math.max(1,radius*.86f-4*dp),paint);
+            paint.setStrokeWidth(2.6f*dp);paint.setColor(withAlpha(hot,envelope*.95f));
+            canvas.drawCircle(cx,cy,radius*.86f,paint);
+            paint.setStrokeWidth(1.4f*dp);paint.setColor(withAlpha(base,envelope*.45f));
+            canvas.drawCircle(cx,cy,radius*.86f+4*dp,paint);
+            canvas.drawCircle(cx,cy,Math.max(1,radius*.86f-4*dp),paint);
+            paint.setStrokeWidth(1.6f*dp);
+            for(int s8=0;s8<8;s8++){
+                float a2=(float)(s8*Math.PI/4)+te*.6f;
+                float r0=radius*.22f,r1=radius*(.55f+.25f*(1-te));
+                paint.setColor(withAlpha(hot,envelope*.35f*(1-te*.6f)));
+                canvas.drawLine(cx+(float)Math.cos(a2)*r0,cy+(float)Math.sin(a2)*r0,cx+(float)Math.cos(a2)*r1,cy+(float)Math.sin(a2)*r1,paint);
+            }
         }else if(style==2){
             // Stage curtains: light panels part with hot leading edges and fringe lines,
             // over a seam flash at the first moment.
@@ -71,6 +80,14 @@ final class LifecycleLight extends Drawable {
             paint.setShader(new LinearGradient(right-w,0,right+w,0,new int[]{withAlpha(base,0),withAlpha(hot,envelope*.85f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));
             canvas.drawRect(right-w,0,right+w,area.bottom,paint);
             paint.setShader(null);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(2.2f*dp);paint.setColor(withAlpha(hot,envelope*.9f));
+            canvas.drawLine(left,0,left,area.bottom,paint);
+            canvas.drawLine(right,0,right,area.bottom,paint);
+            paint.setStrokeWidth(1.2f*dp);paint.setColor(withAlpha(base,envelope*.4f));
+            canvas.drawLine(left-5*dp,0,left-5*dp,area.bottom,paint);
+            canvas.drawLine(right+5*dp,0,right+5*dp,area.bottom,paint);
+            paint.setStyle(Paint.Style.FILL);
             int seam=withAlpha(hot,envelope*.5f*(1-te));
             paint.setShader(new LinearGradient(area.centerX()-w*.4f,0,area.centerX()+w*.4f,0,new int[]{withAlpha(base,0),seam,withAlpha(base,0)},null,Shader.TileMode.CLAMP));
             canvas.drawRect(area.centerX()-w*.4f,0,area.centerX()+w*.4f,area.bottom,paint);
@@ -78,6 +95,9 @@ final class LifecycleLight extends Drawable {
             // Horizon rise: a hot crest line with fringe, sky glow above and a shorter
             // reflection below.
             float y=area.bottom-area.height()*te,tail=area.height()*.5f;
+            paint.setShader(new RadialGradient(area.centerX(),y,area.height()*.42f,
+                new int[]{withAlpha(hot,envelope*.55f),withAlpha(base,envelope*.28f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));
+            canvas.drawRect(area,paint);
             paint.setShader(new LinearGradient(0,y-tail,0,y,new int[]{withAlpha(base,0),withAlpha(base,envelope*.5f)},null,Shader.TileMode.CLAMP));
             canvas.drawRect(area.left,y-tail,area.right,y,paint);
             paint.setShader(new LinearGradient(0,y,0,y+tail*.5f,new int[]{withAlpha(base,envelope*.3f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));

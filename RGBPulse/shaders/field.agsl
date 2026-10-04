@@ -113,9 +113,10 @@ half4 main(float2 frag){
                     // Four sparks: twinkling diamond sparks fly from the edge midpoints,
                     // each with a streak back toward the key and a white tip.
                     float reach=.25+.85*eo(age);
-                    float tw=.7+.3*sin(time*42.+hue*6.28318);
                     for(int k=0;k<4;k++){
                         float2 dir=k==0?float2(1,0):(k==1?float2(-1,0):(k==2?float2(0,1):float2(0,-1)));
+                        // Stable per-spark character instead of wall-clock flicker.
+                        float tw=.8+.2*sin(float(k)*2.3+hue*6.28318);
                         float2 q=u-dir*reach;
                         float along=dot(q,-dir);
                         float perp=abs(dot(q,float2(dir.y,-dir.x)));
@@ -168,6 +169,8 @@ half4 main(float2 frag){
                     acc+=L(body(age,hue),halo*.35);
                     acc+=L(prism(age,hue,-.3),rim*.5);
                 }
+                // A soft bloom around the key rim grounds every effect on its key.
+                acc+=L(body(age,hue),band(max(a.x,a.y)-.88,width*3.)*.25);
                 acc*=clip;
             }else{
                 float2 p=(frag-taps[i].xy)/max(resolution.y,1);
@@ -186,7 +189,7 @@ half4 main(float2 frag){
                     acc+=L(body(age,hue),head);
                     acc+=L(prism(age,hue,-min(back*.5,1.)*.45),tail*.85);
                     acc+=L(float3(1),tail*.35*exp(-back*6.));
-                    acc+=L(body(age,hue),tail*.22*(.6+.4*sin(p.x*31.+time*5.)));
+                    acc+=L(body(age,hue),tail*.22*(.7+.3*sin(p.x*31.)));
                     acc+=L(prism(age,hue,.3),halo*.15);
                 }else{
                     // Nebula bloom: a lobed shell of light blooms outward from the tap,
@@ -196,7 +199,7 @@ half4 main(float2 frag){
                     float grow=.2+1.05*eo(age);
                     float lobes=.75+.25*sin(ang*3.+time*.7)+.15*sin(ang*5.-time*.5);
                     float d=r-grow*lobes;
-                    float shim=.75+.25*sin(ang*9.+time*2.);
+                    float shim=.75+.25*sin(ang*9.);
                     float shell=exp(-d*d/.028)*shim;
                     acc+=L(float3(1),shell*shell*1.1);
                     acc+=L(body(age,hue),shell*.9);

@@ -60,6 +60,10 @@ public final class ConfigTest {
         p.remove("quietBackground48");p.remove("quietStrength48");
         p.put("fluid50",true);p.put("fluidStrength50",70);check(!Config.from(p).enabled); // removed feature keys stay inert
         p.remove("fluid50");p.remove("fluidStrength50");
+        p.put("pulse47",9);check(Config.from(p).effect==7); // legacy wide indices never become key animations
+        p.put("pulse47",3);p.put("background51",2);c=Config.from(p);check(c.enabled&&c.background==2&&c.effect==3);
+        p.put("background51",9);check(Config.from(p).background==2);
+        p.put("background51",0);p.put("tapEffects36",false);check(!Config.from(p).enabled);
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
         p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);
         p.put("closing46",0);check(!Config.from(p).enabled);

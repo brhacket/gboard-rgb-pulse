@@ -98,7 +98,7 @@ public final class SettingsActivity extends Activity {
         ripplePage.addView(text("A little extra, when you want it",20,INK));
         ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
         pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key feedback works on its own: quick layered light on every tap, plus wide background sweeps when you want them. No traveling wave needed.",13,MUTED));
+        pulsePage.addView(text("Key animations and background animations are separate controls — run either, or both at once. No traveling wave needed.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
@@ -142,18 +142,28 @@ public final class SettingsActivity extends Activity {
         LinearLayout backgroundPanel=card(pulsePage);backgrounds.setVisibility(View.GONE);
         backgrounds.setOnClickListener(v->{boolean open=backgroundPanel.getVisibility()!=View.VISIBLE;
             backgroundPanel.setVisibility(open?View.VISIBLE:View.GONE);backgrounds.setText(open?"Background animations  −":"Background animations  +");});
-        Switch backgroundOn=new Switch(this);backgroundOn.setText("Tap feedback");backgroundOn.setTextColor(INK);
+        Switch backgroundOn=new Switch(this);backgroundOn.setText("Key animations");backgroundOn.setTextColor(INK);
         backgroundOn.setMinHeight(px(48));backgroundOn.setChecked(cfg.tapEffects);
         backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
-        backgroundPanel.addView(text("Start with Soft press: one short response beneath your finger. Wide orbit and Wide aurora remain optional expressive choices.",12,MUTED));
+        backgroundPanel.addView(text("Layered-light responses on the tapped key. Start with Soft press.",12,MUTED));
+        final String[] keyEffects=java.util.Arrays.copyOfRange(Config.EFFECTS,0,8);
+        TextView effectHint=text(Config.EFFECT_HINTS[cfg.effect],13,MUTED);
+        Button effect=button("Key animation · "+Config.EFFECTS[cfg.effect],false);
+        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key animation")
+            .setSingleChoiceItems(keyEffects,cfg.effect,(dialog,index)->{
+                cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Key animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);backgroundPanel.addView(effectHint);
+        Button bg=button("Background · "+(cfg.background==0?"Off":Config.EFFECTS[7+cfg.background]),false);
+        TextView bgHint=text(cfg.background==0?"A wide light show behind the keys. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[7+cfg.background],13,MUTED);
+        bg.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation")
+            .setSingleChoiceItems(new String[]{"Off","Comet sweep","Nebula bloom"},cfg.background,(dialog,index)->{
+                cfg.background=index;draft.edit().putInt("background51",index).apply();
+                bg.setText("Background · "+(index==0?"Off":Config.EFFECTS[7+index]));
+                bgHint.setText(index==0?"A wide light show behind the keys. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[7+index]);
+                changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(bg);backgroundPanel.addView(bgHint);
         backgroundStrength(backgroundPanel);
         slider(backgroundPanel,"Feedback length",120,360,cfg.pulseDuration,true);
-        TextView effectHint=text(Config.EFFECT_HINTS[cfg.effect],13,MUTED);
-        Button effect=button("Animation · "+Config.EFFECTS[cfg.effect],false);
-        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Choose your tap feedback")
-            .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index)->{
-                cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);backgroundPanel.addView(effectHint);
         Button colors=button("Color mode · "+Config.COLORS[cfg.colorMode],false);
         colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
@@ -166,7 +176,7 @@ public final class SettingsActivity extends Activity {
         secondaryHueRow=hueControl(backgroundPanel,"Secondary hue","hue2",false);
         secondaryHueRow.setVisibility(cfg.colorMode==3?View.VISIBLE:View.GONE);
         Button everyday=button("Try everyday setup",false);backgroundPanel.addView(everyday);
-        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
+        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putInt("background51",0).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
 
         LinearLayout transitions=card(keyboardPage);
         transitions.addView(text("Hello & goodbye",18,INK));
@@ -187,7 +197,7 @@ public final class SettingsActivity extends Activity {
             .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint. This does not disable Gboard’s own native key-press animation. Everything is saved and Gboard is force-stopped, so the change is live the next time the keyboard opens.")
             .setPositiveButton("Disable & save",(d,w)->{
                 draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
-                    .putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                    .putInt("background51",0).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
                 render();persist();
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
@@ -285,28 +295,19 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             chip.setOnClickListener(v->input.setText(hex(color)));palette.addView(chip,new LinearLayout.LayoutParams(0,px(48),1));
         }
         final int[] candidate={Config.number(draft,key,fallback)};sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);
-        // Direct RGB sliders stay in sync with the hex field and the live sample.
-        final SeekBar[] chans=new SeekBar[3];
-        final String[] names={"Red","Green","Blue"};
-        for(int c=0;c<3;c++){
-            final int ch=c;
-            content.addView(text(names[ch],12,MUTED));
-            SeekBar bar=new SeekBar(this);bar.setMax(255);bar.setMinimumHeight(px(40));bar.setContentDescription(names[ch]);
-            bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-                public void onProgressChanged(SeekBar b,int pv,boolean user){if(!user)return;
-                    int col=candidate[0],r=(col>>16)&255,g=(col>>8)&255,bl=col&255;
-                    if(ch==0)r=pv;else if(ch==1)g=pv;else bl=pv;
-                    candidate[0]=0xff000000|(r<<16)|(g<<8)|bl;
-                    input.setText(hex(candidate[0]));sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}
-                public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
-            });
-            content.addView(bar);chans[ch]=bar;
-        }
-        Runnable syncChans=()->{int col=candidate[0];chans[0].setProgress((col>>16)&255);chans[1].setProgress((col>>8)&255);chans[2].setProgress(col&255);};
-        syncChans.run();
+        // A real picker: saturation/value square plus hue bar, synced with hex and sample.
+        final float[] hsv=new float[3];Color.colorToHSV(candidate[0],hsv);
+        final Runnable[] apply=new Runnable[1];
+        ColorSquare square=new ColorSquare(this,hsv[0],hsv[1],hsv[2],(s,v)->{hsv[1]=s;hsv[2]=v;apply[0].run();});
+        content.addView(square,new LinearLayout.LayoutParams(-1,px(170)));
+        HueBar hbar=new HueBar(this,hsv[0],deg->{hsv[0]=deg;square.setHue(deg);apply[0].run();});
+        content.addView(hbar,new LinearLayout.LayoutParams(-1,px(44)));
+        apply[0]=()->{candidate[0]=Color.HSVToColor(hsv)|0xff000000;sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);input.setText(hex(candidate[0]));};
+        apply[0].run();
         input.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
-                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString());sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);syncChans.run();}}
+                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString())|0xff000000;Color.colorToHSV(candidate[0],hsv);
+                    square.setHue(hsv[0]);square.setSV(hsv[1],hsv[2]);sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}}
             public void afterTextChanged(android.text.Editable e){}
         });
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Use in draft",null).setNegativeButton("Cancel",null).create();
@@ -333,23 +334,80 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
         });panel.addView(bar);
     }
-    private GradientDrawable rainbowTrack(){
-        int[] rainbow=new int[7];for(int i=0;i<7;i++)rainbow[i]=Color.HSVToColor(new float[]{i*60,1,1});
-        GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,rainbow);g.setCornerRadius(px(6));return g;
+    private static float clamp01(float v){return v<0?0:(v>1?1:v);}
+
+    /** A draggable hue spectrum bar with a round thumb — a proper hue picker. */
+    private final class HueBar extends View {
+        interface Sink{void hue(int degrees);}
+        private final Paint p=new Paint(3);
+        private final Sink sink;
+        private float degrees;
+        HueBar(Context c,float start,Sink sink){super(c);this.sink=sink;degrees=start;setMinimumHeight(px(44));setContentDescription("Hue");}
+        void set(float value){degrees=value;invalidate();}
+        @Override protected void onDraw(Canvas canvas){
+            float x0=getPaddingLeft(),x1=getWidth()-getPaddingRight(),w=Math.max(1,x1-x0),cy=getHeight()*.5f;
+            int[] rainbow=new int[7];for(int i=0;i<7;i++)rainbow[i]=Color.HSVToColor(new float[]{i*60,1,1});
+            p.setShader(new LinearGradient(x0,0,x1,0,rainbow,null,Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(x0,cy-px(8),x1,cy+px(8),px(8),px(8),p);
+            p.setShader(null);
+            float tx=x0+w*clamp01(degrees/360f);
+            p.setColor(0xff0c1419);canvas.drawCircle(tx,cy,px(12),p);
+            p.setColor(Color.HSVToColor(new float[]{degrees,1,1}));canvas.drawCircle(tx,cy,px(9),p);
+            p.setColor(0xffffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(px(1.5f));canvas.drawCircle(tx,cy,px(9),p);p.setStyle(Paint.Style.FILL);
+        }
+        @Override public boolean onTouchEvent(MotionEvent e){
+            int a=e.getActionMasked();
+            if(a==MotionEvent.ACTION_DOWN||a==MotionEvent.ACTION_MOVE){
+                float x0=getPaddingLeft(),w=Math.max(1,getWidth()-getPaddingLeft()-getPaddingRight());
+                degrees=clamp01((e.getX()-x0)/w)*360f;
+                sink.hue(Math.round(degrees));invalidate();
+            }
+            return true;
+        }
     }
+
+    /** Saturation/value square for the current hue. */
+    private final class ColorSquare extends View {
+        interface Sink{void sv(float s,float v);}
+        private final Paint p=new Paint(3);
+        private final Sink sink;
+        private float hue,sat,val;
+        ColorSquare(Context c,float h,float s,float v,Sink sink){super(c);this.sink=sink;hue=h;sat=s;val=v;setMinimumHeight(px(160));setContentDescription("Saturation and brightness");}
+        void setHue(float h){hue=h;invalidate();}
+        void setSV(float s,float v){sat=s;val=v;invalidate();}
+        @Override protected void onDraw(Canvas canvas){
+            float w=getWidth(),h=getHeight();
+            int base=Color.HSVToColor(new float[]{hue,1,1});
+            p.setShader(new LinearGradient(0,0,w,0,new int[]{0xffffffff,base},null,Shader.TileMode.CLAMP));
+            canvas.drawRect(0,0,w,h,p);
+            p.setShader(new LinearGradient(0,0,0,h,new int[]{0x00000000,0xff000000},null,Shader.TileMode.CLAMP));
+            canvas.drawRect(0,0,w,h,p);
+            p.setShader(null);
+            float tx=clamp01(sat)*w,ty=(1-clamp01(val))*h;
+            p.setColor(0xff0c1419);canvas.drawCircle(tx,ty,px(11),p);
+            p.setColor(Color.HSVToColor(new float[]{hue,sat,val})|0xff000000);canvas.drawCircle(tx,ty,px(8),p);
+            p.setColor(0xffffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(px(1.5f));canvas.drawCircle(tx,ty,px(8),p);p.setStyle(Paint.Style.FILL);
+        }
+        @Override public boolean onTouchEvent(MotionEvent e){
+            int a=e.getActionMasked();
+            if(a==MotionEvent.ACTION_DOWN||a==MotionEvent.ACTION_MOVE){
+                float s=clamp01(e.getX()/Math.max(1,getWidth())),v=1-clamp01(e.getY()/Math.max(1,getHeight()));
+                sat=s;val=v;sink.sv(s,v);invalidate();
+            }
+            return true;
+        }
+    }
+
     private LinearLayout hueControl(LinearLayout panel,String title,String key,boolean primary){
         LinearLayout row=new LinearLayout(this);row.setOrientation(1);
         TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);row.addView(value);
         swatch(value,Color.HSVToColor(new float[]{primary?cfg.hue1:cfg.hue2,cfg.sat/100f,1}));
-        SeekBar hue=new SeekBar(this);hue.setMax(360);hue.setProgress(primary?cfg.hue1:cfg.hue2);hue.setMinimumHeight(px(48));hue.setContentDescription(title);
-        hue.setProgressDrawable(rainbowTrack());
-        hue.setThumbTintList(android.content.res.ColorStateList.valueOf(0xfff5efff));
-        hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar bar,int progress,boolean user){if(!user)return;
-                if(primary)cfg.hue1=progress;else cfg.hue2=progress;
-                value.setText(title+" · "+progress+"°");swatch(value,Color.HSVToColor(new float[]{progress,cfg.sat/100f,1}));draft.edit().putInt(key,progress).apply();changed();}
-            public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}
-        });row.addView(hue);panel.addView(row);return row;
+        HueBar bar=new HueBar(this,primary?cfg.hue1:cfg.hue2,degrees->{
+            if(primary)cfg.hue1=degrees;else cfg.hue2=degrees;
+            value.setText(title+" · "+degrees+"°");swatch(value,Color.HSVToColor(new float[]{degrees,cfg.sat/100f,1}));
+            draft.edit().putInt(key,degrees).apply();changed();
+        });
+        row.addView(bar,new LinearLayout.LayoutParams(-1,px(44)));panel.addView(row);return row;
     }
     private void changed(){
         cfg=Config.from(draft);preview.fx.cfg=cfg;updatePalette();

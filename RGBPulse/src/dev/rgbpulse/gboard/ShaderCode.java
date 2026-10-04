@@ -118,9 +118,10 @@ final class ShaderCode {
         "                    // Four sparks: twinkling diamond sparks fly from the edge midpoints,\n" +
         "                    // each with a streak back toward the key and a white tip.\n" +
         "                    float reach=.25+.85*eo(age);\n" +
-        "                    float tw=.7+.3*sin(time*42.+hue*6.28318);\n" +
         "                    for(int k=0;k<4;k++){\n" +
         "                        float2 dir=k==0?float2(1,0):(k==1?float2(-1,0):(k==2?float2(0,1):float2(0,-1)));\n" +
+        "                        // Stable per-spark character instead of wall-clock flicker.\n" +
+        "                        float tw=.8+.2*sin(float(k)*2.3+hue*6.28318);\n" +
         "                        float2 q=u-dir*reach;\n" +
         "                        float along=dot(q,-dir);\n" +
         "                        float perp=abs(dot(q,float2(dir.y,-dir.x)));\n" +
@@ -173,6 +174,8 @@ final class ShaderCode {
         "                    acc+=L(body(age,hue),halo*.35);\n" +
         "                    acc+=L(prism(age,hue,-.3),rim*.5);\n" +
         "                }\n" +
+        "                // A soft bloom around the key rim grounds every effect on its key.\n" +
+        "                acc+=L(body(age,hue),band(max(a.x,a.y)-.88,width*3.)*.25);\n" +
         "                acc*=clip;\n" +
         "            }else{\n" +
         "                float2 p=(frag-taps[i].xy)/max(resolution.y,1);\n" +
@@ -191,7 +194,7 @@ final class ShaderCode {
         "                    acc+=L(body(age,hue),head);\n" +
         "                    acc+=L(prism(age,hue,-min(back*.5,1.)*.45),tail*.85);\n" +
         "                    acc+=L(float3(1),tail*.35*exp(-back*6.));\n" +
-        "                    acc+=L(body(age,hue),tail*.22*(.6+.4*sin(p.x*31.+time*5.)));\n" +
+        "                    acc+=L(body(age,hue),tail*.22*(.7+.3*sin(p.x*31.)));\n" +
         "                    acc+=L(prism(age,hue,.3),halo*.15);\n" +
         "                }else{\n" +
         "                    // Nebula bloom: a lobed shell of light blooms outward from the tap,\n" +
@@ -201,7 +204,7 @@ final class ShaderCode {
         "                    float grow=.2+1.05*eo(age);\n" +
         "                    float lobes=.75+.25*sin(ang*3.+time*.7)+.15*sin(ang*5.-time*.5);\n" +
         "                    float d=r-grow*lobes;\n" +
-        "                    float shim=.75+.25*sin(ang*9.+time*2.);\n" +
+        "                    float shim=.75+.25*sin(ang*9.);\n" +
         "                    float shell=exp(-d*d/.028)*shim;\n" +
         "                    acc+=L(float3(1),shell*shell*1.1);\n" +
         "                    acc+=L(body(age,hue),shell*.9);\n" +

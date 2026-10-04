@@ -17,17 +17,21 @@ luminous tap animations and two new wide background effects.
 - **Effects no longer vanish during long sessions**: failed settings pulls are
   retried, confirmed settings are never blanked by a slow module app, and the
   keyboard re-syncs every 30 seconds while it is open.
-- **New wide background effects** (Touch page): *Comet sweep* — a white-hot
-  comet with a long spectral tail crossing the keyboard along the tapped row —
-  and *Nebula bloom* — a lobed, shimmering shell of chromatic light blooming
-  from the tap. They replace the old wide orbit/aurora and the quiet glow,
-  which were removed.
+- **Independent key and background animations** (Touch page): key animations
+  (eight layered-light key responses) and background animations (*Comet
+  sweep* — a white-hot comet with a spectral tail crossing the tapped row —
+  and *Nebula bloom* — a lobed, shimmering shell of chromatic light) are
+  separate controls that can run at the same time. They replace the old wide
+  orbit/aurora and the quiet glow, which were removed. Local effects are
+  grounded on their key with a rim bloom, and wall-clock flicker was replaced
+  by deterministic choreography.
 - **Richer hello & goodbye**: ignition, curtains and horizon transitions are
   now layered light — hot crests with chromatic fringes, seam flashes, sky
   glow and reflections — instead of single gradients.
-- **Better color controls**: hue sliders ride on rainbow tracks, the secondary
-  hue appears only in two-color gradient mode, and color dialogs gain live RGB
-  sliders. Ripple duration can go down to 150 ms.
+- **Better color controls**: a draggable hue spectrum bar with a round thumb,
+  a saturation/value square inside the color dialogs (synced with hex input,
+  swatches and the live sample), and a secondary hue row that appears only in
+  two-color gradient mode. Ripple duration can go down to 150 ms.
 
 ### Requirements and installation
 Android 13+ with LSPosed/Vector; scope the module to Gboard
