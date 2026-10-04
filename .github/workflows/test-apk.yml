@@ -58,7 +58,16 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.1.0.apk
+        run: |
+          set +e
+          bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.1.0.apk > /tmp/build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -n -E "error:|Error:|Exception" /tmp/build.log | head -n 8 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 6 /tmp/build.log | while IFS= read -r line; do echo "::error::tail: $line"; done
+            exit "$status"
+          fi
+          cat /tmp/build.log
       - name: Verify archive and signature
         run: |
           unzip -t Gboard-RGB-Pulse-1.1.0.apk
