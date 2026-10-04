@@ -20,7 +20,7 @@ assert client.index('listener.apply(next)')<client.index('receipt.send()')
 assert 'MAIN.postDelayed(failClosed,2500)' in client and 'listener.apply(new Config())' in client
 assert 'if(!revision.equals(currentRevision))' in client
 # A failed pull is retried, and applied settings survive timeouts once confirmed.
-assert 'if(pullRetries<3)' in client and 'MAIN.postDelayed(pull,900)' in client
+assert 'if(pullRetries<3)' in client and 'schedulePull(900)' in client
 assert 'keeping last applied settings' in client
 assert client.index('MAIN.removeCallbacks(failClosed);pullRetries=0;')<client.index('stamp<lastStamp')
 assert 'moduleResponded48' in sender and 'No live module reply' in ui

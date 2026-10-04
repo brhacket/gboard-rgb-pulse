@@ -26,7 +26,7 @@ final class FluidFx {
         if(w<2||h<2)return;
         if(error!=null)return;
         try{
-            if(shader==null)shader=new RuntimeShader(FluidCode.FLUID);
+            if(shader==null)shader=new RuntimeShader(ShaderCode.FLUID);
         }catch(RuntimeException e){error=e.getClass().getSimpleName()+": "+e.getMessage();clear();return;}
         if(epoch<0)epoch=now;
         sim.bounds(w,h,now);

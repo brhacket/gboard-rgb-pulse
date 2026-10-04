@@ -17,8 +17,9 @@ final class SettingsClient {
     // A missing reply is retried before any consequence. Once settings have been
     // applied in this process they are kept across failed pulls, so a slow or
     // killed module app during a long session never blanks live effects.
+    private static void schedulePull(long delayMs){MAIN.postDelayed(pull,delayMs);}
     private static final Runnable failClosed=()->{
-        if(pullRetries<3){MAIN.postDelayed(pull,900);return;}
+        if(pullRetries<3){schedulePull(900);return;}
         pullRetries=0;
         if(!currentRevision.isEmpty()){
             android.util.Log.w("RGBPulse","Settings pull timed out; keeping last applied settings.");

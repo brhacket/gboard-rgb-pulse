@@ -146,5 +146,5 @@ assert 'root.postDelayed(resync,RESYNC_MS)' in module and 'SettingsClient.reques
 assert 'root.removeCallbacks(resync)' in module
 client=(src/'SettingsClient.java').read_text()
 assert 'if(pullRetries<3)' in client and 'keeping last applied settings' in client
-assert 'MAIN.postDelayed(pull,900)' in client
+assert 'schedulePull(900)' in client and 'MAIN.postDelayed(pull,delayMs)' in client
 print('PASS: long-session resync keeps effects alive without blanking applied settings')
