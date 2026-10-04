@@ -4,20 +4,25 @@ import android.content.SharedPreferences;
 
 public final class Config {
     public static final String PREFS = "settings";
-    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Comet sweep", "Nebula bloom"};
+    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Petal bloom", "Glass tap", "Orbit dots", "Liquid rise", "Comet sweep", "Nebula bloom", "Starfall", "Polar veil"};
     public static final String[] EFFECT_HINTS={
         "A white-hot comet with a spectral tail circles the tapped key.","Glowing brackets spring onto the key corners and flash as they land.",
         "A luminous calligraphic stroke sweeps beneath the tapped letter.","A prism gleam crosses one key, splitting into dispersed colors.",
         "Four twinkling sparks fly from the key edges, trailing light.","A chromatic ring with a hot crest expands inside the key.",
         "Two bowed slivers of light part from a seam flash.","A soft breathing glow with a prismatic rim answers your finger.",
-        "Wide effect · a white-hot comet with a spectral tail sweeps the keyboard.","Wide effect · a lobed nebula of light blooms and shimmers from the tap."};
-    public static final int GPU_COUNT = 10;
+        "Four light petals unfurl diagonally from a hot core.","Thin crack gleams radiate from the tap with a circular glint.",
+        "Two comets orbit the key in opposite directions, trailing spectral arcs.","A luminous fill level rises and drains behind a hot meniscus.",
+        "Wide effect · a white-hot comet with a spectral tail sweeps the keyboard.","Wide effect · a lobed nebula of light blooms and shimmers from the tap.",
+        "Wide effect · choreographed streaks of light rain diagonally across the keyboard.","Wide effect · vertical spectral curtains sway across the keyboard."};
+    public static final int KEY_COUNT = 12;
+    public static final int GPU_COUNT = 16;
     public int pulseDuration=160;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
     public int background=0;
+    public int bgColorMode=0,bgHue1=190,bgHue2=320,bgSat=60;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -60,10 +65,14 @@ public final class Config {
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
-            c.background=clamp(number(p,"background51",0),0,2);
+            c.background=clamp(number(p,"background51",0),0,4);
+            c.bgColorMode=clamp(number(p,"bcolorMode51",c.bgColorMode),0,COLORS.length-1);
+            c.bgHue1=clamp(number(p,"bhue151",c.bgHue1),0,360);
+            c.bgHue2=clamp(number(p,"bhue251",c.bgHue2),0,360);
+            c.bgSat=clamp(number(p,"bsat51",c.bgSat),0,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
-            c.effect = clamp(number(p,"pulse47", c.effect), 0, 7);
+            c.effect = clamp(number(p,"pulse47", c.effect), 0, KEY_COUNT - 1);
             c.pulseDuration=clamp(number(p,"pulseDuration47",160),120,360);
             c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
             c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);

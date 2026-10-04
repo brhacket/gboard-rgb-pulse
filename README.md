@@ -5,8 +5,8 @@
 [Download 1.1.0](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.1.0)
 
 ## Choose your level of motion
-- **Touch:** key animations (eight layered-light key responses: comet borders, corner brackets, spectral swipes, spark bursts, rings, soft presses) and background animations (Comet sweep, Nebula bloom) are independent controls — run either, or both at once. Every effect is layered light with hot cores and prismatic fringes. Try the everyday preset for Soft press at 160 ms without traveling waves.
-- **Colors:** a draggable hue spectrum bar, a saturation/value square in the color dialogs, and a secondary hue that appears only when the two-color gradient mode needs it.
+- **Touch:** the settings studio has four tabs — Ripple, Keys, Background, Keyboard. Keys holds twelve layered-light key responses (comet borders, corner brackets, spectral swipes, spark bursts, rings, petals, glass cracks, orbiting comets, liquid rise, soft presses); Background holds four wide light shows (Comet sweep, Nebula bloom, Starfall, Polar veil). The two groups are independent — each with its own color modes and hue pickers — and can run at the same time. Try the everyday preset for Soft press at 160 ms without traveling waves.
+- **Colors:** a draggable hue spectrum bar, a saturation/value square in the color dialogs, and secondary hues that appear only when a two-color gradient mode needs them — separately for key and background colors.
 - **Ripple:** optional row and full-keyboard patterns, adjustable borders and letter colors. Hiding key fills does not hide ripple borders.
 - **Keyboard:** optional opening/closing lighting and a real keyboard test field.
 

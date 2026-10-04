@@ -17,12 +17,12 @@ luminous tap animations and two new wide background effects.
 - **Effects no longer vanish during long sessions**: failed settings pulls are
   retried, confirmed settings are never blanked by a slow module app, and the
   keyboard re-syncs every 30 seconds while it is open.
-- **Independent key and background animations** (Touch page): key animations
-  (eight layered-light key responses) and background animations (*Comet
-  sweep* — a white-hot comet with a spectral tail crossing the tapped row —
-  and *Nebula bloom* — a lobed, shimmering shell of chromatic light) are
-  separate controls that can run at the same time. They replace the old wide
-  orbit/aurora and the quiet glow, which were removed. Local effects are
+- **Independent key and background animations, in separate tabs**: the studio
+  gains a dedicated Background tab. Twelve key animations (including new
+  Petal bloom, Glass tap, Orbit dots and Liquid rise) and four background
+  light shows (Comet sweep, Nebula bloom, plus new Starfall and Polar veil)
+  render as independent passes over the same taps, so both can run at once.
+  Each group has its own color mode and hue pickers. Local effects are
   grounded on their key with a rim bloom, and wall-clock flicker was replaced
   by deterministic choreography.
 - **Richer hello & goodbye**: ignition, curtains and horizon transitions are

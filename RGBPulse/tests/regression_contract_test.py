@@ -60,7 +60,7 @@ assert 'cfg.tiles &&' in refined and 'if(!refinedApplied)' in refined and '.getO
 print('PASS: confirmed save-before-restart, bounded root process, refined overlay lifecycle')
 
 assert 'c.enabled=c.ripple||c.tapEffects||c.background>0||c.opening>0||c.closing>0' in cfg
-assert 'clamp(number(p,"pulse47", c.effect), 0, 7)' in cfg and 'clamp(number(p,"background51",0),0,2)' in cfg
+assert 'clamp(number(p,"pulse47", c.effect), 0, KEY_COUNT - 1)' in cfg and 'clamp(number(p,"background51",0),0,4)' in cfg
 assert 'c.glass=c.ripple;c.sideStyle=c.ripple?1:0' in cfg
 assert 'enabled.setChecked(cfg.ripple)' in ui
 assert 'putBoolean("ripple40",value)' in ui and 'if(cfg.ripple)fx.side.tap' in ui

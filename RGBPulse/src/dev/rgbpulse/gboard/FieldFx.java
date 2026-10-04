@@ -42,7 +42,7 @@ final class FieldFx {
                     // over the same taps, so both can play at the same time.
                     boolean on=pass==0?cfg.tapEffects:cfg.background>0;
                     if(!on)continue;
-                    int style=pass==0?cfg.effect:7+cfg.background;
+                    int style=pass==0?cfg.effect:Config.KEY_COUNT-1+cfg.background;
                     boolean any=false;
                     for(int i=0;i<4;i++) {
                         int u=i*4;
@@ -64,9 +64,9 @@ final class FieldFx {
                     shader.setFloatUniform("strength",(cfg.refined?cfg.backgroundOpacity:cfg.opacity)/100f);
                     shader.setFloatUniform("effectSize",cfg.size/100f);
                     shader.setFloatUniform("thickness",cfg.thickness/100f);
-                    shader.setFloatUniform("colorMode",(float)cfg.colorMode);
-                    shader.setFloatUniform("hue1",cfg.hue1/360f);shader.setFloatUniform("hue2",cfg.hue2/360f);
-                    shader.setFloatUniform("saturation",cfg.sat/100f);
+                    shader.setFloatUniform("colorMode",(float)(pass==0?cfg.colorMode:cfg.bgColorMode));
+                    shader.setFloatUniform("hue1",(pass==0?cfg.hue1:cfg.bgHue1)/360f);shader.setFloatUniform("hue2",(pass==0?cfg.hue2:cfg.bgHue2)/360f);
+                    shader.setFloatUniform("saturation",(pass==0?cfg.sat:cfg.bgSat)/100f);
                     shader.setFloatUniform("taps",uniforms);
                     shader.setFloatUniform("keyBounds",keyUniforms);
                     paint.setShader(shader);

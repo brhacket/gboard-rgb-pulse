@@ -24,7 +24,9 @@ public final class SettingsActivity extends Activity {
     private final Runnable confirmationTick=()->checkConfirmation();
     private TextView state, shaderStatus;
     private View backgroundPalette;
+    private View bgPalette;
     private View secondaryHueRow;
+    private View secondaryBgHueRow;
     private Button saveRestart;
     private Preview preview;
     private LinearLayout controls;
@@ -44,7 +46,7 @@ public final class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         dp=getResources().getDisplayMetrics().density;
-        if(saved!=null){selectedPage=Config.clamp(saved.getInt("page46",0),0,2);previewCollapsed=saved.getBoolean("previewCollapsed46",false);}
+        if(saved!=null){selectedPage=Config.clamp(saved.getInt("page46",0),0,3);previewCollapsed=saved.getBoolean("previewCollapsed46",false);}
         applied=getSharedPreferences(Config.PREFS,Context.MODE_PRIVATE);
         draft=getSharedPreferences("settings_draft",Context.MODE_PRIVATE);
         if(saved==null){copySettings(applied.getAll(),draft).commit();prepareDraft();}
@@ -90,18 +92,20 @@ public final class SettingsActivity extends Activity {
             if(preview.getLayoutParams().height!=height){preview.getLayoutParams().height=height;preview.requestLayout();}
         });
         LinearLayout navigation=new LinearLayout(this);navigation.setPadding(0,px(8),0,px(8));pinned.addView(navigation);
-        pageButtons=new Button[3];String[] titles={"Ripple","Touch","Keyboard"};
-        for(int i=0;i<3;i++){final int index=i;Button tab=button(titles[i],false);pageButtons[i]=tab;
+        pageButtons=new Button[4];String[] titles={"Ripple","Keys","Background","Keyboard"};
+        for(int i=0;i<4;i++){final int index=i;Button tab=button(titles[i],false);pageButtons[i]=tab;
             tab.setOnClickListener(v->selectPage(index));navigation.addView(tab,new LinearLayout.LayoutParams(0,px(48),1));}
         ScrollView scroll=new ScrollView(this);settingsScroll=scroll;scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(18),0,px(18),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        pages=new LinearLayout[3];for(int i=0;i<3;i++){pages[i]=new LinearLayout(this);pages[i].setOrientation(1);controls.addView(pages[i]);}
-        LinearLayout ripplePage=pages[0],pulsePage=pages[1],keyboardPage=pages[2];
+        pages=new LinearLayout[4];for(int i=0;i<4;i++){pages[i]=new LinearLayout(this);pages[i].setOrientation(1);controls.addView(pages[i]);}
+        LinearLayout ripplePage=pages[0],keysPage=pages[1],bgPage=pages[2],keyboardPage=pages[3];
         ripplePage.addView(text("A little extra, when you want it",20,INK));
-        ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
-        pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key animations and background animations are separate controls — run either, or both at once. No traveling wave needed.",13,MUTED));
+        ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Keys instead.",13,MUTED));
+        keysPage.addView(text("Small details. Better typing.",20,INK));
+        keysPage.addView(text("Layered-light responses on the tapped key, with their own colors. No traveling wave needed.",13,MUTED));
+        bgPage.addView(text("A sky behind your keys",20,INK));
+        bgPage.addView(text("Wide light shows behind the keyboard, with their own color modes. They run independently of key animations — use either, or both at once.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
@@ -141,45 +145,54 @@ public final class SettingsActivity extends Activity {
         colorControl(appearancePanel,"Letters · inactive","letterInactive42",cfg.letterInactive);
 
 
-        Button backgrounds=button("Background animations  +",false);pulsePage.addView(backgrounds);
-        LinearLayout backgroundPanel=card(pulsePage);backgrounds.setVisibility(View.GONE);
-        backgrounds.setOnClickListener(v->{boolean open=backgroundPanel.getVisibility()!=View.VISIBLE;
-            backgroundPanel.setVisibility(open?View.VISIBLE:View.GONE);backgrounds.setText(open?"Background animations  −":"Background animations  +");});
+        LinearLayout keysCard=card(keysPage);
         Switch backgroundOn=new Switch(this);backgroundOn.setText("Key animations");backgroundOn.setTextColor(INK);
         backgroundOn.setMinHeight(px(48));backgroundOn.setChecked(cfg.tapEffects);
-        backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
-        backgroundPanel.addView(text("Layered-light responses on the tapped key. Start with Soft press.",12,MUTED));
-        final String[] keyEffects=java.util.Arrays.copyOfRange(Config.EFFECTS,0,8);
+        backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});keysCard.addView(backgroundOn);
+        keysCard.addView(text("Layered-light responses on the tapped key. Start with Soft press.",12,MUTED));
+        final String[] keyEffects=java.util.Arrays.copyOfRange(Config.EFFECTS,0,Config.KEY_COUNT);
         TextView effectHint=text(Config.EFFECT_HINTS[cfg.effect],13,MUTED);
         Button effect=button("Key animation · "+Config.EFFECTS[cfg.effect],false);
         effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key animation")
             .setSingleChoiceItems(keyEffects,cfg.effect,(dialog,index)->{
                 cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Key animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);backgroundPanel.addView(effectHint);
-        Button bg=button("Background · "+(cfg.background==0?"Off":Config.EFFECTS[7+cfg.background]),false);
-        TextView bgHint=text(cfg.background==0?"A wide light show behind the keys. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[7+cfg.background],13,MUTED);
+            }).setNegativeButton("Cancel",null).show());keysCard.addView(effect);keysCard.addView(effectHint);
+        slider(keysCard,"Feedback length",120,360,cfg.pulseDuration,true);
+        LinearLayout bgCard=card(bgPage);
+        Button bg=button("Background · "+(cfg.background==0?"Off":Config.EFFECTS[Config.KEY_COUNT-1+cfg.background]),false);
+        TextView bgHint=text(cfg.background==0?"Choose a wide light show. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[Config.KEY_COUNT-1+cfg.background],13,MUTED);
         bg.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation")
-            .setSingleChoiceItems(new String[]{"Off","Comet sweep","Nebula bloom"},cfg.background,(dialog,index)->{
+            .setSingleChoiceItems(new String[]{"Off","Comet sweep","Nebula bloom","Starfall","Polar veil"},cfg.background,(dialog,index)->{
                 cfg.background=index;draft.edit().putInt("background51",index).apply();
-                bg.setText("Background · "+(index==0?"Off":Config.EFFECTS[7+index]));
-                bgHint.setText(index==0?"A wide light show behind the keys. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[7+index]);
+                bg.setText("Background · "+(index==0?"Off":Config.EFFECTS[Config.KEY_COUNT-1+index]));
+                bgHint.setText(index==0?"Choose a wide light show. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[Config.KEY_COUNT-1+index]);
                 changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(bg);backgroundPanel.addView(bgHint);
-        backgroundStrength(backgroundPanel);
-        slider(backgroundPanel,"Feedback length",120,360,cfg.pulseDuration,true);
-        Button colors=button("Color mode · "+Config.COLORS[cfg.colorMode],false);
-        colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
+            }).setNegativeButton("Cancel",null).show());bgCard.addView(bg);bgCard.addView(bgHint);
+        backgroundStrength(bgCard);
+        Button colors=button("Key color mode · "+Config.COLORS[cfg.colorMode],false);
+        colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key color mode")
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
-                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Color mode · "+Config.COLORS[index]);
+                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Key color mode · "+Config.COLORS[index]);
                 if(secondaryHueRow!=null)secondaryHueRow.setVisibility(index==3?View.VISIBLE:View.GONE);
                 changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(colors);
-        backgroundPalette=new View(this);backgroundPalette.setContentDescription("Background palette preview");backgroundPanel.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
-        hueControl(backgroundPanel,"Primary hue","hue1",true);
-        secondaryHueRow=hueControl(backgroundPanel,"Secondary hue","hue2",false);
+            }).setNegativeButton("Cancel",null).show());keysCard.addView(colors);
+        backgroundPalette=new View(this);backgroundPalette.setContentDescription("Key palette preview");keysCard.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
+        hueControl(keysCard,"Primary hue","hue1",true,false);
+        secondaryHueRow=hueControl(keysCard,"Secondary hue","hue2",false,false);
         secondaryHueRow.setVisibility(cfg.colorMode==3?View.VISIBLE:View.GONE);
-        Button everyday=button("Try everyday setup",false);backgroundPanel.addView(everyday);
+        Button everyday=button("Try everyday setup",false);keysCard.addView(everyday);
         everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putInt("background51",0).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
+        Button bgColors=button("Background color mode · "+Config.COLORS[cfg.bgColorMode],false);
+        bgColors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
+            .setSingleChoiceItems(Config.COLORS,cfg.bgColorMode,(dialog,index)->{
+                cfg.bgColorMode=index;draft.edit().putInt("bcolorMode51",index).apply();bgColors.setText("Background color mode · "+Config.COLORS[index]);
+                if(secondaryBgHueRow!=null)secondaryBgHueRow.setVisibility(index==3?View.VISIBLE:View.GONE);
+                changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());bgCard.addView(bgColors);
+        bgPalette=new View(this);bgPalette.setContentDescription("Background palette preview");bgCard.addView(bgPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
+        hueControl(bgCard,"Background hue","bhue151",true,true);
+        secondaryBgHueRow=hueControl(bgCard,"Secondary background hue","bhue251",false,true);
+        secondaryBgHueRow.setVisibility(cfg.bgColorMode==3?View.VISIBLE:View.GONE);
 
         LinearLayout transitions=card(keyboardPage);
         transitions.addView(text("Hello & goodbye",18,INK));
@@ -227,7 +240,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
     }
     private void selectPage(int index){
         selectedPage=index;if(settingsScroll!=null)settingsScroll.scrollTo(0,0);
-        for(int i=0;i<3;i++){
+        for(int i=0;i<4;i++){
             pages[i].setVisibility(i==index?View.VISIBLE:View.GONE);
             pageButtons[i].setSelected(i==index);
             pageButtons[i].setTextColor(i==index?BG:MUTED);
@@ -319,14 +332,17 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             draft.edit().putInt(key,candidate[0]).apply();select.setText(title+"  "+hex(candidate[0]));swatch(select,candidate[0]);changed();dialog.dismiss();
         }));dialog.show();
     }
-    private void updatePalette(){
-        if(backgroundPalette==null)return;
-        int first=Color.HSVToColor(new float[]{cfg.hue1,cfg.sat/100f,1}),second=Color.HSVToColor(new float[]{cfg.hue2,cfg.sat/100f,1});
+    private GradientDrawable paletteDrawable(int mode,int h1,int h2,int sat){
+        int first=Color.HSVToColor(new float[]{h1,sat/100f,1}),second=Color.HSVToColor(new float[]{h2,sat/100f,1});
         int[] colors;
-        if(cfg.colorMode==2)colors=new int[]{first,first};
-        else if(cfg.colorMode==3)colors=new int[]{first,second};
-        else{colors=new int[7];for(int i=0;i<7;i++)colors[i]=Color.HSVToColor(new float[]{i*60,cfg.sat/100f,1});}
-        GradientDrawable palette=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,colors);palette.setCornerRadius(px(8));backgroundPalette.setBackground(palette);
+        if(mode==2)colors=new int[]{first,first};
+        else if(mode==3)colors=new int[]{first,second};
+        else{colors=new int[7];for(int i=0;i<7;i++)colors[i]=Color.HSVToColor(new float[]{i*60,sat/100f,1});}
+        GradientDrawable palette=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,colors);palette.setCornerRadius(px(8));return palette;
+    }
+    private void updatePalette(){
+        if(backgroundPalette!=null)backgroundPalette.setBackground(paletteDrawable(cfg.colorMode,cfg.hue1,cfg.hue2,cfg.sat));
+        if(bgPalette!=null)bgPalette.setBackground(paletteDrawable(cfg.bgColorMode,cfg.bgHue1,cfg.bgHue2,cfg.bgSat));
     }
     private void backgroundStrength(LinearLayout panel){
         TextView label=text("Background brightness · "+cfg.backgroundOpacity+"%",14,INK);panel.addView(label);
@@ -399,13 +415,16 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         }
     }
 
-    private LinearLayout hueControl(LinearLayout panel,String title,String key,boolean primary){
+    private LinearLayout hueControl(LinearLayout panel,String title,String key,boolean primary,boolean forBg){
+        int start=forBg?(primary?cfg.bgHue1:cfg.bgHue2):(primary?cfg.hue1:cfg.hue2);
+        int sat=forBg?cfg.bgSat:cfg.sat;
         LinearLayout row=new LinearLayout(this);row.setOrientation(1);
-        TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);row.addView(value);
-        swatch(value,Color.HSVToColor(new float[]{primary?cfg.hue1:cfg.hue2,cfg.sat/100f,1}));
-        HueBar bar=new HueBar(this,primary?cfg.hue1:cfg.hue2,degrees->{
-            if(primary)cfg.hue1=degrees;else cfg.hue2=degrees;
-            value.setText(title+" · "+degrees+"°");swatch(value,Color.HSVToColor(new float[]{degrees,cfg.sat/100f,1}));
+        TextView value=text(title+" · "+start+"°",13,INK);row.addView(value);
+        swatch(value,Color.HSVToColor(new float[]{start,sat/100f,1}));
+        HueBar bar=new HueBar(this,start,degrees->{
+            if(forBg){if(primary)cfg.bgHue1=degrees;else cfg.bgHue2=degrees;}
+            else{if(primary)cfg.hue1=degrees;else cfg.hue2=degrees;}
+            value.setText(title+" · "+degrees+"°");swatch(value,Color.HSVToColor(new float[]{degrees,sat/100f,1}));
             draft.edit().putInt(key,degrees).apply();changed();
         });
         row.addView(bar,new LinearLayout.LayoutParams(-1,px(44)));panel.addView(row);return row;

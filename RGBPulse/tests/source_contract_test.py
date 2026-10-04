@@ -4,8 +4,8 @@ import re,subprocess,sys
 root=Path(__file__).resolve().parents[1];src=root/'src/dev/rgbpulse/gboard'
 cfg=(src/'Config.java').read_text()
 effects=re.findall(r'"([^"]+)"',cfg.split('String[] EFFECTS = {',1)[1].split('};',1)[0])
-assert len(effects)==10 and len(set(effects))==10
-assert effects[0]=='Edge runner' and effects[-1]=='Nebula bloom'
+assert len(effects)==16 and len(set(effects))==16
+assert effects[0]=='Edge runner' and effects[-1]=='Polar veil'
 assert 'pulse47' in cfg and 'tapFx6' not in cfg
 assert 'effect = 7' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg
@@ -25,14 +25,14 @@ assert 'Detailed layout logs (no drawing)' in ui
 old=(src/'ShaderCode.java').read_text()
 subprocess.run([sys.executable,str(root/'embed_shader.py')],check=True)
 assert old==(src/'ShaderCode.java').read_text()
-assert 'GPU_COUNT = 10' in cfg
+assert 'GPU_COUNT = 16' in cfg and 'KEY_COUNT = 12' in cfg
 assert 'static final String FLUID' not in old and not (root/'shaders/fluid.agsl').exists()
 print('PASS: curated pulse catalog, migration, no idle animation and shader sync')
 
 field=(src/'FieldFx.java').read_text()
-assert 'next=(next+1)%3' in field and 'int style=pass==0?cfg.effect:7+cfg.background;' in field
+assert 'next=(next+1)%3' in field and 'int style=pass==0?cfg.effect:Config.KEY_COUNT-1+cfg.background;' in field
 assert 'boolean on=pass==0?cfg.tapEffects:cfg.background>0;' in field
 assert 'RectF key' in fx and 'keyBounds' in field and 'keyBounds[4]' in shader
-assert 'float cap=style<7.5?.48:.40' in shader
+assert 'float cap=style<11.5?.48:.40' in shader
 assert 'Rightward chase' not in cfg and 'Heartbeat' not in cfg and 'Inward sweep' not in cfg
 print('PASS: exact ten-effect catalog, actual key footprint, independent short duration and bounded overlap')
