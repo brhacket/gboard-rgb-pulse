@@ -1,7 +1,7 @@
 ## Gboard RGB Pulse 1.1.0
 
-Long-session stability, a visible quiet glow, one-button saving and a curated
-catalog of layered, luminous tap animations.
+Long-session stability, one-button saving, a curated catalog of layered,
+luminous tap animations and two new wide background effects.
 
 ### Highlights
 - **Ten curated tap animations** (Touch page): each pulse is built from
@@ -17,9 +17,17 @@ catalog of layered, luminous tap animations.
 - **Effects no longer vanish during long sessions**: failed settings pulls are
   retried, confirmed settings are never blanked by a slow module app, and the
   keyboard re-syncs every 30 seconds while it is open.
-- **Subtle background is now visible**: the quiet glow is larger (up to 72 dp),
-  lasts 520 ms and reaches up to 50% intensity instead of an almost-invisible
-  12%, with a gentle downward drift while it fades.
+- **New wide background effects** (Touch page): *Comet sweep* — a white-hot
+  comet with a long spectral tail crossing the keyboard along the tapped row —
+  and *Nebula bloom* — a lobed, shimmering shell of chromatic light blooming
+  from the tap. They replace the old wide orbit/aurora and the quiet glow,
+  which were removed.
+- **Richer hello & goodbye**: ignition, curtains and horizon transitions are
+  now layered light — hot crests with chromatic fringes, seam flashes, sky
+  glow and reflections — instead of single gradients.
+- **Better color controls**: hue sliders ride on rainbow tracks, the secondary
+  hue appears only in two-color gradient mode, and color dialogs gain live RGB
+  sliders. Ripple duration can go down to 150 ms.
 
 ### Requirements and installation
 Android 13+ with LSPosed/Vector; scope the module to Gboard

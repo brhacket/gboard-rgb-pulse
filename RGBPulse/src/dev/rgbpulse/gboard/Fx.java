@@ -11,10 +11,9 @@ public final class Fx {
     final SideSweep side=new SideSweep();
     private final Random rnd = new Random();
     private FieldFx fields;
-    private final QuietBackground quiet;
     private String issue;
     private boolean attempted;
-    public Fx(float density) {quiet=new QuietBackground(density);}
+    public Fx(float density) {}
     private void init() {
         if(attempted)return;
         attempted=true;
@@ -24,11 +23,9 @@ public final class Fx {
         if(issue!=null)return issue;
         return fields!=null?fields.issue():null;
     }
-    public boolean active(long now){return cfg.enabled&&((cfg.quietBackground&&quiet.active(now))||(cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
+    public boolean active(long now){return cfg.enabled&&((cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
     public void tap(float x,float y,RectF play,RectF key,long now) {
-        if(!cfg.enabled)return;
-        if(cfg.quietBackground)quiet.tap(key,now);
-        if(!cfg.tapEffects)return;
+        if(!cfg.enabled||!cfg.tapEffects)return;
         init();
         if(fields==null||fields.issue()!=null)return; // Never resurrect a removed effect as fallback.
         int style=cfg.effect;
@@ -41,9 +38,8 @@ public final class Fx {
     final java.util.ArrayList<RectF> lensBoxes=new java.util.ArrayList<RectF>();
     public void lenses(java.util.List<RectF> boxes,float dp){lensBoxes.clear();lensBoxes.addAll(boxes);}
     public void drawFields(Canvas canvas,RectF play,long now){
-        if(cfg.enabled&&cfg.quietBackground)quiet.draw(canvas,play,cfg,now);
         if(cfg.enabled&&cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))fields.draw(canvas,play,cfg,now);
     }
-    public void clear(){quiet.clear();glide.points.clear();side.clear();if(fields!=null)fields.clear();}
+    public void clear(){glide.points.clear();side.clear();if(fields!=null)fields.clear();}
     public void dispose(){clear();fields=null;attempted=false;issue=null;}
 }

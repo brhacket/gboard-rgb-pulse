@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1];src=root/'src/dev/rgbpulse/gboard'
 cfg=(src/'Config.java').read_text()
 effects=re.findall(r'"([^"]+)"',cfg.split('String[] EFFECTS = {',1)[1].split('};',1)[0])
 assert len(effects)==10 and len(set(effects))==10
-assert effects[0]=='Edge runner' and effects[-1]=='Wide aurora'
+assert effects[0]=='Edge runner' and effects[-1]=='Nebula bloom'
 assert 'pulse47' in cfg and 'tapFx6' not in cfg
 assert 'effect = 7' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg
@@ -32,6 +32,6 @@ print('PASS: curated pulse catalog, migration, no idle animation and shader sync
 field=(src/'FieldFx.java').read_text()
 assert 'next=(next+1)%3' in field and 'if(style>=8)clear()' in field
 assert 'RectF key' in fx and 'keyBounds' in field and 'keyBounds[4]' in shader
-assert 'float cap=style<7.5?.48:.28' in shader
+assert 'float cap=style<7.5?.48:.40' in shader
 assert 'Rightward chase' not in cfg and 'Heartbeat' not in cfg and 'Inward sweep' not in cfg
 print('PASS: exact ten-effect catalog, actual key footprint, independent short duration and bounded overlap')

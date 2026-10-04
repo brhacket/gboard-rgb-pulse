@@ -24,6 +24,7 @@ public final class SettingsActivity extends Activity {
     private final Runnable confirmationTick=()->checkConfirmation();
     private TextView state, shaderStatus;
     private View backgroundPalette;
+    private View secondaryHueRow;
     private Button saveRestart;
     private Preview preview;
     private LinearLayout controls;
@@ -97,7 +98,7 @@ public final class SettingsActivity extends Activity {
         ripplePage.addView(text("A little extra, when you want it",20,INK));
         ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
         pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key feedback and the quiet glow work independently. No traveling wave needed.",13,MUTED));
+        pulsePage.addView(text("Key feedback works on its own: quick layered light on every tap, plus wide background sweeps when you want them. No traveling wave needed.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
@@ -119,7 +120,7 @@ public final class SettingsActivity extends Activity {
         Switch tiles=new Switch(this);tiles.setText("Hide key fills");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.hideTiles);
         tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("hideTiles45",value).apply();changed();});settings.addView(tiles);
         settings.addView(text("Keep the keyboard airy without solid key tiles. Ripple borders stay visible. Turn all lighting off to restore your Gboard theme.",12,MUTED));
-        slider(settings,"Duration",400,1100,Config.clamp(cfg.duration,400,1100),true);
+        slider(settings,"Duration",150,1100,Config.clamp(cfg.duration,150,1100),true);
         Button rippleStyle=button("Ripple · "+Config.RIPPLES[cfg.rippleStyle],false);
         rippleStyle.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Ripple effect")
             .setSingleChoiceItems(Config.RIPPLES,cfg.rippleStyle,(dialog,index)->{
@@ -156,36 +157,28 @@ public final class SettingsActivity extends Activity {
         Button colors=button("Color mode · "+Config.COLORS[cfg.colorMode],false);
         colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
-                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Color mode · "+Config.COLORS[index]);changed();dialog.dismiss();
+                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Color mode · "+Config.COLORS[index]);
+                if(secondaryHueRow!=null)secondaryHueRow.setVisibility(index==3?View.VISIBLE:View.GONE);
+                changed();dialog.dismiss();
             }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(colors);
         backgroundPalette=new View(this);backgroundPalette.setContentDescription("Background palette preview");backgroundPanel.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
         hueControl(backgroundPanel,"Primary hue","hue1",true);
-        hueControl(backgroundPanel,"Secondary hue","hue2",false);
+        secondaryHueRow=hueControl(backgroundPanel,"Secondary hue","hue2",false);
+        secondaryHueRow.setVisibility(cfg.colorMode==3?View.VISIBLE:View.GONE);
+        Button everyday=button("Try everyday setup",false);backgroundPanel.addView(everyday);
+        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
 
         LinearLayout transitions=card(keyboardPage);
         transitions.addView(text("Hello & goodbye",18,INK));
         transitions.addView(text("A dramatic reveal or exit, with the keys firmly in place. Closing depends on Android’s dismissal timing and may be cut short.",13,MUTED));
         transitionControl(transitions,"Opening light","opening46",false);
         transitionControl(transitions,"Closing light","closing46",true);
-        LinearLayout quietCard=card(pulsePage);
-        quietCard.addView(text("Quiet background",18,INK));
-        quietCard.addView(text("One visible pool of light near the tapped key that sinks gently as it fades. No spreading rings, no full-keyboard wash. Fast taps replace the glow rather than stacking it.",13,MUTED));
-        Switch quietOn=new Switch(this);quietOn.setText("Subtle background on tap");quietOn.setTextColor(INK);quietOn.setMinHeight(px(48));quietOn.setChecked(cfg.quietBackground);
-        quietOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("quietBackground48",value).apply();changed();});quietCard.addView(quietOn);
-        TextView quietValue=text("Softness · "+cfg.quietStrength+"%",14,INK);quietCard.addView(quietValue);
-        SeekBar quietLevel=new SeekBar(this);quietLevel.setMax(90);quietLevel.setProgress(cfg.quietStrength-10);quietLevel.setMinimumHeight(px(48));quietLevel.setContentDescription("Quiet background intensity");
-        quietLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar b,int value,boolean user){if(user){draft.edit().putInt("quietStrength48",value+10).apply();quietValue.setText("Softness · "+(value+10)+"%");changed();}}
-            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
-        });quietCard.addView(quietLevel);
-        Button everyday=button("Try everyday setup",false);quietCard.addView(everyday);
-        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putBoolean("quietBackground48",true).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
         Button help=button("Setup & troubleshooting  +",false);keyboardPage.addView(help);
         LinearLayout details=card(keyboardPage);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
         details.addView(text("Pulse Studio · version 1.1.0\nSettings are stored privately. Saving force-stops Gboard once, so the keyboard always reopens with exactly what you saved. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
         details.addView(text("Android 13+ and LSPosed / Vector are required. Edit anything, then tap Save & restart Gboard: one tap saves everything and restarts the keyboard. The force-stop needs root; without it, opening the keyboard still syncs the new settings. Font replacement and gesture trails remain off.",13,MUTED));
-        details.addView(text("Background animations and the quiet glow are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
+        details.addView(text("Background animations are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
         details.addView(text("If letter colors do not change: enable logs, Save & restart Gboard, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
@@ -194,7 +187,7 @@ public final class SettingsActivity extends Activity {
             .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint. This does not disable Gboard’s own native key-press animation. Everything is saved and Gboard is force-stopped, so the change is live the next time the keyboard opens.")
             .setPositiveButton("Disable & save",(d,w)->{
                 draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
-                    .putBoolean("quietBackground48",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                    .putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
                 render();persist();
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
@@ -292,9 +285,28 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             chip.setOnClickListener(v->input.setText(hex(color)));palette.addView(chip,new LinearLayout.LayoutParams(0,px(48),1));
         }
         final int[] candidate={Config.number(draft,key,fallback)};sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);
+        // Direct RGB sliders stay in sync with the hex field and the live sample.
+        final SeekBar[] chans=new SeekBar[3];
+        final String[] names={"Red","Green","Blue"};
+        for(int c=0;c<3;c++){
+            final int ch=c;
+            content.addView(text(names[ch],12,MUTED));
+            SeekBar bar=new SeekBar(this);bar.setMax(255);bar.setMinimumHeight(px(40));bar.setContentDescription(names[ch]);
+            bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+                public void onProgressChanged(SeekBar b,int pv,boolean user){if(!user)return;
+                    int col=candidate[0],r=(col>>16)&255,g=(col>>8)&255,bl=col&255;
+                    if(ch==0)r=pv;else if(ch==1)g=pv;else bl=pv;
+                    candidate[0]=0xff000000|(r<<16)|(g<<8)|bl;
+                    input.setText(hex(candidate[0]));sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}
+                public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
+            });
+            content.addView(bar);chans[ch]=bar;
+        }
+        Runnable syncChans=()->{int col=candidate[0];chans[0].setProgress((col>>16)&255);chans[1].setProgress((col>>8)&255);chans[2].setProgress(col&255);};
+        syncChans.run();
         input.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
-                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString());sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}}
+                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString());sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);syncChans.run();}}
             public void afterTextChanged(android.text.Editable e){}
         });
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Use in draft",null).setNegativeButton("Cancel",null).create();
@@ -321,16 +333,23 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
         });panel.addView(bar);
     }
-    private void hueControl(LinearLayout panel,String title,String key,boolean primary){
-        TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);panel.addView(value);
+    private GradientDrawable rainbowTrack(){
+        int[] rainbow=new int[7];for(int i=0;i<7;i++)rainbow[i]=Color.HSVToColor(new float[]{i*60,1,1});
+        GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,rainbow);g.setCornerRadius(px(6));return g;
+    }
+    private LinearLayout hueControl(LinearLayout panel,String title,String key,boolean primary){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(1);
+        TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);row.addView(value);
         swatch(value,Color.HSVToColor(new float[]{primary?cfg.hue1:cfg.hue2,cfg.sat/100f,1}));
         SeekBar hue=new SeekBar(this);hue.setMax(360);hue.setProgress(primary?cfg.hue1:cfg.hue2);hue.setMinimumHeight(px(48));hue.setContentDescription(title);
+        hue.setProgressDrawable(rainbowTrack());
+        hue.setThumbTintList(android.content.res.ColorStateList.valueOf(0xfff5efff));
         hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar bar,int progress,boolean user){if(!user)return;
                 if(primary)cfg.hue1=progress;else cfg.hue2=progress;
                 value.setText(title+" · "+progress+"°");swatch(value,Color.HSVToColor(new float[]{progress,cfg.sat/100f,1}));draft.edit().putInt(key,progress).apply();changed();}
             public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}
-        });panel.addView(hue);
+        });row.addView(hue);panel.addView(row);return row;
     }
     private void changed(){
         cfg=Config.from(draft);preview.fx.cfg=cfg;updatePalette();

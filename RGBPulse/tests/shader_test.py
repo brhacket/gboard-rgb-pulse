@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1]
 src=(ROOT/'shaders/field.agsl').read_text()
 effect=skia.RuntimeEffect.MakeForShader(src)
 W,H=360,180
-names=['edge-runner','corner-snap','underline','prism-swipe','four-sparks','drop-ring','split-shutters','soft-press','wide-orbit','wide-aurora']
+names=['edge-runner','corner-snap','underline','prism-swipe','four-sparks','drop-ring','split-shutters','soft-press','comet-sweep','nebula-bloom']
 def render(style,age,mode=2,origins=None,boxes=None,strength=.9,padded=False,special=None):
     if origins is None:origins=[(180,90,age,.7)]
     if boxes is None:boxes=[(161,67,199,113)]*len(origins)
@@ -28,7 +28,7 @@ for style in range(10):
             assert not a[:6].any() and not a[-6:].any() and not a[:,:6].any() and not a[:,-6:].any()
             if age<=0 or age>=1:assert not a[:,:,3].any()
             elif .1<age<.8:assert a[:,:,3].max()>8,(style,age)
-            assert a[:,:,3].max()<=int((.48 if style<8 else .28)*.9*255)+1
+            assert a[:,:,3].max()<=int((.48 if style<8 else .40)*.9*255)+1
     assert not render(style,.3,strength=0).any()
     assert np.abs(render(style,.2)[:,:,3].astype(float)-render(style,.6)[:,:,3].astype(float)).sum()>30
     assert np.abs(render(style,.3).astype(float)-render(style,.3,special=compiled).astype(float)).max()<=1
@@ -37,7 +37,7 @@ for style in range(10):
         assert not a[:6].any() and not a[-6:].any() and not a[:,:6].any() and not a[:,-6:].any()
     # Four same-position touches must not multiply brightness beyond the total cap.
     a=render(style,.25,origins=[(180,90,.25,.7)]*4)
-    assert a[:,:,3].max()<=int((.48 if style<8 else .28)*.9*255)+1
+    assert a[:,:,3].max()<=int((.48 if style<8 else .40)*.9*255)+1
     if style<8:
         yy,xx=np.mgrid[0:H,0:W]
         outside=(np.abs(xx+.5-180)>19*1.2)|(np.abs(yy+.5-90)>23*1.2)

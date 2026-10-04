@@ -1,11 +1,11 @@
 # Gboard RGB Pulse · Pulse Studio
 
-**Version 1.1.0** — optional key feedback, a visible quiet glow and expressive ripples for Gboard.
+**Version 1.1.0** — optional key feedback, wide background effects and expressive ripples for Gboard.
 
 [Download 1.1.0](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.1.0)
 
 ## Choose your level of motion
-- **Touch:** ten curated tap animations — comet borders, corner brackets, spectral swipes, spark bursts, rings and soft presses, plus two wide keyboard sweeps — each a layered glow with hot cores and prismatic fringes, plus an independently controlled quiet background glow that is clearly visible and sinks gently as it fades. Try the everyday preset for Soft press at 160 ms without traveling waves.
+- **Touch:** ten curated tap animations — comet borders, corner brackets, spectral swipes, spark bursts, rings and soft presses — plus two wide background effects: a comet sweep with a spectral tail and a shimmering nebula bloom. Every effect is layered light with hot cores and prismatic fringes. Try the everyday preset for Soft press at 160 ms without traveling waves.
 - **Ripple:** optional row and full-keyboard patterns, adjustable borders and letter colors. Hiding key fills does not hide ripple borders.
 - **Keyboard:** optional opening/closing lighting and a real keyboard test field.
 

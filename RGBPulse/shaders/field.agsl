@@ -172,33 +172,38 @@ half4 main(float2 frag){
             }else{
                 float2 p=(frag-taps[i].xy)/max(resolution.y,1);
                 if(style<8.5){
-                    // Wide orbit: a fine chromatic ring with a hot crest, angular sparkle,
-                    // a trailing echo and a soft glow at the tap point.
-                    float r=length(p);
-                    float R=1.25*eo(age);
-                    float ring=band(r-R,.05);
-                    float ang=atan(p.y,p.x);
-                    float sparkle=.75+.25*sin(ang*3.+time*2.);
-                    acc+=L(body(age,hue),ring*sparkle*1.1);
-                    acc+=L(float3(1),ring*ring*.95);
-                    acc+=L(prism(age,hue,-.25),band(r-R-.06,.06)*.6);
-                    acc+=L(prism(age,hue,.25),band(r-R+.06,.06)*.6);
-                    acc+=L(body(age,hue),band(r-R*.86,.11)*(1-age)*.35);
-                    acc+=L(body(age,hue),exp(-r*r*3.)*(1-age)*.6);
+                    // Comet sweep: a white-hot comet crosses the keyboard along the tap
+                    // row, trailing a long spectral tail with sparkle and a broad halo.
+                    float travel=mix(-1.4,1.6,eo(age));
+                    float dx=p.x-travel;
+                    float back=max(-dx,0.);
+                    float py=p.y-.10*sin(p.x*1.8+1.7*age);
+                    float lane=exp(-py*py*14.);
+                    float head=exp(-dx*dx*34.)*exp(-py*py*30.);
+                    float tail=exp(-back*2.2)*lane*smoothstep(0.,.06,back);
+                    float halo=exp(-dx*dx*3.)*exp(-p.y*p.y*4.);
+                    acc+=L(float3(1),head*1.4);
+                    acc+=L(body(age,hue),head);
+                    acc+=L(prism(age,hue,-min(back*.5,1.)*.45),tail*.85);
+                    acc+=L(float3(1),tail*.35*exp(-back*6.));
+                    acc+=L(body(age,hue),tail*.22*(.6+.4*sin(p.x*31.+time*5.)));
+                    acc+=L(prism(age,hue,.3),halo*.15);
                 }else{
-                    // Wide aurora: three shimmering spectral curtains sweep the keyboard
-                    // over a broad under-glow.
-                    float sweep=-.9+1.8*eo(age);
-                    float shimmer=.7+.3*sin(p.x*23.+time*3.);
-                    for(int k=0;k<3;k++){
-                        float off=(float(k)-1.)*.22;
-                        float wav=.10*sin(p.x*(3.+float(k)*1.7)+time*(.6+.2*float(k))+float(k)*2.1)+.05*sin(p.x*7.-time*.8);
-                        float d=p.y-sweep-off-wav;
-                        float cur=exp(-d*d/(.06+.025*float(k)))*shimmer;
-                        acc+=L(prism(age,hue,(float(k)-1.)*.3),cur*(.9+.25*float(k)));
-                    }
-                    float d0=p.y-sweep;
-                    acc+=L(body(age,hue),exp(-d0*d0/.5)*.08);
+                    // Nebula bloom: a lobed shell of light blooms outward from the tap,
+                    // shimmering, with chromatic edges and a fading inner glow.
+                    float r=length(p);
+                    float ang=atan(p.y,p.x);
+                    float grow=.2+1.05*eo(age);
+                    float lobes=.75+.25*sin(ang*3.+time*.7)+.15*sin(ang*5.-time*.5);
+                    float d=r-grow*lobes;
+                    float shim=.75+.25*sin(ang*9.+time*2.);
+                    float shell=exp(-d*d/.028)*shim;
+                    acc+=L(float3(1),shell*shell*1.1);
+                    acc+=L(body(age,hue),shell*.9);
+                    acc+=L(prism(age,hue,-.3),band(d+.045,.04)*.55);
+                    acc+=L(prism(age,hue,.3),band(d-.045,.04)*.55);
+                    acc+=L(prism(age,hue,.2),exp(-d*d/.18)*.25);
+                    acc+=L(body(age,hue),exp(-r*r/(grow*grow*.4))*(1-age)*.3);
                 }
             }
             float weight=acc.w*envelope;
@@ -206,7 +211,7 @@ half4 main(float2 frag){
         }
     }
     // This cap applies to the combined light, not separately per tap.
-    float cap=style<7.5?.48:.28;
+    float cap=style<7.5?.48:.40;
     float alpha=min(cap,energy*.7)*clamp(strength,0,1);
     return half4(clamp(light/max(energy,.0001),0,1)*alpha,alpha);
 }

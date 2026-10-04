@@ -59,7 +59,7 @@ refined=key.split('private void applyRefined(',1)[1].split('private void clearOv
 assert 'cfg.tiles &&' in refined and 'if(!refinedApplied)' in refined and '.getOverlay().remove' in refined
 print('PASS: confirmed save-before-restart, bounded root process, refined overlay lifecycle')
 
-assert 'c.enabled=c.ripple||c.tapEffects||c.quietBackground' in cfg
+assert 'c.enabled=c.ripple||c.tapEffects||c.opening>0||c.closing>0' in cfg
 assert 'c.glass=c.ripple;c.sideStyle=c.ripple?1:0' in cfg
 assert 'enabled.setChecked(cfg.ripple)' in ui
 assert 'putBoolean("ripple40",value)' in ui and 'if(cfg.ripple)fx.side.tap' in ui
@@ -121,9 +121,9 @@ assert 'setTranslation' not in light and 'setScale' not in light
 assert '.putInt("opening46",0).putInt("closing46",0)' in ui
 print('PASS: sticky responsive preview, independent borders, grouped controls and cancellable light-only transitions')
 
-assert 'Try everyday setup' in ui and 'quietBackground48' in ui
+assert 'Try everyday setup' in ui and 'quietBackground48' not in ui and 'Quiet background' not in ui
 assert 'restart=button("Restart…",false)' not in ui and 'Gboard was not stopped' in ui
-assert 'quiet.clear()' in fx and 'cfg.quietBackground' in fx
+assert 'glide.points.clear()' in fx and 'QuietBackground' not in fx
 print('PASS: single save-and-restart button replaces apply/restart pair')
 
 # The magnetic fluid was removed: no code, shader, UI or preference leftovers.

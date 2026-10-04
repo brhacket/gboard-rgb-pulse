@@ -177,33 +177,38 @@ final class ShaderCode {
         "            }else{\n" +
         "                float2 p=(frag-taps[i].xy)/max(resolution.y,1);\n" +
         "                if(style<8.5){\n" +
-        "                    // Wide orbit: a fine chromatic ring with a hot crest, angular sparkle,\n" +
-        "                    // a trailing echo and a soft glow at the tap point.\n" +
-        "                    float r=length(p);\n" +
-        "                    float R=1.25*eo(age);\n" +
-        "                    float ring=band(r-R,.05);\n" +
-        "                    float ang=atan(p.y,p.x);\n" +
-        "                    float sparkle=.75+.25*sin(ang*3.+time*2.);\n" +
-        "                    acc+=L(body(age,hue),ring*sparkle*1.1);\n" +
-        "                    acc+=L(float3(1),ring*ring*.95);\n" +
-        "                    acc+=L(prism(age,hue,-.25),band(r-R-.06,.06)*.6);\n" +
-        "                    acc+=L(prism(age,hue,.25),band(r-R+.06,.06)*.6);\n" +
-        "                    acc+=L(body(age,hue),band(r-R*.86,.11)*(1-age)*.35);\n" +
-        "                    acc+=L(body(age,hue),exp(-r*r*3.)*(1-age)*.6);\n" +
+        "                    // Comet sweep: a white-hot comet crosses the keyboard along the tap\n" +
+        "                    // row, trailing a long spectral tail with sparkle and a broad halo.\n" +
+        "                    float travel=mix(-1.4,1.6,eo(age));\n" +
+        "                    float dx=p.x-travel;\n" +
+        "                    float back=max(-dx,0.);\n" +
+        "                    float py=p.y-.10*sin(p.x*1.8+1.7*age);\n" +
+        "                    float lane=exp(-py*py*14.);\n" +
+        "                    float head=exp(-dx*dx*34.)*exp(-py*py*30.);\n" +
+        "                    float tail=exp(-back*2.2)*lane*smoothstep(0.,.06,back);\n" +
+        "                    float halo=exp(-dx*dx*3.)*exp(-p.y*p.y*4.);\n" +
+        "                    acc+=L(float3(1),head*1.4);\n" +
+        "                    acc+=L(body(age,hue),head);\n" +
+        "                    acc+=L(prism(age,hue,-min(back*.5,1.)*.45),tail*.85);\n" +
+        "                    acc+=L(float3(1),tail*.35*exp(-back*6.));\n" +
+        "                    acc+=L(body(age,hue),tail*.22*(.6+.4*sin(p.x*31.+time*5.)));\n" +
+        "                    acc+=L(prism(age,hue,.3),halo*.15);\n" +
         "                }else{\n" +
-        "                    // Wide aurora: three shimmering spectral curtains sweep the keyboard\n" +
-        "                    // over a broad under-glow.\n" +
-        "                    float sweep=-.9+1.8*eo(age);\n" +
-        "                    float shimmer=.7+.3*sin(p.x*23.+time*3.);\n" +
-        "                    for(int k=0;k<3;k++){\n" +
-        "                        float off=(float(k)-1.)*.22;\n" +
-        "                        float wav=.10*sin(p.x*(3.+float(k)*1.7)+time*(.6+.2*float(k))+float(k)*2.1)+.05*sin(p.x*7.-time*.8);\n" +
-        "                        float d=p.y-sweep-off-wav;\n" +
-        "                        float cur=exp(-d*d/(.06+.025*float(k)))*shimmer;\n" +
-        "                        acc+=L(prism(age,hue,(float(k)-1.)*.3),cur*(.9+.25*float(k)));\n" +
-        "                    }\n" +
-        "                    float d0=p.y-sweep;\n" +
-        "                    acc+=L(body(age,hue),exp(-d0*d0/.5)*.08);\n" +
+        "                    // Nebula bloom: a lobed shell of light blooms outward from the tap,\n" +
+        "                    // shimmering, with chromatic edges and a fading inner glow.\n" +
+        "                    float r=length(p);\n" +
+        "                    float ang=atan(p.y,p.x);\n" +
+        "                    float grow=.2+1.05*eo(age);\n" +
+        "                    float lobes=.75+.25*sin(ang*3.+time*.7)+.15*sin(ang*5.-time*.5);\n" +
+        "                    float d=r-grow*lobes;\n" +
+        "                    float shim=.75+.25*sin(ang*9.+time*2.);\n" +
+        "                    float shell=exp(-d*d/.028)*shim;\n" +
+        "                    acc+=L(float3(1),shell*shell*1.1);\n" +
+        "                    acc+=L(body(age,hue),shell*.9);\n" +
+        "                    acc+=L(prism(age,hue,-.3),band(d+.045,.04)*.55);\n" +
+        "                    acc+=L(prism(age,hue,.3),band(d-.045,.04)*.55);\n" +
+        "                    acc+=L(prism(age,hue,.2),exp(-d*d/.18)*.25);\n" +
+        "                    acc+=L(body(age,hue),exp(-r*r/(grow*grow*.4))*(1-age)*.3);\n" +
         "                }\n" +
         "            }\n" +
         "            float weight=acc.w*envelope;\n" +
@@ -211,7 +216,7 @@ final class ShaderCode {
         "        }\n" +
         "    }\n" +
         "    // This cap applies to the combined light, not separately per tap.\n" +
-        "    float cap=style<7.5?.48:.28;\n" +
+        "    float cap=style<7.5?.48:.40;\n" +
         "    float alpha=min(cap,energy*.7)*clamp(strength,0,1);\n" +
         "    return half4(clamp(light/max(energy,.0001),0,1)*alpha,alpha);\n" +
         "}\n";

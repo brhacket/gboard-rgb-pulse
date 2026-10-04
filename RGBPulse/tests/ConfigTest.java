@@ -56,8 +56,8 @@ public final class ConfigTest {
         p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
         c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
         check(Config.EFFECTS.length==10&&Config.EFFECT_HINTS.length==10);
-        p.put("quietBackground48",true);c=Config.from(p);check(c.enabled&&c.quietBackground&&!c.ripple&&!c.tapEffects);
-        p.put("quietBackground48",false);check(!Config.from(p).enabled);
+        p.put("quietBackground48",true);p.put("quietStrength48",90);check(!Config.from(p).enabled); // removed quiet background stays inert
+        p.remove("quietBackground48");p.remove("quietStrength48");
         p.put("fluid50",true);p.put("fluidStrength50",70);check(!Config.from(p).enabled); // removed feature keys stay inert
         p.remove("fluid50");p.remove("fluidStrength50");
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);

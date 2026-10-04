@@ -392,13 +392,12 @@ client does not depend on it. Real Android delivery still needs device validatio
 The footer exposes Restart with confirmation, independently of Apply. Root failure
 gets a dedicated dialog, not a transient status overwritten by acknowledgement.
 
-Quiet background is a separate toggle/renderer from tap feedback and traveling
-ripple. One fixed-radius pool (<=40dp), <=12% opacity times intensity, single smooth
-240ms response, newest tap replaces old. No expanding front or global sweep.
-The everyday preset only stages Soft press / 160ms + quiet background, disabling
-ripple and entrance/exit lighting. No application/demo/restart occurs from preset
-selection. Both independent effects can run without ripple or without each other.
+The quiet background renderer and the original wide orbit/aurora programs were
+removed in the final 1.1.0 build; the wide catalog now offers two background
+effects (Comet sweep, Nebula bloom) rendered by the same bounded pulse field.
+The everyday preset stages Soft press / 160ms, disabling ripple and
+entrance/exit lighting. No application/demo/restart occurs from preset
+selection. Tap feedback and wide effects can run without ripple or each other.
 
-Tests cover quiet geometry/envelope, opt-in combinations and existing policy/render
-contracts. Security/lifecycle transport contracts are source checks plus executable
+Tests cover opt-in combinations and existing policy/render contracts. Security/lifecycle transport contracts are source checks plus executable
 revision/build tests, not proof of Android broadcast/IME behavior.

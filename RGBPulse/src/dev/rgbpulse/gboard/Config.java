@@ -4,21 +4,19 @@ import android.content.SharedPreferences;
 
 public final class Config {
     public static final String PREFS = "settings";
-    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Wide orbit", "Wide aurora"};
+    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Comet sweep", "Nebula bloom"};
     public static final String[] EFFECT_HINTS={
         "A white-hot comet with a spectral tail circles the tapped key.","Glowing brackets spring onto the key corners and flash as they land.",
         "A luminous calligraphic stroke sweeps beneath the tapped letter.","A prism gleam crosses one key, splitting into dispersed colors.",
         "Four twinkling sparks fly from the key edges, trailing light.","A chromatic ring with a hot crest expands inside the key.",
         "Two bowed slivers of light part from a seam flash.","A soft breathing glow with a prismatic rim answers your finger.",
-        "Wide effect · one fine chromatic ring travels across the keyboard.","Wide effect · shimmering spectral curtains sweep the keyboard."};
+        "Wide effect · a white-hot comet with a spectral tail sweeps the keyboard.","Wide effect · a lobed nebula of light blooms and shimmers from the tap."};
     public static final int GPU_COUNT = 10;
     public int pulseDuration=160;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
-    public boolean quietBackground=false;
-    public int quietStrength=65;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -61,8 +59,6 @@ public final class Config {
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
-            c.quietBackground=flag(p,"quietBackground48",false);
-            c.quietStrength=clamp(number(p,"quietStrength48",65),10,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
             c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
@@ -72,7 +68,7 @@ public final class Config {
             c.hue2 = clamp(number(p,"hue2", c.hue2), 0, 360);
             c.sat = clamp(number(p,"sat", c.sat), 0, 100);
             c.opacity = clamp(number(p,"opacity3", c.opacity), 5, 100);
-            c.duration = clamp(number(p,"duration3", c.duration), 300, 3500);
+            c.duration = clamp(number(p,"duration3", c.duration), 150, 3500);
             c.size = clamp(number(p,"size", c.size), 30, 250);
             c.thickness = clamp(number(p,"thickness8", c.thickness), 25, 300);
             c.accentColor=number(p,"accent19",0xff575c68);c.tileColor=number(p,"tile19",0xfff5f5f3);c.sideStyle=clamp(number(p,"side20",0),0,2);c.trailStyle=clamp(number(p,"trail19",0),0,3);c.trailWidth=clamp(number(p,"trailWidth19",2),1,6);c.trailLife=clamp(number(p,"trailLife19",420),150,1000);
@@ -91,10 +87,10 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0;
+            c.enabled=c.ripple||c.tapEffects||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
-            c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
+            c.duration=clamp(c.duration,150,1100);c.opacity=clamp(c.opacity,15,85);
         }
         return c;
     }
