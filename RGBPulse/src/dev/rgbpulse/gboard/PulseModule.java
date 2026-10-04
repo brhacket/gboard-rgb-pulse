@@ -403,7 +403,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         }
         void pause() {
             light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); root.removeCallbacks(resync); ticking=false;
-            motion.stop();
             if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();keyStyle.refreshRipples();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }
@@ -413,7 +412,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             pause(); bind(null); disposed=true;
             ViewTreeObserver o=root.getViewTreeObserver(); if(o.isAlive()){o.removeOnPreDrawListener(this);o.removeOnGlobalLayoutListener(this);}
             root.removeOnAttachStateChangeListener(this); XposedHelpers.removeAdditionalInstanceField(root,ROOT);
-            surface.release(); fx.dispose(); motion.stop();
+            surface.release(); fx.dispose();
         }
     }
 }
