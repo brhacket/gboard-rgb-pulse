@@ -37,6 +37,9 @@ public final class SettingsActivity extends Activity {
 
     private static final int BG=0xff0c1419, CARD=0xff182329, INK=0xfff1f2ef, MUTED=0xffa2aaa9;
 
+    interface HueSink{void hue(int degrees);}
+    interface SvSink{void sv(float s,float v);}
+
     @SuppressWarnings("deprecation")
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -338,11 +341,10 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
 
     /** A draggable hue spectrum bar with a round thumb — a proper hue picker. */
     private final class HueBar extends View {
-        interface Sink{void hue(int degrees);}
         private final Paint p=new Paint(3);
-        private final Sink sink;
+        private final HueSink sink;
         private float degrees;
-        HueBar(Context c,float start,Sink sink){super(c);this.sink=sink;degrees=start;setMinimumHeight(px(44));setContentDescription("Hue");}
+        HueBar(Context c,float start,HueSink sink){super(c);this.sink=sink;degrees=start;setMinimumHeight(px(44));setContentDescription("Hue");}
         void set(float value){degrees=value;invalidate();}
         @Override protected void onDraw(Canvas canvas){
             float x0=getPaddingLeft(),x1=getWidth()-getPaddingRight(),w=Math.max(1,x1-x0),cy=getHeight()*.5f;
@@ -368,11 +370,10 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
 
     /** Saturation/value square for the current hue. */
     private final class ColorSquare extends View {
-        interface Sink{void sv(float s,float v);}
         private final Paint p=new Paint(3);
-        private final Sink sink;
+        private final SvSink sink;
         private float hue,sat,val;
-        ColorSquare(Context c,float h,float s,float v,Sink sink){super(c);this.sink=sink;hue=h;sat=s;val=v;setMinimumHeight(px(160));setContentDescription("Saturation and brightness");}
+        ColorSquare(Context c,float h,float s,float v,SvSink sink){super(c);this.sink=sink;hue=h;sat=s;val=v;setMinimumHeight(px(160));setContentDescription("Saturation and brightness");}
         void setHue(float h){hue=h;invalidate();}
         void setSV(float s,float v){sat=s;val=v;invalidate();}
         @Override protected void onDraw(Canvas canvas){
