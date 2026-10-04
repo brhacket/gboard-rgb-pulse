@@ -1,14 +1,19 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
 cd "$(dirname "$0")"
+
+if ! command -v javac >/dev/null || ! command -v java >/dev/null; then
+  echo "error: JDK 11+ is required to run Java tests (javac/java not found)." >&2
+  exit 127
+fi
 mkdir -p work/tests
+rm -rf work/tests/*
+# Keep each test's production dependency list explicit: this suite works without Android SDK.
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/BodyGeometry.java src/dev/rgbpulse/gboard/PanelPolicy.java tests/GeometryTest.java tests/PanelPolicyTest.java
 java -cp work/tests dev.rgbpulse.gboard.GeometryTest
 java -cp work/tests dev.rgbpulse.gboard.PanelPolicyTest
-python3 tests/source_contract_test.py
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendPolicy.java tests/LegendPolicyTest.java
 java -cp work/tests dev.rgbpulse.gboard.LegendPolicyTest
-python3 tests/material_contract_test.py
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/CapPolicy.java tests/CapPolicyTest.java
 java -cp work/tests dev.rgbpulse.gboard.CapPolicyTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendWave.java tests/LegendWaveTest.java
@@ -19,3 +24,24 @@ javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/TileGeometry.java te
 java -cp work/tests dev.rgbpulse.gboard.TileGeometryTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/TrailPoints.java tests/TrailPointsTest.java
 java -cp work/tests dev.rgbpulse.gboard.TrailPointsTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/WavePolicy.java tests/WavePolicyTest.java
+java -cp work/tests dev.rgbpulse.gboard.WavePolicyTest
+javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreferences.java src/dev/rgbpulse/gboard/Config.java tests/ConfigTest.java
+java -cp work/tests dev.rgbpulse.gboard.ConfigTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/BorderFade.java tests/BorderFadeTest.java
+java -cp work/tests dev.rgbpulse.gboard.BorderFadeTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/LegendTint.java tests/LegendTintTest.java
+java -cp work/tests dev.rgbpulse.gboard.LegendTintTest
+javac -encoding UTF-8 -cp work/tests -d work/tests tests/stubs/android/view/*.java tests/stubs/android/widget/*.java tests/stubs/android/content/res/*.java src/dev/rgbpulse/gboard/NativeLegends.java tests/NativeLegendsTest.java
+java -cp work/tests dev.rgbpulse.gboard.NativeLegendsTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/RevisionGate.java tests/RevisionGateTest.java
+java -cp work/tests dev.rgbpulse.gboard.RevisionGateTest
+javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreferences.java src/dev/rgbpulse/gboard/SettingsStore.java tests/SettingsStoreTest.java
+java -cp work/tests dev.rgbpulse.gboard.SettingsStoreTest
+javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/QuietPolicy.java tests/QuietPolicyTest.java
+java -cp work/tests dev.rgbpulse.gboard.QuietPolicyTest
+python3 tests/settings_transport_test.py
+python3 tests/regression_contract_test.py
+python3 tests/source_contract_test.py
+python3 tests/material_contract_test.py
+printf 'PASS: Java policy and source contract tests\n'

@@ -1,19 +1,61 @@
-#!/bin/bash
-# Needs: Java 11+, curl, zip, openssl, aapt, libapksig-java (Debian: apt install aapt libapksig-java)
-set -euo pipefail
+#!/usr/bin/env bash
+# Reproducible command-line build. Requires JDK 11+, curl, zip, openssl, aapt and libapksig-java.
+set -Eeuo pipefail
 cd "$(dirname "$0")"
-python3 embed_shader.py
-mkdir -p tools signing; rm -rf work; mkdir -p work/classes
-[ -f tools/android.jar ] || curl -fL -o tools/android.jar https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar
-[ -f tools/xposed.jar ] || curl -fL -o tools/xposed.jar https://api.xposed.info/de/robv/android/xposed/api/82/api-82.jar
-[ -f tools/r8.jar ] || curl -fL -o tools/r8.jar https://storage.googleapis.com/r8-releases/raw/8.3.37/r8.jar
-javac -encoding UTF-8 -source 8 -target 8 -nowarn -cp tools/android.jar:tools/xposed.jar -d work/classes src/dev/rgbpulse/gboard/*.java
-java -cp tools/r8.jar com.android.tools.r8.D8 --release --lib tools/android.jar --classpath tools/xposed.jar --min-api 33 --output work $(find work/classes -name '*.class')
-aapt package -f -M AndroidManifest.xml -S res -A assets -I tools/android.jar -F work/unsigned.apk
-(cd work && zip -q unsigned.apk classes.dex)
-if [ ! -f signing/key.pk8 ]; then
- openssl req -x509 -newkey rsa:2048 -keyout signing/key.pem -out signing/cert.pem -days 10000 -nodes -subj '/CN=Gboard RGB Pulse local build/'
- openssl pkcs8 -topk8 -inform PEM -outform DER -in signing/key.pem -out signing/key.pk8 -nocrypt
+
+for command in java javac curl zip openssl aapt python3; do
+  command -v "$command" >/dev/null || { echo "error: missing required command: $command" >&2; exit 127; }
+done
+APKSIG_JAR="${APKSIG_JAR:-/usr/share/java/apksig.jar}"
+APKSIGNER="${APKSIGNER:-$(command -v apksigner || true)}"
+if [[ ! -f "$APKSIG_JAR" && -z "$APKSIGNER" ]]; then
+  echo "error: apksig.jar or the Android apksigner command is required" >&2; exit 1
 fi
-javac -nowarn -cp /usr/share/java/apksig.jar -d work Sign.java
-java -cp /usr/share/java/apksig.jar:work Sign signing/key.pk8 signing/cert.pem work/unsigned.apk "${1:-Gboard-RGB-Pulse.apk}"
+
+python3 embed_shader.py
+mkdir -p tools signing
+rm -rf work
+mkdir -p work/classes
+# Never cache an interrupted download under the final dependency filename.
+fetch() {
+  [[ -s "$2" ]] && return 0
+  local partial="$2.partial"
+  if curl --fail --location --retry 3 --retry-delay 2 --output "$partial" "$1"; then
+    mv "$partial" "$2"
+  else
+    rm -f "$partial"
+    return 1
+  fi
+}
+fetch https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar tools/android.jar
+fetch https://api.xposed.info/de/robv/android/xposed/api/82/api-82.jar tools/xposed.jar
+fetch https://storage.googleapis.com/r8-releases/raw/8.3.37/r8.jar tools/r8.jar
+
+javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options -nowarn \
+  -cp tools/android.jar:tools/xposed.jar -d work/classes src/dev/rgbpulse/gboard/*.java
+java -cp tools/r8.jar com.android.tools.r8.D8 --release --lib tools/android.jar \
+  --classpath tools/xposed.jar --min-api 33 --output work $(find work/classes -name '*.class' -print)
+aapt package -f -M AndroidManifest.xml -S res -A assets -I tools/android.jar -F work/unsigned.apk
+(cd work && zip -q -u unsigned.apk classes.dex)
+
+if [[ -e signing/key.pk8 || -e signing/cert.pem || -e signing/key.pem ]]; then
+  if [[ ! -s signing/key.pk8 || ! -s signing/cert.pem ]]; then
+    echo "error: incomplete signing identity; restore key.pk8 and cert.pem instead of replacing an existing key" >&2
+    exit 1
+  fi
+else
+  umask 077
+  openssl req -x509 -newkey rsa:2048 -keyout signing/key.pem -out signing/cert.pem \
+    -days 10000 -nodes -subj '/CN=Gboard RGB Pulse local build/'
+  openssl pkcs8 -topk8 -inform PEM -outform DER -in signing/key.pem -out signing/key.pk8 -nocrypt
+  chmod 600 signing/key.pem signing/key.pk8
+fi
+output="${1:-Gboard-RGB-Pulse.apk}"
+if [[ -f "$APKSIG_JAR" ]]; then
+  javac -encoding UTF-8 -nowarn -cp "$APKSIG_JAR" -d work Sign.java
+  java -cp "$APKSIG_JAR:work" Sign signing/key.pk8 signing/cert.pem work/unsigned.apk "$output"
+else
+  "$APKSIGNER" sign --key signing/key.pk8 --cert signing/cert.pem \
+    --out "$output" work/unsigned.apk
+fi
+echo "Built ${1:-Gboard-RGB-Pulse.apk}"

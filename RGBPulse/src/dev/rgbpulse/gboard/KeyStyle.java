@@ -3,6 +3,7 @@ package dev.rgbpulse.gboard;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.view.View;
+import android.view.ViewGroup;
 import java.util.*;
 import java.lang.reflect.Method;
 import de.robv.android.xposed.*;
@@ -10,7 +11,13 @@ import de.robv.android.xposed.*;
 final class KeyStyle {
     static final ThreadLocal<Integer> textDepth=new ThreadLocal<Integer>();
     static final ThreadLocal<Boolean> ownWrite=new ThreadLocal<Boolean>();
+    static final String TILELESS="rgbpulse.tileless.owner";
+    final IdentityHashMap<View,Drawable> hiddenBackgrounds=new IdentityHashMap<>();
     static final String TAG="rgbpulse.glass.key";
+    static final String REFINED_CHILD="rgbpulse.refined.legend.owner";
+    static final Set<Class<?>> refinedClasses=new HashSet<Class<?>>();
+    static int legendScopes,legendPaints,legendBitmaps,legendNodes;
+    static boolean legendBindingLogged;
     static final ThreadLocal<Canvas> scopedCanvas=new ThreadLocal<Canvas>();
     static final Map<Paint,Boolean> copies=Collections.synchronizedMap(new WeakHashMap<Paint,Boolean>());
     static final ThreadLocal<Integer> scope=new ThreadLocal<Integer>();
@@ -20,9 +27,13 @@ final class KeyStyle {
     final CutoutTiles cutouts=new CutoutTiles();
     final CapHooks caps=new CapHooks();
     final IdentityHashMap<View,Drawable> originals=new IdentityHashMap<View,Drawable>();
-    static void configure(Config c,android.content.Context context) {cfg=c;Typography.configure(c,context);face=Typography.face;}
+    static final ThreadLocal<RippleOverlay> refinedScope=new ThreadLocal<RippleOverlay>();
+    static final Set<Method> refinedDrawHooks=new HashSet<Method>();
+    boolean refinedApplied;
+    final IdentityHashMap<View,RippleOverlay> overlays=new IdentityHashMap<View,RippleOverlay>();
+    static void configure(Config c,android.content.Context context) {cfg=c;legendScopes=legendPaints=legendBitmaps=legendNodes=0;legendBindingLogged=false;Typography.configure(c,context);face=Typography.face;}
     static boolean markedTree(View v){
-        if(!cfg.enabled||!cfg.glass)return false;
+        if(!cfg.enabled||!cfg.glass||cfg.refined)return false;
         for(int i=0;i<12 && v!=null;i++){
             if(XposedHelpers.getAdditionalInstanceField(v,TAG)!=null)return true;
             if(PulseModule.keyboardClass(v))return false;
@@ -34,21 +45,29 @@ final class KeyStyle {
         XposedHelpers.findAndHookMethod(View.class,"setBackgroundDrawable",Drawable.class,new XC_MethodHook(){
             protected void beforeHookedMethod(MethodHookParam p){
                 if(Boolean.TRUE.equals(ownWrite.get()))return;
+                Object tileOwner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TILELESS);
+                if(tileOwner instanceof KeyStyle && cfg.enabled && cfg.hideTiles && !(p.args[0] instanceof EmptyBackground)){
+                    ((KeyStyle)tileOwner).hiddenBackgrounds.put((View)p.thisObject,(Drawable)p.args[0]);
+                    p.args[0]=new EmptyBackground((View)p.thisObject,(Drawable)p.args[0]);return;
+                }
                 Object owner=XposedHelpers.getAdditionalInstanceField(p.thisObject,TAG);
-                if(!(owner instanceof KeyStyle)||!cfg.enabled||!cfg.glass||p.args[0] instanceof Glass)return;
+                if(!(owner instanceof KeyStyle)||!cfg.enabled||p.args[0] instanceof Glass)return;
+                if(cfg.refined?!cfg.tiles:!cfg.glass)return;
                 View v=(View)p.thisObject;KeyStyle style=(KeyStyle)owner;
                 style.originals.put(v,(Drawable)p.args[0]);
-                p.args[0]=new Glass((View)p.thisObject, v.getResources().getDisplayMetrics().density, (Drawable)p.args[0]);
+                p.args[0]=new Glass((View)p.thisObject, v.getResources().getDisplayMetrics().density, (Drawable)p.args[0],cfg.refined);
             }
         });
         try {
             Method record=View.class.getDeclaredMethod("updateDisplayListIfDirty");
             XposedBridge.hookMethod(record,new XC_MethodHook(){
                 protected void beforeHookedMethod(MethodHookParam p){
+                    enterRefinedScope(p);
                     if(!markedTree((View)p.thisObject))return;
                     Integer n=scope.get();scope.set(n==null?1:n+1);p.setObjectExtra(TAG,true);
                 }
                 protected void afterHookedMethod(MethodHookParam p){
+                    leaveRefinedScope(p);
                     if(p.getObjectExtra(TAG)!=null){Integer n=scope.get();if(n==null||n<=1)scope.remove();else scope.set(n-1);}
                 }
             });
@@ -56,11 +75,23 @@ final class KeyStyle {
         Set<Method> methods=new HashSet<Method>();
         for(String name:new String[]{"android.graphics.Canvas","android.graphics.BaseCanvas","android.graphics.BaseRecordingCanvas","android.graphics.RecordingCanvas"}) {
             try { for(Method m:Class.forName(name).getDeclaredMethods()) {
-                if(!(m.getName().equals("drawText")||m.getName().equals("drawTextRun")))continue;
+                if(m.getName().equals("drawBitmap")||m.getName().equals("drawRenderNode")){
+                    if(methods.add(m))XposedBridge.hookMethod(m,new XC_MethodHook(){
+                        @Override protected void beforeHookedMethod(MethodHookParam p){
+                            if(!cfg.debug||refinedScope.get()==null)return;
+                            boolean bitmap=p.method.getName().equals("drawBitmap");
+                            int count=bitmap?++legendBitmaps:++legendNodes;
+                            if(count==1)XposedBridge.log("RGBPulse legend observed="+p.method.getName()+" (not recolored)");
+                        }
+                    });
+                    continue;
+                }
+                if(!(m.getName().equals("drawText")||m.getName().equals("drawTextRun")||m.getName().equals("drawGlyphs")))continue;
                 Class<?>[] args=m.getParameterTypes();
                 if(args.length==0 || args[args.length-1]!=Paint.class || !methods.add(m))continue;
                 XposedBridge.hookMethod(m,new XC_MethodHook(){
                     protected void beforeHookedMethod(MethodHookParam p){
+                        if(cfg.refined){tintRefinedText(p);return;}
                         Integer depth=scope.get();if(depth==null||depth==0||!cfg.enabled||!cfg.glass)return;
                         Integer nested=textDepth.get();textDepth.set(nested==null?1:nested+1);p.setObjectExtra("rgbText",true);
                         if(nested!=null&&nested>0)return;
@@ -112,14 +143,69 @@ final class KeyStyle {
                         }catch(Throwable ignored){}
                     }
                     protected void afterHookedMethod(MethodHookParam p){
+                        if(p.getObjectExtra("refinedTint")!=null){
+                            p.args[p.args.length-1]=p.getObjectExtra("refinedOriginalPaint");textDepth.remove();
+                        }
                         if(p.getObjectExtra("rgbText")!=null){Integer n=textDepth.get();if(n==null||n<=1)textDepth.remove();else textDepth.set(n-1);}
                     }
                 });
             }}catch(Throwable ignored){}
         }
     }
+    private static void enterRefinedScope(XC_MethodHook.MethodHookParam p){
+        if(!cfg.refined||!cfg.enabled||!cfg.ripple)return;
+        Object candidate=XposedHelpers.getAdditionalInstanceField(p.thisObject,REFINED_CHILD);
+        if(!(candidate instanceof RippleOverlay))return;
+        RippleOverlay layer=(RippleOverlay)candidate;
+        Object owner=XposedHelpers.getAdditionalInstanceField(layer.key,TAG);
+        // Recycled/removed descendants must never inherit stale key ownership.
+        if(!(owner instanceof KeyStyle)||((KeyStyle)owner).overlays.get(layer.key)!=layer)return;
+        if(cfg.debug&&++legendScopes==1)XposedBridge.log("RGBPulse legend scope="+p.method.getName()+" view="+p.thisObject.getClass().getName());
+        p.setObjectExtra("refinedKeyScope",true);p.setObjectExtra("refinedPreviousScope",refinedScope.get());
+        refinedScope.set(layer);
+    }
+    private static void leaveRefinedScope(XC_MethodHook.MethodHookParam p){
+        if(p.getObjectExtra("refinedKeyScope")==null)return;
+        RippleOverlay previous=(RippleOverlay)p.getObjectExtra("refinedPreviousScope");
+        if(previous==null)refinedScope.remove();else refinedScope.set(previous);
+    }
+    private static void tintRefinedText(XC_MethodHook.MethodHookParam p){
+        RippleOverlay layer=refinedScope.get();
+        Integer depth=textDepth.get();
+        if(!cfg.enabled||!cfg.ripple||layer==null||(depth!=null&&depth>0))return;
+        Paint original=(Paint)p.args[p.args.length-1];
+        if(original==null)return;
+        if(cfg.debug&&++legendPaints==1)XposedBridge.log("RGBPulse legend tint="+p.method.getName()+" active="+Integer.toHexString(cfg.letterActive)+" inactive="+Integer.toHexString(cfg.letterInactive));
+        // No text extraction, repositioning, font substitution or original-Paint mutation.
+        layer.legendPaint.set(original);
+        layer.legendPaint.setShader(null);layer.legendPaint.setColorFilter(null);
+        layer.legendPaint.setColor(LegendTint.color(original.getColor(),layer.fade.value(),cfg.letterInactive,cfg.letterActive));
+        p.setObjectExtra("refinedTint",true);p.setObjectExtra("refinedOriginalPaint",original);
+        textDepth.set(1);p.args[p.args.length-1]=layer.legendPaint;
+    }
+    private static void hookRefinedMethod(Method method){
+        if(!refinedDrawHooks.add(method))return;
+        try{
+            XposedBridge.hookMethod(method,new XC_MethodHook(){
+                @Override protected void beforeHookedMethod(MethodHookParam p){enterRefinedScope(p);}
+                @Override protected void afterHookedMethod(MethodHookParam p){leaveRefinedScope(p);}
+            });
+        }catch(Throwable e){refinedDrawHooks.remove(method);android.util.Log.w("RGBPulse","Legend method hook unavailable: "+method.getName(),e);}
+    }
+    private static void hookRefinedDraw(View view){
+        if(!refinedClasses.add(view.getClass()))return;
+        try{hookRefinedMethod(view.getClass().getMethod("draw",Canvas.class));}catch(NoSuchMethodException ignored){}
+        // HWUI can record a custom child using onDraw without calling public draw.
+        for(Class<?> type=view.getClass();type!=null&&View.class.isAssignableFrom(type);type=type.getSuperclass()){
+            try{hookRefinedMethod(type.getDeclaredMethod("onDraw",Canvas.class));}catch(NoSuchMethodException ignored){}
+        }
+    }
     void apply(java.util.List<View> keys,Config c) {
-        if(!c.enabled||!c.glass){restore();return;}
+        if(!c.enabled){restore();return;}
+        if(c.refined){applyRefined(keys);return;}
+        if(refinedApplied)restore();
+        if(!c.glass){restore();return;}
+        clearOverlays();
         for(Iterator<Map.Entry<View,Drawable>> it=originals.entrySet().iterator();it.hasNext();) {
             Map.Entry<View,Drawable> e=it.next();if(!keys.contains(e.getKey())){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());it.remove();}
         }
@@ -142,22 +228,155 @@ final class KeyStyle {
             }
             if(!(key.getBackground() instanceof Glass)){originals.put(key,key.getBackground());setBackground(key,new Glass(key, key.getResources().getDisplayMetrics().density, key.getBackground()));invalidateTree(key);}
         }
-        caps.apply(keys);cutouts.bind(keys);
+        if(!c.refined){caps.apply(keys);cutouts.bind(keys);}else {caps.restore();cutouts.studio.bind(keys);}
     }
     static void invalidateTree(View v){v.invalidate();if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)invalidateTree(g.getChildAt(i));}}
     void refresh(){for(View v:originals.keySet())invalidateTree(v);}
     static void setBackground(View v,Drawable d){int l=v.getPaddingLeft(),t=v.getPaddingTop(),r=v.getPaddingRight(),b=v.getPaddingBottom();try{ownWrite.set(true);v.setBackground(d);v.setPadding(l,t,r,b);}finally{ownWrite.remove();}}
-    void restore(){cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
+    void restore(){restoreHiddenBackgrounds();refinedApplied=false;clearOverlays();cutouts.studio.clear();cutouts.clear();caps.restore();for(Map.Entry<View,Drawable> e:originals.entrySet()){CapHooks.clear(e.getKey());XposedHelpers.removeAdditionalInstanceField(e.getKey(),TAG);if(e.getKey().getBackground() instanceof Glass)setBackground(e.getKey(),e.getValue());invalidateTree(e.getKey());}originals.clear();}
 
 
 
+
+    // Draw above native key paint. A background wrapper can be painted over by
+    // Gboard's own key fill; ViewOverlay remains in the key's local clipped space.
+    private void applyRefined(java.util.List<View> keys){
+        if(!refinedApplied){restore();refinedApplied=true;}
+        for(Iterator<Map.Entry<View,RippleOverlay>> it=overlays.entrySet().iterator();it.hasNext();){
+            Map.Entry<View,RippleOverlay> entry=it.next();View key=entry.getKey();
+            if(!keys.contains(key)){
+                entry.getValue().clearDrawingScopes();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());XposedHelpers.removeAdditionalInstanceField(key,TAG);
+                if(originals.containsKey(key)){Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);}
+                invalidateTree(key);it.remove();
+            }
+        }
+        for(View key:keys){
+            RippleOverlay layer=overlays.get(key);
+            if(layer==null){
+                layer=new RippleOverlay(key);overlays.put(key,layer);key.getOverlay().add(layer);
+                XposedHelpers.setAdditionalInstanceField(key,TAG,this);hookRefinedDraw(key);invalidateTree(key);
+            }
+            layer.setBounds(0,0,key.getWidth(),key.getHeight());
+            layer.bindDrawingScopes();layer.labels.bind(key);layer.labels.apply(cfg,layer.fade.value());
+            if(cfg.tiles && !(key.getBackground() instanceof Glass)){
+                originals.put(key,key.getBackground());setBackground(key,new Glass(key,layer.dp,key.getBackground(),true));
+            }else if(!cfg.tiles && originals.containsKey(key)){
+                Drawable original=originals.remove(key);if(key.getBackground() instanceof Glass)setBackground(key,original);
+            }
+        }
+        syncHiddenBackgrounds(keys);
+        cutouts.studio.bind(keys);
+        if(cfg.debug&&!legendBindingLogged){
+            legendBindingLogged=true;int views=0;for(RippleOverlay layer:overlays.values())views+=layer.drawingViews.size();
+            XposedBridge.log("RGBPulse legend bind keys="+keys.size()+" scopedViews="+views+" methods="+refinedDrawHooks.size()+" ripple="+cfg.ripple);
+        }
+    }
+    // Only verified key subtrees, never the toolbar or keyboard panel. Keep padding,
+    // drawable state and the latest theme background so disable/recycling is reversible.
+    private void syncHiddenBackgrounds(java.util.List<View> keys){
+        Set<View> live=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        if(cfg.hideTiles)for(View key:keys)collectTileViews(key,live);
+        for(Iterator<Map.Entry<View,Drawable>> it=hiddenBackgrounds.entrySet().iterator();it.hasNext();){
+            Map.Entry<View,Drawable> e=it.next();if(!live.contains(e.getKey())){restoreHidden(e.getKey(),e.getValue());it.remove();}
+        }
+        for(View v:live){
+            if(!hiddenBackgrounds.containsKey(v)){
+                hiddenBackgrounds.put(v,v.getBackground());XposedHelpers.setAdditionalInstanceField(v,TILELESS,this);
+                setBackground(v,new EmptyBackground(v,v.getBackground()));invalidateTree(v);
+            }
+        }
+    }
+    private static void collectTileViews(View v,Set<View> live){
+        live.add(v);if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)collectTileViews(g.getChildAt(i),live);}
+    }
+    private void restoreHidden(View v,Drawable original){
+        if(XposedHelpers.getAdditionalInstanceField(v,TILELESS)!=this)return;
+        XposedHelpers.removeAdditionalInstanceField(v,TILELESS);
+        if(v.getBackground() instanceof EmptyBackground)setBackground(v,original);
+        invalidateTree(v);
+    }
+    private void restoreHiddenBackgrounds(){
+        for(Map.Entry<View,Drawable> e:hiddenBackgrounds.entrySet())restoreHidden(e.getKey(),e.getValue());
+        hiddenBackgrounds.clear();
+    }
+    static final class EmptyBackground extends Glass {
+        EmptyBackground(View view,Drawable original){super(view,view.getResources().getDisplayMetrics().density,original,true);}
+        @Override public void draw(Canvas canvas){} // No native face, press fill, or module tile.
+    }
+    private void clearOverlays(){
+        for(Map.Entry<View,RippleOverlay> entry:overlays.entrySet()){
+            View key=entry.getKey();entry.getValue().clearDrawingScopes();entry.getValue().labels.restore();key.getOverlay().remove(entry.getValue());
+            XposedHelpers.removeAdditionalInstanceField(key,TAG);invalidateTree(key);
+        }
+        overlays.clear();
+    }
+    boolean advanceRipples(long now){
+        boolean active=false;
+        for(RippleOverlay layer:overlays.values()){
+            if(!cfg.ripple){layer.fade.clear();layer.labels.restore();continue;}
+            layer.fade.advance(SideSweep.activeRow?SideSweep.computeGlowAlpha(layer.key,layer.dp):0,now);
+            layer.labels.apply(cfg,layer.fade.value());
+            active|=layer.fade.active();
+        }
+        return active;
+    }
+    void clearRippleFades(){for(RippleOverlay layer:overlays.values()){layer.fade.clear();layer.labels.apply(cfg,0);}}
+    void refreshRipples(){for(RippleOverlay layer:overlays.values()){layer.invalidateSelf();invalidateTree(layer.key);}}
+    static final class RippleOverlay extends Drawable {
+        final View key;final float dp;
+        final RipplePaint ripple=new RipplePaint();final RectF bounds=new RectF();
+        final BorderFade fade=new BorderFade();
+        final Paint legendPaint=new Paint();
+        final NativeLegends labels=new NativeLegends();
+        final Set<View> drawingViews=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        final Set<View> liveDrawingViews=Collections.newSetFromMap(new IdentityHashMap<View,Boolean>());
+        void bindDrawingScopes(){
+            liveDrawingViews.clear();trackDrawingViews(key,0);
+            for(Iterator<View> it=drawingViews.iterator();it.hasNext();){
+                View view=it.next();if(!liveDrawingViews.contains(view)){
+                    if(XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)==this)XposedHelpers.removeAdditionalInstanceField(view,REFINED_CHILD);
+                    view.invalidate();it.remove();
+                }
+            }
+        }
+        private void trackDrawingViews(View view,int depth){
+            if(depth>12)return;
+            liveDrawingViews.add(view);
+            if(drawingViews.add(view)||XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)!=this){
+                XposedHelpers.setAdditionalInstanceField(view,REFINED_CHILD,this);hookRefinedDraw(view);view.invalidate();
+            }
+            if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)trackDrawingViews(group.getChildAt(i),depth+1);}
+        }
+        void clearDrawingScopes(){
+            for(View view:drawingViews){
+                if(XposedHelpers.getAdditionalInstanceField(view,REFINED_CHILD)==this)XposedHelpers.removeAdditionalInstanceField(view,REFINED_CHILD);
+                view.invalidate();
+            }
+            drawingViews.clear();liveDrawingViews.clear();
+        }
+        private int alpha=255;
+        RippleOverlay(View key){this.key=key;dp=key.getResources().getDisplayMetrics().density;}
+        @Override public void draw(Canvas canvas){
+            if(!cfg.enabled||!cfg.refined||!cfg.ripple)return;
+            bounds.set(0,0,key.getWidth(),key.getHeight());
+            ripple.draw(canvas,bounds,dp,fade.value(),cfg.rippleOpacity/100f*alpha/255f,6*dp,cfg.rippleActive,cfg.rippleInactive,cfg.borderTenths/10f);
+        }
+        @Override public void setAlpha(int value){alpha=value;invalidateSelf();}
+        @Override public void setColorFilter(ColorFilter filter){} // State colors are controlled by settings.
+        @Override public int getOpacity(){return PixelFormat.TRANSLUCENT;}
+    }
 
     /** v33 stock default always visible, border only during multi-wave, white one-color */
-    static final class Glass extends Drawable {
+    static class Glass extends Drawable implements Drawable.Callback {
+        final RipplePaint ripple=new RipplePaint();
+        final RectF rippleBounds=new RectF();
         final View view;
         final float dp;
         final Drawable orig;
-        Glass(View v,float d,Drawable o){view=v;dp=d;orig=o;}
+        final boolean stable;
+        final Paint tilePaint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        Glass(View v,float d,Drawable o){this(v,d,o,false);}
+        Glass(View v,float d,Drawable o,boolean stable){view=v;dp=d;orig=o;this.stable=stable;if(orig!=null)orig.setCallback(this);}
         Glass(View v,float d){this(v,d,null);}
         Glass(float d){this(null,d,null);}
         Glass(float d,Drawable o){this(null,d,o);}
@@ -170,13 +389,24 @@ final class KeyStyle {
             Rect b=getBounds();
             if(w<=0) w=b.width()>0?b.width():80;
             if(h<=0) h=b.height()>0?b.height():60;
+            if(stable && cfg.enabled && cfg.tiles){
+                rippleBounds.set(2*dp,2*dp,w-2*dp,h-2*dp);
+                tilePaint.setColor(0xff303538);tilePaint.setStyle(Paint.Style.FILL);
+                c.drawRoundRect(rippleBounds,6*dp,6*dp,tilePaint);
+            }
             if(orig!=null){
-                orig.setBounds(0,0,w,h);
+                orig.setBounds(getBounds());
                 orig.draw(c);
             }
-            if(!SideSweep.activeRow) return;
+            if(stable)return; // The permanent tile is never tied to ripple opacity.
+            if(!cfg.enabled||!cfg.glass||cfg.sideStyle==0||!SideSweep.activeRow) return;
             float glowAlpha=SideSweep.computeGlowAlpha(view, dp);
             if(glowAlpha<=0.01f) return;
+            if(cfg.refined){
+                rippleBounds.set(getBounds());
+                ripple.draw(c,rippleBounds,dp,glowAlpha,cfg.rippleOpacity/100f,6*dp);
+                return;
+            }
             int finalBorder=SideSweep.computeFinalBorder(view, 0xffe8e8ec, dp);
             RectF tile=new RectF(0,0,w,h);
             float rad=12*dp;
@@ -189,6 +419,17 @@ final class KeyStyle {
             c.drawRoundRect(inset,rad,rad,rim);
         }
         public void setAlpha(int a){if(orig!=null)orig.setAlpha(a);}public void setColorFilter(ColorFilter f){if(orig!=null)orig.setColorFilter(f);}
+        @Override public boolean isStateful(){return orig!=null&&orig.isStateful();}
+        @Override protected boolean onStateChange(int[] state){boolean changed=orig!=null&&orig.setState(state);if(changed)invalidateSelf();return changed;}
+        @Override protected boolean onLevelChange(int level){return orig!=null&&orig.setLevel(level);}
+        @Override public boolean getPadding(Rect padding){return orig!=null?orig.getPadding(padding):super.getPadding(padding);}
+        @Override public int getIntrinsicWidth(){return orig!=null?orig.getIntrinsicWidth():-1;}
+        @Override public int getIntrinsicHeight(){return orig!=null?orig.getIntrinsicHeight():-1;}
+        @Override public void setHotspot(float x,float y){if(orig!=null)orig.setHotspot(x,y);}
+        @Override public void jumpToCurrentState(){if(orig!=null)orig.jumpToCurrentState();}
+        @Override public void invalidateDrawable(Drawable who){invalidateSelf();}
+        @Override public void scheduleDrawable(Drawable who,Runnable what,long when){scheduleSelf(what,when);}
+        @Override public void unscheduleDrawable(Drawable who,Runnable what){unscheduleSelf(what);}
         public int getOpacity(){return PixelFormat.TRANSLUCENT;}
     }
 }

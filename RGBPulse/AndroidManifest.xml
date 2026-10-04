@@ -1,6 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="33" android:versionName="33.0">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="49" android:versionName="1.0.2">
  <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="34"/>
- <application android:label="Gboard RGB Pulse" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:hasCode="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+ <permission android:name="dev.rgbpulse.gboard.permission.NOTIFY_SETTINGS" android:protectionLevel="signature"/>
+ <uses-permission android:name="dev.rgbpulse.gboard.permission.NOTIFY_SETTINGS"/>
+ <queries><package android:name="com.google.android.inputmethod.latin"/></queries>
+ <application android:forceQueryable="true" android:label="Gboard RGB Pulse" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:hasCode="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+  <receiver android:name=".SettingsReceipt" android:exported="false"/>
+  <receiver android:name=".SettingsRelay" android:exported="true"/>
+  <provider android:name=".SettingsProvider" android:authorities="dev.rgbpulse.gboard.settings" android:exported="true"/>
   <activity android:name=".SettingsActivity" android:exported="true" android:label="Gboard RGB Pulse" android:windowSoftInputMode="adjustResize">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="de.robv.android.xposed.category.MODULE_SETTINGS"/></intent-filter>
@@ -8,7 +14,6 @@
   <meta-data android:name="xposedmodule" android:value="true"/>
   <meta-data android:name="xposeddescription" android:value="Clipped keyboard-background lighting. No root overlay or key masks. Scope: Gboard only."/>
   <meta-data android:name="xposedminversion" android:value="93"/>
-  <meta-data android:name="xposedsharedprefs" android:value="true"/>
   <meta-data android:name="xposedscope" android:resource="@array/xposed_scope"/>
  </application>
 </manifest>

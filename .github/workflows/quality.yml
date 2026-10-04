@@ -1,0 +1,30 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Run policy and source tests
+        working-directory: RGBPulse
+        run: bash test.sh
+      - name: Check generated shader is current
+        working-directory: RGBPulse
+        run: |
+          before=$(sha256sum src/dev/rgbpulse/gboard/ShaderCode.java)
+          python3 embed_shader.py
+          test "$before" = "$(sha256sum src/dev/rgbpulse/gboard/ShaderCode.java)"
+      - name: Check shell scripts
+        run: bash -n RGBPulse/build.sh RGBPulse/test.sh
