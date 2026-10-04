@@ -5,7 +5,7 @@
 [Download 1.1.0](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.1.0)
 
 ## Choose your level of motion
-- **Touch:** the settings studio has four tabs — Ripple, Keys, Background, Keyboard. Keys holds twelve layered-light key responses (comet borders, corner brackets, spectral swipes, spark bursts, rings, petals, glass cracks, orbiting comets, liquid rise, soft presses); Background holds four wide light shows (Comet sweep, Nebula bloom, Starfall, Polar veil). The two groups are independent — each with its own color modes and hue pickers — and can run at the same time. Try the everyday preset for Soft press at 160 ms without traveling waves.
+- **Touch:** the settings studio has four tabs — Ripple, Keys, Background, Keyboard. Keys holds twelve RGB-style key responses (rainbow ring, corner pulse, underline wave, diagonal wave, quad pulse, rainbow ripple, side waves, breathing glow, bloom wave, pulse cross, orbit glow, liquid rise); Background holds four wide shows (Wave sweep, Aura ripple, Color wash, Curtain wave) with their own speed control. The two groups are independent — each with its own color modes and hue pickers — and can run at the same time. Every effect is smooth flowing color in the classic RGB lighting style. Try the everyday preset for Breathing glow at 160 ms without traveling waves.
 - **Colors:** a draggable hue spectrum bar, a saturation/value square in the color dialogs, and secondary hues that appear only when a two-color gradient mode needs them — separately for key and background colors.
 - **Ripple:** optional row and full-keyboard patterns, adjustable borders and letter colors. Hiding key fills does not hide ripple borders.
 - **Keyboard:** optional opening/closing lighting and a real keyboard test field.

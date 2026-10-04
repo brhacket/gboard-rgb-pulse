@@ -1,9 +1,9 @@
-// Sixteen curated pulses: twelve key-local effects and four wide background
-// effects. Every pulse stacks layered light — a hot near-white core, a
-// saturated body, a soft halo and a prismatic fringe that disperses hue
-// across the feature. Motion is choreographed from the tap age, not the
-// wall clock. Actual key bounds determine local footprint; summed alpha is
-// capped for fast typing.
+// Sixteen curated RGB pulses: twelve key-local effects and four wide
+// background effects. The language is classic RGB lighting: smooth flowing
+// hue waves, ripples and sweeps — layered as a saturated color body, a soft
+// halo and a gentle sheen. Motion is eased from the tap age; hue travels
+// across each feature so everything reads as flowing color, not noise.
+// Actual key bounds determine local footprint; summed alpha is capped.
 uniform float2 resolution;
 uniform float time;
 uniform float strength;
@@ -20,18 +20,12 @@ float3 hueRgb(float h){
     float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);
     return mix(float3(1),clamp(w-1,0,1),saturation);
 }
-// Body color of the palette; phase also drives the two-color gradient.
+// Body color of the palette; phase also drives the two-color gradient and,
+// in cycling modes, slides the hue so color flows across the feature.
 float3 body(float phase,float hue){
     if(colorMode>2.5&&colorMode<3.5)return mix(hueRgb(hue1),hueRgb(hue2),clamp(phase,0,1));
-    if(colorMode>1.5&&colorMode<2.5)return hueRgb(hue1);
-    return hueRgb(hue+phase*.12+(colorMode<.5?time*.015:0));
-}
-// Prismatic variant: the hue (or gradient position) slides with f, so the
-// edges of every feature disperse into neighboring colors like light in glass.
-float3 prism(float phase,float hue,float f){
-    if(colorMode>2.5&&colorMode<3.5)return mix(hueRgb(hue1),hueRgb(hue2),clamp(phase+f,0,1));
-    if(colorMode>1.5&&colorMode<2.5)return hueRgb(hue1+f*.45);
-    return hueRgb(hue+f+phase*.12+(colorMode<.5?time*.015:0));
+    if(colorMode>1.5&&colorMode<2.5)return hueRgb(hue1+phase*.15);
+    return hueRgb(hue+phase*.35+(colorMode<.5?time*.03:0));
 }
 float band(float d,float w){return exp(-d*d/(w*w));}
 float sq(float x){return x*x;}
@@ -52,240 +46,160 @@ half4 main(float2 frag){
             float4 acc=float4(0);
             float width=.12*clamp(thickness,.6,1.6)*clamp(effectSize,.85,1.15);
             if(style<11.5){
-                // Hard finite footprint, with a soft edge: no keyboard-sized local waves.
                 float clip=(1-smoothstep(1.06,1.20,a.x))*(1-smoothstep(1.06,1.20,a.y));
                 if(style<.5){
-                    // Edge runner: a white-hot comet circles the rim, trailing a spectral tail.
+                    // Rainbow ring: hue circulates around the key rim and rotates.
                     float d=max(a.x,a.y);
-                    float edge=band(d-.88,width*1.5);
-                    float ang=atan(u.y,u.x)*.1591549+.5;
-                    float head=eo(age)*1.15;
-                    float behind=fract(ang-head+1.);
-                    float tail=exp(-behind*5.);
-                    float hg=edge*exp(-sq(fract(ang-head+.5)-.5)*60.);
-                    acc+=L(prism(age,hue,-behind*.45),edge*tail);
-                    acc+=L(float3(1),hg*1.1);
-                    acc+=L(body(age,hue),hg*.7+edge*.2);
-                    acc+=L(prism(age,hue,.3),band(d-.88,width*3.2)*(tail*.6+.2)*.35);
+                    float ang=atan(u.y,u.x)*.1591549;
+                    float ring=band(d-.86,width*2.2);
+                    acc+=L(body(ang+age*.9,hue),ring*.95);
+                    acc+=L(float3(1),ring*ring*.35);
+                    acc+=L(body(ang+age*.9+.1,hue),band(d-.86,width*4.5)*.35);
                 }else if(style<1.5){
-                    // Corner snap: brackets spring in from outside, overshoot and settle,
-                    // with a hot tip and a snap flash as they land.
-                    float s=.82+.30*exp(-5.5*age)*cos(10.*age);
-                    float2 q=abs(u)-s;
-                    float inX=1.-smoothstep(.02,.12,q.x);
-                    float inY=1.-smoothstep(.02,.12,q.y);
-                    float armX=band(q.y,width*1.2)*(1.-smoothstep(.38,.5,abs(q.x)))*inX;
-                    float armY=band(q.x,width*1.2)*(1.-smoothstep(.38,.5,abs(q.y)))*inY;
-                    float br=max(armX,armY);
-                    float dotc=exp(-dot(q,q)*18.);
-                    float flash=exp(-sq((age-.34)*7.));
-                    acc+=L(body(age,hue),br*1.1);
-                    acc+=L(float3(1),dotc*(.5+.8*flash));
-                    acc+=L(body(age,hue),exp(-dot(q,q)*9.)*.35);
-                    acc+=L(prism(age,hue,.35),br*.4);
+                    // Corner pulse: four corner glows swell outward, hue by quadrant.
+                    float2 q=abs(u)-(.58+.28*eo(age));
+                    float g=exp(-dot(q,q)*7.);
+                    float ang=atan(u.y,u.x)*.1591549;
+                    acc+=L(body(ang+age*.4,hue),g*.95);
+                    acc+=L(float3(1),g*g*.4);
+                    acc+=L(body(ang+.12,hue),exp(-dot(q,q)*3.)*.3);
                 }else if(style<2.5){
-                    // Underline: a calligraphic stroke with a bright head, arced baseline
-                    // and a spectral tail left behind the sweep.
-                    float head=-.92+1.84*eo(age);
-                    float arc=.84+.05*sin((u.x+.9)*2.4);
-                    float along=head-u.x;
-                    float stroke=band(u.y-arc,width*1.7)*exp(-max(along,0.)*1.6)*smoothstep(-.08,.02,along+width*4.);
-                    float hg=exp(-dot(u-float2(head,arc),u-float2(head,arc))*14.);
-                    acc+=L(body(age,hue),stroke*1.1);
-                    acc+=L(prism(age,hue,-.4),stroke*.6*smoothstep(0.,.5,along));
-                    acc+=L(float3(1),hg);
-                    acc+=L(body(age,hue),band(u.y-arc,width*4.)*exp(-max(along,0.)*1.2)*.3);
-                    acc+=L(prism(age,hue,.4),band(u.y-arc,width*3.4)*exp(-max(along,0.)*1.4)*.35);
+                    // Underline wave: a rainbow underline with a soft passing sheen.
+                    float y=u.y-.8;
+                    float grad=band(y,width*2.);
+                    float hs=u.x*.35+age*.4;
+                    float hx=eo(age)*2.-1.;
+                    acc+=L(body(hs,hue),grad*.95);
+                    acc+=L(float3(1),grad*grad*.3+exp(-sq(u.x-hx)*18.)*grad*.5);
+                    acc+=L(body(hs+.1,hue),band(y,width*4.5)*.3);
                 }else if(style<3.5){
-                    // Prism swipe: a diagonal gleam split into dispersed color bands,
-                    // white-hot where they overlap.
+                    // Diagonal wave: a wide smooth spectral band glides across the key.
                     float v=(u.x+u.y)*.7071;
-                    float c=-1.4+2.8*eo(age);
-                    float m=1.-smoothstep(.82,1.,max(a.x,a.y));
-                    float wR=band(v-c-width*2.,width*1.3);
-                    float wG=band(v-c,width*1.3);
-                    float wB=band(v-c+width*2.,width*1.3);
-                    acc+=L(prism(age,hue,-.18),wR*.9*m);
-                    acc+=L(body(age,hue),wG*1.1*m);
-                    acc+=L(prism(age,hue,.18),wB*.9*m);
-                    acc+=L(float3(1),wG*wG*.9*m);
-                    acc+=L(body(age,hue),band(v-c,width*4.)*.25*m);
+                    float c=-1.2+2.4*eo(age);
+                    float m=1.-smoothstep(.9,1.1,max(a.x,a.y));
+                    acc+=L(body(v*.3+age*.3,hue),band(v-c,width*3.5)*.95*m);
+                    acc+=L(float3(1),band(v-c,width*1.2)*.35*m);
+                    acc+=L(body(v*.3+.15,hue),band(v-c,width*7.)*.25*m);
                 }else if(style<4.5){
-                    // Four sparks: diamond sparks fly from the edge midpoints,
-                    // each with a streak back toward the key and a white tip.
-                    float reach=.25+.85*eo(age);
+                    // Quad pulse: four soft orbs at the edge midpoints drift outward,
+                    // each a quarter turn of hue apart.
+                    float reach=.5+.38*eo(age);
                     for(int k=0;k<4;k++){
                         float2 dir=k==0?float2(1,0):(k==1?float2(-1,0):(k==2?float2(0,1):float2(0,-1)));
-                        // Stable per-spark character instead of wall-clock flicker.
-                        float tw=.8+.2*sin(float(k)*2.3+hue*6.28318);
                         float2 q=u-dir*reach;
-                        float along=dot(q,-dir);
-                        float perp=abs(dot(q,float2(dir.y,-dir.x)));
-                        float streak=exp(-(abs(along)*4.+perp*9.))*tw;
-                        float core=exp(-(abs(q.x)+abs(q.y))*7.);
-                        float tip=exp(-dot(q,q)*24.);
-                        acc+=L(body(age,hue),streak);
-                        acc+=L(prism(age,hue,.3),streak*.4);
-                        acc+=L(body(age,hue),core*.8);
-                        acc+=L(body(age,hue),exp(-dot(q,q)*10.)*.5);
-                        acc+=L(float3(1),tip);
+                        float g=exp(-dot(q,q)*8.);
+                        acc+=L(body(float(k)*.25+age*.3,hue),g*.9);
+                        acc+=L(float3(1),g*g*.35);
                     }
-                    acc+=L(body(age,hue),band(max(a.x,a.y)-.9,width*1.4)*exp(-age*6.)*.4);
+                    acc+=L(body(age*.3,hue),exp(-dot(u,u)*3.)*.3*(1-age));
                 }else if(style<5.5){
-                    // Drop ring: a chromatic ring with a hot crest, an inner echo and a
-                    // droplet highlight left at the tap point.
+                    // Rainbow ripple: an expanding ring whose hue runs around the
+                    // circumference, with a soft halo and a gentle center glow.
                     float r=length(u);
-                    float R=.12+.85*eo(age);
-                    float ring=band(r-R,width*1.2);
-                    acc+=L(prism(age,hue,-.25),band(r-R-width*1.5,width*.9)*.8);
-                    acc+=L(prism(age,hue,.25),band(r-R+width*1.5,width*.9)*.8);
-                    acc+=L(body(age,hue),ring);
-                    acc+=L(float3(1),ring*ring*.9);
-                    acc+=L(body(age,hue),band(r-R*.55,width*.8)*(1-age)*.5);
-                    acc+=L(float3(1),exp(-r*r*8.)*(1-age)*.8);
-                    acc+=L(body(age,hue),band(r-R,width*3.)*.3);
+                    float R=.1+.85*eo(age);
+                    float ang=atan(u.y,u.x)*.1591549;
+                    acc+=L(body(ang*.5+age*.3,hue),band(r-R,width*2.2)*.95);
+                    acc+=L(float3(1),band(r-R,width*.9)*.3);
+                    acc+=L(body(ang*.5+.1,hue),band(r-R,width*4.5)*.3);
+                    acc+=L(body(age*.4,hue),exp(-r*r*6.)*(1-age)*.5);
                 }else if(style<6.5){
-                    // Split shutters: two bowed slivers of light part from a seam flash,
-                    // each with a bright spine and prismatic edges.
-                    float s=eo(age)*.78;
-                    float bow=.06*sin(u.y*2.2);
-                    float xr=abs(u.x)-s+bow;
-                    float mask=1.-smoothstep(.5,1.,a.y);
-                    float sliver=band(xr,width*1.4)*mask;
-                    acc+=L(body(age,hue),sliver);
-                    acc+=L(float3(1),band(xr,width*.6)*mask*.6);
-                    acc+=L(prism(age,hue,.3),band(xr,width*3.)*mask*.35);
-                    acc+=L(float3(1),exp(-u.x*u.x*30.)*exp(-age*7.)*.9*mask);
+                    // Side waves: two vertical color waves part from the center.
+                    float s=eo(age)*.8;
+                    float mask=1.-smoothstep(.6,1.,a.y);
+                    for(int k=0;k<2;k++){
+                        float x=k==0?u.x+s:u.x-s;
+                        float g=exp(-x*x/(width*6.))*mask;
+                        acc+=L(body(u.y*.2+float(k)*.25+age*.3,hue),g*.9);
+                        acc+=L(float3(1),g*g*.25);
+                    }
+                    acc+=L(body(age*.3,hue),exp(-u.x*u.x*8.)*exp(-age*6.)*.5*mask);
                 }else if(style<7.5){
-                    // Soft press: a breathing glow with a hot core, wide colored halo and a
-                    // slowly expanding prismatic rim.
-                    float r2=u.x*u.x+u.y*u.y;
-                    float breathe=1.+.10*sin(age*6.28318);
-                    float core=exp(-r2/(.20*breathe));
-                    float halo=exp(-r2/(.65*breathe));
-                    float rim=band(sqrt(r2)-(.45+.35*eo(age)),width*1.8);
-                    acc+=L(body(age,hue),core*1.05);
-                    acc+=L(float3(1),core*core*.8);
-                    acc+=L(prism(age,hue,.3),halo*.45);
-                    acc+=L(body(age,hue),halo*.35);
-                    acc+=L(prism(age,hue,-.3),rim*.5);
+                    // Breathing glow: one large soft pulse of slowly drifting color.
+                    float r2=dot(u,u);
+                    float breathe=1.+.12*sin(age*6.28318);
+                    float core=exp(-r2/(.30*breathe));
+                    acc+=L(body(age*.5,hue),core);
+                    acc+=L(float3(1),core*core*.4);
+                    acc+=L(body(age*.5+.15,hue),exp(-r2/.85)*.4);
                 }else if(style<8.5){
-                    // Petal bloom: four diagonal petals unfurl from a hot core.
+                    // Bloom wave: four smooth color petals open from the center,
+                    // hue rotating around them.
                     float r=length(u);
                     float ang=atan(u.y,u.x);
-                    float grow=.15+.75*eo(age);
-                    float lobes=.62+.38*cos(4.*ang+3.141592);
+                    float grow=.2+.7*eo(age);
+                    float lobes=.7+.3*cos(4.*ang+3.141592);
                     float d=r-grow*lobes;
-                    float petal=exp(-d*d/.02);
-                    acc+=L(body(age,hue),petal*.9);
-                    acc+=L(float3(1),petal*petal);
-                    acc+=L(prism(age,hue,.3),exp(-d*d/.08)*.3);
-                    acc+=L(float3(1),exp(-r*r*14.)*(1-age)*.8);
+                    float petal=exp(-d*d/.05);
+                    acc+=L(body(ang*.25+age*.3,hue),petal*.9);
+                    acc+=L(float3(1),petal*petal*.35);
+                    acc+=L(body(ang*.25+.12,hue),exp(-d*d/.2)*.3);
                 }else if(style<9.5){
-                    // Glass tap: thin crack gleams radiate while a circular glint flashes.
-                    float r=length(u);
-                    float ang=atan(u.y,u.x);
-                    float crack=pow(max(cos(6.*ang+.5),0.),8.);
-                    float rr=r-(.2+.7*eo(age));
-                    float lines=crack*exp(-rr*rr/.015)*(1-age);
-                    float glint=exp(-r*r*10.)*exp(-age*5.);
-                    acc+=L(float3(1),lines*.9+glint);
-                    acc+=L(body(age,hue),lines*.5+band(r-.55,width*1.5)*.3*(1-age));
-                    acc+=L(prism(age,hue,.25),crack*exp(-sq(rr+.05)/.015)*.5*(1-age));
+                    // Pulse cross: soft horizontal and vertical color bars flash
+                    // gently, meeting in a calm center glow.
+                    float len=.3+.6*eo(age);
+                    float hx=exp(-u.y*u.y/(width*5.))*(1.-smoothstep(len,len+.2,a.x));
+                    float vy=exp(-u.x*u.x/(width*5.))*(1.-smoothstep(len,len+.2,a.y));
+                    acc+=L(body(u.x*.25+age*.3,hue),hx*.85);
+                    acc+=L(body(u.y*.25+.5+age*.3,hue),vy*.85);
+                    acc+=L(float3(1),hx*vy*.5);
                 }else if(style<10.5){
-                    // Orbit dots: two comets orbit the key in opposite directions,
-                    // trailing spectral arcs.
+                    // Orbit glow: a rainbow arc sweeps around the key like a
+                    // smooth loading ring.
                     float r=length(u);
-                    float ang=atan(u.y,u.x);
-                    float R=.72;
-                    float a1=eo(age)*7.54;
-                    float a2=3.14159-eo(age)*7.54;
-                    float2 p1=float2(cos(a1),sin(a1))*R;
-                    float2 p2=float2(cos(a2),sin(a2))*R;
-                    float d1=dot(u-p1,u-p1),d2=dot(u-p2,u-p2);
-                    acc+=L(float3(1),exp(-d1*60.)+exp(-d2*60.));
-                    acc+=L(body(age,hue),exp(-d1*25.)+exp(-d2*25.));
-                    float ring1=band(r-R,width*1.2)*exp(-mod(a1-ang+6.28318,6.28318)*1.2);
-                    float ring2=band(r-R,width*1.2)*exp(-mod(ang-a2+6.28318,6.28318)*1.2);
-                    acc+=L(prism(age,hue,-.2),ring1*.8);
-                    acc+=L(prism(age,hue,.2),ring2*.8);
+                    float ang=atan(u.y,u.x)*.1591549;
+                    float arc=.3+.7*exp(-fract(ang-age*1.2)*2.5);
+                    float ring=band(r-.75,width*2.5);
+                    acc+=L(body(ang+age*.4,hue),ring*arc*.95);
+                    acc+=L(float3(1),band(r-.75,width)*arc*.3);
+                    acc+=L(body(ang+.15,hue),band(r-.75,width*5.)*arc*.25);
                 }else{
-                    // Liquid rise: a luminous fill level rises and drains behind a hot,
-                    // wavy meniscus.
+                    // Liquid rise: a rainbow fill level rises and drains behind a
+                    // smooth bright meniscus.
                     float level=-1.+2.2*sin(age*3.14159);
-                    float fill=1.-smoothstep(level-.06,level+.06,u.y);
-                    float wave=band(u.y-level-.03*sin(u.x*6.+age*9.),width*1.1);
-                    acc+=L(body(age,hue),fill*.35);
-                    acc+=L(body(age,hue),wave*.9);
-                    acc+=L(float3(1),wave*wave*.8);
-                    acc+=L(prism(age,hue,.3),band(u.y-level,width*1.3)*.5);
+                    float fill=1.-smoothstep(level-.1,level+.1,u.y);
+                    acc+=L(body(u.y*.3+age*.2,hue),fill*.55);
+                    acc+=L(body(u.x*.2+age*.3,hue),band(u.y-level,width*2.)*.9);
+                    acc+=L(float3(1),band(u.y-level,width*.8)*.35);
                 }
                 // A soft bloom around the key rim grounds every effect on its key.
-                acc+=L(body(age,hue),band(max(a.x,a.y)-.88,width*3.)*.25);
+                acc+=L(body(age*.3,hue),band(max(a.x,a.y)-.88,width*3.)*.2);
                 acc*=clip;
             }else{
                 float2 p=(frag-taps[i].xy)/max(resolution.y,1);
                 if(style<12.5){
-                    // Comet sweep: a white-hot comet crosses the keyboard along the tap
-                    // row, trailing a long spectral tail with sparkle and a broad halo.
-                    float travel=mix(-1.4,1.6,eo(age));
-                    float dx=p.x-travel;
-                    float back=max(-dx,0.);
-                    float py=p.y-.10*sin(p.x*1.8+1.7*age);
-                    float lane=exp(-py*py*14.);
-                    float head=exp(-dx*dx*34.)*exp(-py*py*30.);
-                    float tail=exp(-back*2.2)*lane*smoothstep(0.,.06,back);
-                    float halo=exp(-dx*dx*3.)*exp(-p.y*p.y*4.);
-                    acc+=L(float3(1),head*1.4);
-                    acc+=L(body(age,hue),head);
-                    acc+=L(prism(age,hue,-min(back*.5,1.)*.45),tail*.85);
-                    acc+=L(float3(1),tail*.35*exp(-back*6.));
-                    acc+=L(body(age,hue),tail*.22*(.7+.3*sin(p.x*31.)));
-                    acc+=L(prism(age,hue,.3),halo*.15);
+                    // Wave sweep: a broad rainbow wave glides across the keyboard.
+                    float xc=mix(-1.6,1.6,eo(age));
+                    float d=p.x-xc;
+                    acc+=L(body(p.x*.25+age*.2,hue),exp(-d*d/.35)*.9);
+                    acc+=L(float3(1),exp(-d*d/.08)*.35);
+                    acc+=L(body(p.x*.25+.2,hue),exp(-d*d/1.2)*.3);
                 }else if(style<13.5){
-                    // Nebula bloom: a lobed shell of light blooms outward from the tap,
-                    // shimmering, with chromatic edges and a fading inner glow.
+                    // Aura ripple: a wide rainbow ring expands from the tap.
                     float r=length(p);
-                    float ang=atan(p.y,p.x);
-                    float grow=.2+1.05*eo(age);
-                    float lobes=.75+.25*sin(ang*3.+time*.7)+.15*sin(ang*5.-time*.5);
-                    float d=r-grow*lobes;
-                    float shim=.75+.25*sin(ang*9.);
-                    float shell=exp(-d*d/.028)*shim;
-                    acc+=L(float3(1),shell*shell*1.1);
-                    acc+=L(body(age,hue),shell*.9);
-                    acc+=L(prism(age,hue,-.3),band(d+.045,.04)*.55);
-                    acc+=L(prism(age,hue,.3),band(d-.045,.04)*.55);
-                    acc+=L(prism(age,hue,.2),exp(-d*d/.18)*.25);
-                    acc+=L(body(age,hue),exp(-r*r/(grow*grow*.4))*(1-age)*.3);
+                    float R=1.3*eo(age);
+                    float ang=atan(p.y,p.x)*.1591549;
+                    acc+=L(body(ang+age*.3,hue),band(r-R,.12)*.9);
+                    acc+=L(float3(1),band(r-R,.05)*.35);
+                    acc+=L(body(ang+.15,hue),band(r-R,.35)*.3);
                 }else if(style<14.5){
-                    // Starfall: choreographed diagonal streaks rain across the keyboard,
-                    // each with a hot head and a spectral trail.
-                    for(int k=0;k<5;k++){
-                        float fk=float(k);
-                        float xk=-1.6+fk*.8+.15*sin(fk*7.3);
-                        float delay=fk*.12;
-                        float prog=clamp((age-delay)/.7,0.,1.);
-                        float yk=mix(-.8,1.1,eo(prog));
-                        float along=p.y-yk;
-                        float lat=p.x-xk-.3*along;
-                        float head=exp(-(lat*lat*60.+along*along*60.));
-                        float trail=exp(-lat*lat*50.)*exp(-max(-along,0.)*2.5)*smoothstep(.02,-.04,along);
-                        acc+=L(float3(1),head*1.2);
-                        acc+=L(prism(age,hue,-.2*clamp(-along,0.,1.)),trail*.8);
-                    }
+                    // Color wash: the whole keyboard breathes with a drifting hue
+                    // gradient and one soft radial pulse at the tap.
+                    float3 wash=body(p.x*.2+p.y*.15+age*.4,hue);
+                    float bandY=exp(-sq(p.y-(-1.+2.*eo(age)))*.8);
+                    acc+=L(wash,bandY*.7);
+                    acc+=L(wash,exp(-dot(p,p)*.9)*.6*(1-age));
+                    acc+=L(float3(1),exp(-dot(p,p)*2.5)*.3*(1-age));
                 }else{
-                    // Polar veil: vertical spectral curtains sway across the keyboard
-                    // over a broad under-glow.
+                    // Curtain wave: three smooth spectral curtains sway across.
                     float xc=-1.6+3.2*eo(age);
                     for(int k=0;k<3;k++){
-                        float off=(float(k)-1.)*.35;
-                        float wx=xc+off+.12*sin(p.y*(4.+float(k))+time*.3*float(k));
+                        float off=(float(k)-1.)*.4;
+                        float wx=xc+off+.15*sin(p.y*(2.5+float(k)*.7)+time*.4*float(k));
                         float d=p.x-wx;
-                        float cur=exp(-d*d/.05)*(.8+.2*sin(p.y*14.));
-                        acc+=L(prism(age,hue,(float(k)-1.)*.3),cur*.8);
+                        float cur=exp(-d*d/.09);
+                        acc+=L(body(float(k)*.3+p.y*.1+age*.2,hue),cur*.75);
                     }
-                    acc+=L(body(age,hue),exp(-(p.x-xc)*(p.x-xc)/.6)*.12);
+                    acc+=L(body(p.y*.15+age*.2,hue),exp(-(p.x-xc)*(p.x-xc)/.7)*.15);
                 }
             }
             float weight=acc.w*envelope;

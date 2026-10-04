@@ -4,16 +4,16 @@ import android.content.SharedPreferences;
 
 public final class Config {
     public static final String PREFS = "settings";
-    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Petal bloom", "Glass tap", "Orbit dots", "Liquid rise", "Comet sweep", "Nebula bloom", "Starfall", "Polar veil"};
+    public static final String[] EFFECTS = {"Rainbow ring", "Corner pulse", "Underline wave", "Diagonal wave", "Quad pulse", "Rainbow ripple", "Side waves", "Breathing glow", "Bloom wave", "Pulse cross", "Orbit glow", "Liquid rise", "Wave sweep", "Aura ripple", "Color wash", "Curtain wave"};
     public static final String[] EFFECT_HINTS={
-        "A white-hot comet with a spectral tail circles the tapped key.","Glowing brackets spring onto the key corners and flash as they land.",
-        "A luminous calligraphic stroke sweeps beneath the tapped letter.","A prism gleam crosses one key, splitting into dispersed colors.",
-        "Four twinkling sparks fly from the key edges, trailing light.","A chromatic ring with a hot crest expands inside the key.",
-        "Two bowed slivers of light part from a seam flash.","A soft breathing glow with a prismatic rim answers your finger.",
-        "Four light petals unfurl diagonally from a hot core.","Thin crack gleams radiate from the tap with a circular glint.",
-        "Two comets orbit the key in opposite directions, trailing spectral arcs.","A luminous fill level rises and drains behind a hot meniscus.",
-        "Wide effect · a white-hot comet with a spectral tail sweeps the keyboard.","Wide effect · a lobed nebula of light blooms and shimmers from the tap.",
-        "Wide effect · choreographed streaks of light rain diagonally across the keyboard.","Wide effect · vertical spectral curtains sway across the keyboard."};
+        "A smooth ring of circulating color flows around the tapped key.","Four corner glows swell outward, one hue per quadrant.",
+        "A rainbow underline with a soft passing sheen.","A wide spectral band glides diagonally across one key.",
+        "Four soft orbs drift from the key edges, a quarter turn of hue apart.","An expanding ripple whose color runs around the ring.",
+        "Two vertical color waves part from the key center.","One large soft pulse of slowly drifting color.",
+        "Four smooth color petals open from the center.","Soft horizontal and vertical color bars meet in a calm glow.",
+        "A rainbow arc sweeps around the key like a smooth loading ring.","A rainbow fill level rises and drains behind a bright meniscus.",
+        "Wide effect · a broad rainbow wave glides across the keyboard.","Wide effect · a wide rainbow ring expands from the tap.",
+        "Wide effect · the keyboard breathes with a drifting hue gradient.","Wide effect · three smooth spectral curtains sway across."};
     public static final int KEY_COUNT = 12;
     public static final int GPU_COUNT = 16;
     public int pulseDuration=160;
@@ -22,6 +22,7 @@ public final class Config {
     public boolean enabled = false;
     public boolean tapEffects = false;
     public int background=0;
+    public int bgDuration=1400;
     public int bgColorMode=0,bgHue1=190,bgHue2=320,bgSat=60;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
@@ -66,6 +67,7 @@ public final class Config {
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
             c.background=clamp(number(p,"background51",0),0,4);
+            c.bgDuration=clamp(number(p,"bgduration51",c.bgDuration),300,3500);
             c.bgColorMode=clamp(number(p,"bcolorMode51",c.bgColorMode),0,COLORS.length-1);
             c.bgHue1=clamp(number(p,"bhue151",c.bgHue1),0,360);
             c.bgHue2=clamp(number(p,"bhue251",c.bgHue2),0,360);

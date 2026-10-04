@@ -43,11 +43,12 @@ final class FieldFx {
                     boolean on=pass==0?cfg.tapEffects:cfg.background>0;
                     if(!on)continue;
                     int style=pass==0?cfg.effect:Config.KEY_COUNT-1+cfg.background;
+                    int duration=pass==0?cfg.pulseDuration:cfg.bgDuration;
                     boolean any=false;
                     for(int i=0;i<4;i++) {
                         int u=i*4;
                         uniforms[u]=xs[i]*play.width();uniforms[u+1]=ys[i]*play.height();uniforms[u+3]=hues[i];
-                        float age=starts[i]<0 ? -1f : (now-starts[i])/(float)cfg.pulseDuration;
+                        float age=starts[i]<0 ? -1f : (now-starts[i])/(float)duration;
                         uniforms[u+2]=age<1?age:-1f;
                         any|=uniforms[u+2]>=0;
                         RectF box=keyBounds[i];keyUniforms[u]=box.left*play.width();keyUniforms[u+1]=box.top*play.height();keyUniforms[u+2]=box.right*play.width();keyUniforms[u+3]=box.bottom*play.height();

@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1];src=root/'src/dev/rgbpulse/gboard'
 cfg=(src/'Config.java').read_text()
 effects=re.findall(r'"([^"]+)"',cfg.split('String[] EFFECTS = {',1)[1].split('};',1)[0])
 assert len(effects)==16 and len(set(effects))==16
-assert effects[0]=='Edge runner' and effects[-1]=='Polar veil'
+assert effects[0]=='Rainbow ring' and effects[-1]=='Curtain wave'
 assert 'pulse47' in cfg and 'tapFx6' not in cfg
 assert 'effect = 7' in cfg
 assert 'particles' not in cfg and 'AMBIENT' not in cfg

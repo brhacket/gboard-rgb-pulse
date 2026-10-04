@@ -49,7 +49,7 @@ assert 'removeOnGlobalLayoutListener(this)' in module
 assert 'keyStyle.refreshRipples()' in module
 assert 'key.getOverlay().add(layer)' in key and 'private void clearOverlays()' in key
 fx=(src/'Fx.java').read_text()
-assert 'cfg.enabled&&(cfg.tapEffects||cfg.background>0)&&fields!=null' in fx
+assert 'fields.active(now,cfg.pulseDuration)' in fx and 'fields.active(now,cfg.bgDuration)' in fx
 
 restart=(src/'GboardRestart.java').read_text()
 assert 'waitFor(25,TimeUnit.SECONDS)' in restart and 'destroyForcibly()' in restart

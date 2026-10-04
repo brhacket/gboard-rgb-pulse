@@ -23,7 +23,7 @@ public final class Fx {
         if(issue!=null)return issue;
         return fields!=null?fields.issue():null;
     }
-    public boolean active(long now){return cfg.enabled&&(((cfg.tapEffects||cfg.background>0)&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
+    public boolean active(long now){return cfg.enabled&&(((cfg.tapEffects&&fields!=null&&fields.active(now,cfg.pulseDuration))||(cfg.background>0&&fields!=null&&fields.active(now,cfg.bgDuration)))||(cfg.trailStyle>0&&glide.points.active(now,cfg.trailLife)));}
     public void tap(float x,float y,RectF play,RectF key,long now) {
         if(!cfg.enabled)return;
         if(!cfg.tapEffects&&cfg.background<=0)return;
@@ -38,7 +38,7 @@ public final class Fx {
     final java.util.ArrayList<RectF> lensBoxes=new java.util.ArrayList<RectF>();
     public void lenses(java.util.List<RectF> boxes,float dp){lensBoxes.clear();lensBoxes.addAll(boxes);}
     public void drawFields(Canvas canvas,RectF play,long now){
-        if(cfg.enabled&&(cfg.tapEffects||cfg.background>0)&&fields!=null&&fields.active(now,cfg.pulseDuration))fields.draw(canvas,play,cfg,now);
+        if(cfg.enabled&&fields!=null&&((cfg.tapEffects&&fields.active(now,cfg.pulseDuration))||(cfg.background>0&&fields.active(now,cfg.bgDuration))))fields.draw(canvas,play,cfg,now);
     }
     public void clear(){glide.points.clear();side.clear();if(fields!=null)fields.clear();}
     public void dispose(){clear();fields=null;attempted=false;issue=null;}

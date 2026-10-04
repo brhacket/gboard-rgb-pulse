@@ -18,13 +18,13 @@ luminous tap animations and two new wide background effects.
   retried, confirmed settings are never blanked by a slow module app, and the
   keyboard re-syncs every 30 seconds while it is open.
 - **Independent key and background animations, in separate tabs**: the studio
-  gains a dedicated Background tab. Twelve key animations (including new
-  Petal bloom, Glass tap, Orbit dots and Liquid rise) and four background
-  light shows (Comet sweep, Nebula bloom, plus new Starfall and Polar veil)
-  render as independent passes over the same taps, so both can run at once.
-  Each group has its own color mode and hue pickers. Local effects are
-  grounded on their key with a rim bloom, and wall-clock flicker was replaced
-  by deterministic choreography.
+  gains a dedicated Background tab with its own speed control. Twelve key
+  animations and four background light shows render as independent passes
+  over the same taps, so both can run at once, and each group has its own
+  color mode and hue pickers. The whole catalog was redesigned in the classic
+  RGB lighting language — smooth flowing hue waves, ripples and sweeps
+  (rainbow ring, corner pulse, quad pulse, orbit glow, wave sweep, aura
+  ripple, color wash, curtain wave…) instead of sparkle noise.
 - **Richer hello & goodbye**: ignition, curtains and horizon transitions are
   now layered light — hot crests with chromatic fringes, seam flashes, sky
   glow and reflections — instead of single gradients.

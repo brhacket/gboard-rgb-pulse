@@ -64,6 +64,7 @@ public final class ConfigTest {
         p.put("pulse47",9);check(Config.from(p).effect==9);p.put("pulse47",12);check(Config.from(p).effect==11);
         p.put("pulse47",3);p.put("background51",2);c=Config.from(p);check(c.enabled&&c.background==2&&c.effect==3);
         p.put("background51",9);check(Config.from(p).background==4);
+        p.put("bgduration51",9999);check(Config.from(p).bgDuration==3500);p.put("bgduration51",10);check(Config.from(p).bgDuration==300);p.put("bgduration51",1800);check(Config.from(p).bgDuration==1800);
         p.put("background51",0);p.put("tapEffects36",false);check(!Config.from(p).enabled);
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
         p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);

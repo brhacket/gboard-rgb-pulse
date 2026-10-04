@@ -168,6 +168,7 @@ public final class SettingsActivity extends Activity {
                 bgHint.setText(index==0?"Choose a wide light show. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[Config.KEY_COUNT-1+index]);
                 changed();dialog.dismiss();
             }).setNegativeButton("Cancel",null).show());bgCard.addView(bg);bgCard.addView(bgHint);
+        slider(bgCard,"Background length",300,3500,cfg.bgDuration,true);
         backgroundStrength(bgCard);
         Button colors=button("Key color mode · "+Config.COLORS[cfg.colorMode],false);
         colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key color mode")
@@ -278,6 +279,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             public void onProgressChanged(SeekBar b,int progress,boolean user){if(!user)return;int n=min+progress;
                 label.setText(name+"  ·  "+n+(duration?" ms":"%"));
                 if(duration&&name.equals("Feedback length")){cfg.pulseDuration=n;draft.edit().putInt("pulseDuration47",n).apply();}
+                else if(duration&&name.equals("Background length")){cfg.bgDuration=n;draft.edit().putInt("bgduration51",n).apply();}
                 else if(duration){cfg.duration=n;draft.edit().putInt("duration3",n).apply();}
                 else{cfg.rippleOpacity=n;draft.edit().putInt("rippleStrength41",n).apply();}changed();}
             public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}

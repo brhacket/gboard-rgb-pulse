@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1]
 src=(ROOT/'shaders/field.agsl').read_text()
 effect=skia.RuntimeEffect.MakeForShader(src)
 W,H=360,180
-names=['edge-runner','corner-snap','underline','prism-swipe','four-sparks','drop-ring','split-shutters','soft-press','petal-bloom','glass-tap','orbit-dots','liquid-rise','comet-sweep','nebula-bloom','starfall','polar-veil']
+names=['rainbow-ring','corner-pulse','underline-wave','diagonal-wave','quad-pulse','rainbow-ripple','side-waves','breathing-glow','bloom-wave','pulse-cross','orbit-glow','liquid-rise','wave-sweep','aura-ripple','color-wash','curtain-wave']
 def render(style,age,mode=2,origins=None,boxes=None,strength=.9,padded=False,special=None):
     if origins is None:origins=[(180,90,age,.7)]
     if boxes is None:boxes=[(161,67,199,113)]*len(origins)
