@@ -7,14 +7,14 @@ Verified using v4 scheme (APK Signature Scheme v4): false
 Verified for SourceStamp: false
 Number of signers: 1
 Signer #1 certificate DN: CN=Gboard RGB Pulse local build
-Signer #1 certificate SHA-256 digest: 1d3aa4b2efb1634e72ec914002b9b3011d43e38fb631655dabb916d8175c7c6c
-Signer #1 certificate SHA-1 digest: b9742bad67b16c46056b0b3dc642c1f65ff2132e
-Signer #1 certificate MD5 digest: afe8fd2bfc940313a1acfab29d41c982
+Signer #1 certificate SHA-256 digest: 2dd977a6b5b027ad8cf5426ebf19e362ca0ec7a0c2b894bb6c8ea19379312d42
+Signer #1 certificate SHA-1 digest: 876755fdd0ecb6f5e85c65aa7aa70853ebd1c7be
+Signer #1 certificate MD5 digest: c4ae88520e021bf663a95cbdf8155b1a
 Signer #1 key algorithm: RSA
 Signer #1 key size (bits): 2048
-Signer #1 public key SHA-256 digest: 317eba8845b5b1406395916dfc64e49dc2e5108801794abc275880174f7ab3d7
-Signer #1 public key SHA-1 digest: 079491c6621dc7c87c4f6bf4b3f28663de66e7ba
-Signer #1 public key MD5 digest: fe2c3a74f18f7506139ec1bc1fb397b2
+Signer #1 public key SHA-256 digest: 8bb92c4bd01dd2f50d1508a7e8e0417483c3bf4cba48e01aa78775bbebf45c7b
+Signer #1 public key SHA-1 digest: fb5572b0ec1699629123bd2cdfc640b92201c3bf
+Signer #1 public key MD5 digest: 368f017b211d666a7c1bee78708ba786
 package: name='dev.rgbpulse.gboard' versionCode='50' versionName='1.1.0' platformBuildVersionName='14' platformBuildVersionCode='34' compileSdkVersion='34' compileSdkVersionCodename='14'
 sdkVersion:'33'
 targetSdkVersion:'34'
