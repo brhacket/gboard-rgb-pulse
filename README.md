@@ -6,7 +6,7 @@
 
 ## Choose your level of motion
 - **Touch:** quick feedback on the tapped key, plus an independently controlled quiet background glow that is now clearly visible and sinks gently as it fades. Try the everyday preset for Soft press at 160 ms without traveling waves.
-- **Magnetic fluid:** liquid metal that pools between your keys. It chases your fingertips (multi-touch), splashes on every tap, and leans when you tilt your phone — it reacts to everything. Opt-in, with an intensity slider.
+- **Magnetic fluid:** one living bubble of liquid metal between your keys. Touch the keyboard and it darts straight to your finger; several fingers split it into equal parts that flow back together when you let go. It leans with device tilt, stretches while it moves and flashes as it splits. Opt-in, with an intensity slider.
 - **Ripple:** optional row and full-keyboard patterns, adjustable borders and letter colors. Hiding key fills does not hide ripple borders.
 - **Keyboard:** optional opening/closing lighting and a real keyboard test field.
 

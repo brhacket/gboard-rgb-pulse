@@ -70,6 +70,20 @@ assert magnet[spot[1] - 6:spot[1] + 6, spot[0] - 6:spot[0] + 6, 3].max() > 40
 streak = render(pack(touches=[[180, 90, 1.0, 0.9]], vels=[[900, 0, 0.9, 0]]))
 no_streak = render(pack(touches=[[180, 90, 1.0, 0.9]], vels=[[0, 0, 0, 0]]))
 assert streak[:, :140, :3].astype(float).sum() > no_streak[:, :140, :3].astype(float).sum(), 'drag streak trails the motion'
+# A fast drop stretches along its velocity instead of staying round.
+round_a = render(pack(blobs=[[180, 90, 46, 0.0]], touches=[], vels=[[0, 0, 0, 0]]))
+fast_a = render(pack(blobs=[[180, 90, 46, 0.0]], touches=[], vels=[[1500, 0, 1.0, 0]]))
+
+
+def extent(a):
+    ys, xs = np.where(a[:, :, 3] > 40)
+    return xs.max() - xs.min(), ys.max() - ys.min()
+
+
+rw, rh = extent(round_a)
+fw, fh = extent(fast_a)
+assert abs(rw - rh) < 8, 'a resting drop is round'
+assert fw > rw + 12 and fh < rh, 'a moving drop stretches along its motion'
 # Tilting the device changes the lighting of the same surface.
 left = render(pack(tilt=(-1.0, 0.0)))
 right = render(pack(tilt=(1.0, 0.0)))

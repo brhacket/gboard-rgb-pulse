@@ -169,7 +169,7 @@ public final class SettingsActivity extends Activity {
         transitionControl(transitions,"Closing light","closing46",true);
         LinearLayout fluidCard=card(pulsePage);
         fluidCard.addView(text("Magnetic fluid",18,INK));
-        fluidCard.addView(text("Liquid metal that pools between your keys. It chases your fingertips, splashes on every tap and leans when you tilt your phone — it reacts to everything you do. Turn it on and play with it.",13,MUTED));
+        fluidCard.addView(text("One living bubble of liquid metal between your keys. Touch the keyboard and it darts straight to your finger; two or more fingers split it into equal parts, and when you let go they flow back together. It leans when you tilt your phone and flashes as it splits. Turn it on and play with it.",13,MUTED));
         Switch fluidOn=new Switch(this);fluidOn.setText("Magnetic fluid");fluidOn.setTextColor(INK);fluidOn.setMinHeight(px(48));fluidOn.setChecked(cfg.fluid);
         fluidOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("fluid50",value).apply();changed();});fluidCard.addView(fluidOn);
         TextView fluidValue=text("Fluid intensity · "+cfg.fluidStrength+"%",14,INK);fluidCard.addView(fluidValue);

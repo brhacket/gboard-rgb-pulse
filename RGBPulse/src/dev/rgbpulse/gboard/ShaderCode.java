@@ -118,9 +118,19 @@ final class ShaderCode {
         "        if(b.z<=0)continue;\n" +
         "        float2 d=frag-b.xy;\n" +
         "        float r2=b.z*b.z;\n" +
-        "        float d2=dot(d,d)+r2*.18;\n" +
-        "        float w=r2/d2;\n" +
-        "        F+=w;grad-=2*w/d2*d;charge+=b.w*w;\n" +
+        "        // Moving drops stretch along their velocity and slim across it.\n" +
+        "        float st=min(touchVel[i].z*1.3,1.);\n" +
+        "        float la=1.+1.6*st;\n" +
+        "        float2 dir=normalize(touchVel[i].xy+float2(1e-4,1e-5));\n" +
+        "        float2 per=float2(-dir.y,dir.x);\n" +
+        "        float da=dot(d,dir)/la;\n" +
+        "        float dp=dot(d,per)*la;\n" +
+        "        float q=da*da+dp*dp;\n" +
+        "        float D=q+r2*.18;\n" +
+        "        float w=r2/D;\n" +
+        "        F+=w;\n" +
+        "        grad-=(w/D)*(2*da/la*dir+2*dp*la*per);\n" +
+        "        charge+=b.w*w;\n" +
         "    }\n" +
         "    float touchLight=0;float streakAmt=0;float3 streakColor=float3(0);\n" +
         "    for(int j=0;j<4;j++){\n" +
