@@ -183,7 +183,7 @@ public final class SettingsActivity extends Activity {
         Button help=button("Setup & troubleshooting  +",false);keyboardPage.addView(help);
         LinearLayout details=card(keyboardPage);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
-        details.addView(text("Pulse Studio · version 48\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
+        details.addView(text("Pulse Studio · version 1.0.2\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
         details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
         details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
@@ -405,7 +405,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         if(++confirmationChecks<30)confirmationHandler.postDelayed(confirmationTick,400);
         else {
             boolean reply=getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE).getBoolean("moduleResponded48",false);
-            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load v48.");
+            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load 1.0.2.");
         }
     }
     private void openGboardSettings(){

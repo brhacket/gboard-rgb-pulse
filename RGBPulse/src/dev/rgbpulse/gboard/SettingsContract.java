@@ -1,7 +1,7 @@
 package dev.rgbpulse.gboard;
 
 final class SettingsContract {
-    static final int RUNTIME_VERSION=48;
+    static final int RUNTIME_VERSION=49;
     static final String AUTHORITY="dev.rgbpulse.gboard.settings";
     static final android.net.Uri URI=android.net.Uri.parse("content://"+AUTHORITY);
     static final String REVISION="revision44";
