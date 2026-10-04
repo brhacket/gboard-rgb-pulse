@@ -42,7 +42,7 @@ jobs:
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build APK
         if: steps.check.outputs.exists == 'false'
-        run: bash RGBPulse/build.sh Gboard-RGB-Pulse-1.1.0.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.1.0.apk
       - name: Verify archive and signature
         if: steps.check.outputs.exists == 'false'
         run: |
