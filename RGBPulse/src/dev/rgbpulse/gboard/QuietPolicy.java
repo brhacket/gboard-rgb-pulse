@@ -1,3 +1,5 @@
+package dev.rgbpulse.gboard;
+
 final class QuietPolicy {
     // Long enough to be seen between two fast taps; bounded so it never lingers.
     static final int DURATION=520;

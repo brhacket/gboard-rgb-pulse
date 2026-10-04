@@ -129,7 +129,7 @@ public final class FluidSim {
             vx[i]+=ax*dt;vy[i]+=ay*dt;
             float damp=(float)Math.exp(-DAMP*dt);vx[i]*=damp;vy[i]*=damp;
             float v2=vx[i]*vx[i]+vy[i]*vy[i];
-            if(v2>maxV*maxV){float s=maxV/(float)Math.sqrt(v2);vx[i]*=s;vy[i]*=s;}
+            if(v2>maxV*maxV){float scale=maxV/(float)Math.sqrt(v2);vx[i]*=scale;vy[i]*=scale;}
             x[i]+=vx[i]*dt;y[i]+=vy[i]*dt;
             float m=baseR[i]*.4f;
             if(x[i]<m){x[i]=m;vx[i]=Math.abs(vx[i])*.4f;}
