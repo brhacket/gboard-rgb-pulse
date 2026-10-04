@@ -23,7 +23,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Run regression and policy tests
-        run: bash RGBPulse/test.sh
+        run: |
+          set +e
+          bash RGBPulse/test.sh > /tmp/test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -n -E "error:|Error|Exception|Traceback|FAIL|assert" /tmp/test.log | head -n 8 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 6 /tmp/test.log | while IFS= read -r line; do echo "::error::tail: $line"; done
+            exit "$status"
+          fi
+          cat /tmp/test.log
       - name: Verify background shaders with desktop Skia
         run: |
           sudo apt-get update -qq
