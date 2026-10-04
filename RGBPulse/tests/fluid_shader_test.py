@@ -14,8 +14,9 @@ TOUCHES = 4
 
 
 def pack(time=0.4, strength=0.7, hue=0.75, hue2=0.55, sat=0.5, tilt=(0.0, 0.0),
-         ripple=1.0, glow=1.0, detail=1.0, blobs=None, touches=None):
-    # Declaration order: float2 resolution, ten scalars, blobs[12], touches[4].
+         ripple=1.0, glow=1.0, detail=1.0, blobs=None, touches=None, vels=None):
+    # Declaration order: float2 resolution, ten scalars, blobs[12], touches[4],
+    # touchVel[4] — every float4 array starts 16-byte aligned.
     values = [W, H, time, strength, hue, hue2, sat, tilt[0], tilt[1], ripple, glow, detail]
     blob_rows = blobs if blobs is not None else [[150, 90, 42, 0.2], [185, 95, 38, 0.0], [215, 85, 34, 0.5]]
     for row in blob_rows:
@@ -27,7 +28,12 @@ def pack(time=0.4, strength=0.7, hue=0.75, hue2=0.55, sat=0.5, tilt=(0.0, 0.0),
         values += list(row)
     for _ in range(TOUCHES - len(touch_rows)):
         values += [0, 0, 0, 0]
-    assert len(values) == 12 + BLOBS * 4 + TOUCHES * 4
+    vel_rows = vels if vels is not None else [list(t[:2]) + [t[3], 0.0] for t in (touch_rows or [])]
+    for row in vel_rows:
+        values += list(row)
+    for _ in range(TOUCHES - len(vel_rows)):
+        values += [0, 0, 0, 0]
+    assert len(values) == 12 + BLOBS * 4 + TOUCHES * 8
     return skia.Data.MakeWithCopy(struct.pack('=' + str(len(values)) + 'f', *values))
 
 
@@ -60,6 +66,10 @@ assert empty[spot[1], spot[0], 3] == 0
 magnet = render(pack(touches=[[spot[0], spot[1], 1.0, 0.2]]))
 assert magnet[spot[1], spot[0], 3] > 30, 'touch pulls the liquid toward it'
 assert magnet[spot[1] - 6:spot[1] + 6, spot[0] - 6:spot[0] + 6, 3].max() > 40
+# A fast finger leaves a bright drag streak behind it.
+streak = render(pack(touches=[[180, 90, 1.0, 0.9]], vels=[[900, 0, 0.9, 0]]))
+no_streak = render(pack(touches=[[180, 90, 1.0, 0.9]], vels=[[0, 0, 0, 0]]))
+assert streak[:, :140, :3].astype(float).sum() > no_streak[:, :140, :3].astype(float).sum(), 'drag streak trails the motion'
 # Tilting the device changes the lighting of the same surface.
 left = render(pack(tilt=(-1.0, 0.0)))
 right = render(pack(tilt=(1.0, 0.0)))

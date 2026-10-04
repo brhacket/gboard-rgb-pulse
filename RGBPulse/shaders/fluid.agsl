@@ -1,6 +1,7 @@
-// Magnetic fluid: metaball liquid that pools between the keys, stretches toward
-// fingertips, splashes on taps and tilts with the device. The CPU simulation owns
-// blob positions; this program renders the surface, lighting and touch glow.
+// Magnetic fluid v2: liquid metal. The CPU simulation owns blob positions; this
+// program builds a pseudo-3D surface from the metaball field — dome lighting,
+// fresnel rim, sharp specular, a slow moving sheen and velocity streaks where
+// fingers drag it. Smooth functions only: no isoline banding.
 // Uniform order matters for the desktop Skia test: scalar block first so the
 // float4 arrays start 16-byte aligned.
 uniform float2 resolution;
@@ -16,6 +17,7 @@ uniform float glow;
 uniform float detail;
 uniform float4 blobs[12];
 uniform float4 touches[4];
+uniform float4 touchVel[4];
 float3 hueRgb(float h){
     float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);
     return mix(float3(1),clamp(w-1,0,1),clamp(saturation,0,1));
@@ -31,35 +33,57 @@ half4 main(float2 frag){
         float w=r2/d2;
         F+=w;grad-=2*w/d2*d;charge+=b.w*w;
     }
-    float touchLight=0;
+    float touchLight=0;float streakAmt=0;float3 streakColor=float3(0);
     for(int j=0;j<4;j++){
         float4 t=touches[j];
         if(t.z<=.01)continue;
         float2 d=frag-t.xy;
-        float reach=max(resolution.y,1)*.16;
+        float reach=max(resolution.y,1)*.17;
         float r2=reach*reach;
         float d2=dot(d,d)+r2*.25;
-        float w=r2/d2*t.z*.8;
+        float w=r2/d2*t.z*.85;
         // Fingers act as magnets: the surface itself leans toward them.
         F+=w;grad-=2*w/d2*d;
         touchLight+=t.z*exp(-dot(d,d)/(r2*.55));
+        // Velocity streak: a bright drag line behind a moving finger.
+        float sp=touchVel[j].z;
+        if(sp>.02){
+            float2 dir=normalize(touchVel[j].xy+float2(1e-4));
+            float along=dot(d,dir);
+            float perp=dot(d,float2(-dir.y,dir.x));
+            float back=max(-along,0.);
+            float tail=exp(-(perp*perp)/(r2*.16))*exp(-(back*back)/(r2*1.6))*t.z;
+            streakAmt+=tail*sp;
+            streakColor+=hueRgb(hue2+.08*sp);
+        }
     }
     float iso=1;
-    float body=smoothstep(iso-.22,iso+.30,F);
-    float halo=smoothstep(iso*.42,iso,F);
-    if(body<=0&&halo<=0)return half4(0,0,0,0);
-    float e=clamp(charge*.5+touchLight*.7,0,1);
-    float3 nrm=normalize(float3(grad*2.2,7));
-    float3 lightDir=normalize(float3(-tiltX*.8-.22,-tiltY*.8-.4,1));
+    float edge=smoothstep(iso-.06,iso+.10,F);
+    float halo=smoothstep(iso*.50,iso-.04,F);
+    if(halo<=0)return half4(0,0,0,0);
+    float e=clamp(charge*.6+touchLight*.75,0,1);
+    // The field gradient is the surface slope; strong enough to read as 3D domes.
+    float3 nrm=normalize(float3(grad*13,3.2));
+    float3 lightDir=normalize(float3(-tiltX*.6-.35,-tiltY*.6-.5,1));
     float diff=clamp(dot(nrm,lightDir),0,1);
-    float spec=pow(clamp(dot(reflect(-lightDir,nrm),float3(0,0,1)),0,1),26);
-    float shimmer=.5+.5*sin(F*(2.6+1.8*clamp(detail,0,2))-time*2.4+frag.x*.021+frag.y*.017);
-    float3 deep=hueRgb(hue)*.16;
-    float3 bodyColor=mix(deep,hueRgb(hue+.045*shimmer)*(.52+.34*diff),body);
-    bodyColor+=hueRgb(hue2)*e*.38*body;
-    float3 rim=mix(hueRgb(hue2),float3(1),.35);
-    float3 color=bodyColor+rim*spec*(.5+.5*e)+float3(1)*touchLight*.10*clamp(ripple,0,2);
-    float alpha=(body*(.52+.34*diff)+halo*clamp(glow,0,2)*.14)*clamp(strength,0,1);
-    alpha=min(alpha,.88*clamp(strength,0,1));
-    return half4(clamp(color,0,1)*alpha,alpha);
+    float3 halfv=normalize(lightDir+float3(0,0,1));
+    float spec=pow(clamp(dot(nrm,halfv),0,1),90)*1.4;
+    float fres=pow(1-clamp(nrm.z,0,1),2.2);
+    // Slight iridescence: the hue drifts toward hue2 on the steep walls.
+    float3 base=mix(hueRgb(hue),hueRgb(hue+.06),fres*.7);
+    float3 rimC=mix(hueRgb(hue2),float3(1),.25);
+    // Moving sheen: one slow-rotating highlight sweeping across the domes.
+    float2 xy=nrm.xy;float xl=length(xy);
+    float2 sheenDir=normalize(float2(.75,.4)+.5*float2(sin(time*.6),cos(time*.8)));
+    float sheen=(xl>1e-4)?pow(clamp(dot(xy/xl,sheenDir),0,1),3)*edge*.22:0;
+    float3 metal=base*(.24+.22*diff+.55*diff*diff);
+    metal+=rimC*fres*(.5+.5*e);
+    metal+=base*e*.45;
+    metal+=float3(1)*spec;
+    metal+=hueRgb(hue2)*sheen;
+    metal+=clamp(streakColor,0,1)*streakAmt*.8*clamp(ripple,0,2);
+    float alpha=edge*(.62+.26*diff)+halo*halo*.12*clamp(glow,0,2);
+    alpha+=streakAmt*.30*clamp(ripple,0,2)*halo;
+    alpha=min(alpha*clamp(strength,0,1),.88*clamp(strength,0,1));
+    return half4(clamp(metal,0,1)*alpha,alpha);
 }

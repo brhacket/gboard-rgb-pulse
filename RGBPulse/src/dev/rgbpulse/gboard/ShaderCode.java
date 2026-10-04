@@ -47,7 +47,7 @@ final class ShaderCode {
         "                    float edge=band(max(a.x,a.y)-.88,width);\n" +
         "                    float angle=atan(u.y,u.x)*.1591549+.5;\n" +
         "                    float travel=fract(angle-age);\n" +
-        "                    intensity=edge*(.12+.88*exp(-travel*9));\n" +
+        "                    intensity=edge*(.18+.82*exp(-travel*7))+.22*band(max(a.x,a.y)-.88,width*2.4);\n" +
         "                }else if(style<1.5){\n" +
         "                    float edge=band(max(a.x,a.y)-(.70+.22*age),width);\n" +
         "                    intensity=edge*smoothstep(.40,.72,min(a.x,a.y));\n" +
@@ -63,17 +63,19 @@ final class ShaderCode {
         "                    intensity=1-smoothstep(.08,.22,d);\n" +
         "                }else if(style<5.5){\n" +
         "                    float r=length((frag-center)/max(1,min(halfSize.x,halfSize.y)));\n" +
-        "                    intensity=band(r-(.12+.8*age),width);\n" +
+        "                    float front=band(r-(.12+.8*age),width);\n" +
+        "                    intensity=front+.45*band(r-(.12+.8*age)*.6,width*.8);\n" +
         "                }else if(style<6.5){\n" +
         "                    intensity=band(a.x-(.15+.72*age),.12)*(1-smoothstep(.35,.85,a.y));\n" +
         "                }else{\n" +
-        "                    intensity=.72*exp(-(u.x*u.x+u.y*u.y)/(.18+.3*sin(age*3.14159)));\n" +
+        "                    float r2p=u.x*u.x+u.y*u.y;\n" +
+        "                    intensity=.9*exp(-r2p/(.20+.34*sin(age*3.14159)))+.35*band(sqrt(r2p)-(.35+.5*age),width);\n" +
         "                }\n" +
         "                intensity*=clip;\n" +
         "            }else{\n" +
         "                float2 p=(frag-taps[i].xy)/max(resolution.y,1);\n" +
-        "                if(style<8.5)intensity=band(length(p)-age*1.25,.025);\n" +
-        "                else intensity=band(p.y+age*.95-.16*sin(p.x*4+age*3),.075)*exp(-p.x*p.x/2);\n" +
+        "                if(style<8.5)intensity=band(length(p)-age*1.25,.035)+.3*band(length(p)-age*1.25+.09,.12);\n" +
+        "                else intensity=(band(p.y+age*.95-.16*sin(p.x*4+age*3),.075)+.35*band(p.y+age*.95-.16*sin(p.x*4+age*3)-.18,.14))*exp(-p.x*p.x/2);\n" +
         "            }\n" +
         "            float weight=clamp(intensity*envelope,0,1);\n" +
         "            energy+=weight;light+=palette(age+u.x*.1,taps[i].w)*weight;\n" +
@@ -85,9 +87,10 @@ final class ShaderCode {
         "    return half4(clamp(light/max(energy,.0001),0,1)*alpha,alpha);\n" +
         "}\n";
     static final String FLUID =
-        "// Magnetic fluid: metaball liquid that pools between the keys, stretches toward\n" +
-        "// fingertips, splashes on taps and tilts with the device. The CPU simulation owns\n" +
-        "// blob positions; this program renders the surface, lighting and touch glow.\n" +
+        "// Magnetic fluid v2: liquid metal. The CPU simulation owns blob positions; this\n" +
+        "// program builds a pseudo-3D surface from the metaball field — dome lighting,\n" +
+        "// fresnel rim, sharp specular, a slow moving sheen and velocity streaks where\n" +
+        "// fingers drag it. Smooth functions only: no isoline banding.\n" +
         "// Uniform order matters for the desktop Skia test: scalar block first so the\n" +
         "// float4 arrays start 16-byte aligned.\n" +
         "uniform float2 resolution;\n" +
@@ -103,6 +106,7 @@ final class ShaderCode {
         "uniform float detail;\n" +
         "uniform float4 blobs[12];\n" +
         "uniform float4 touches[4];\n" +
+        "uniform float4 touchVel[4];\n" +
         "float3 hueRgb(float h){\n" +
         "    float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);\n" +
         "    return mix(float3(1),clamp(w-1,0,1),clamp(saturation,0,1));\n" +
@@ -118,36 +122,58 @@ final class ShaderCode {
         "        float w=r2/d2;\n" +
         "        F+=w;grad-=2*w/d2*d;charge+=b.w*w;\n" +
         "    }\n" +
-        "    float touchLight=0;\n" +
+        "    float touchLight=0;float streakAmt=0;float3 streakColor=float3(0);\n" +
         "    for(int j=0;j<4;j++){\n" +
         "        float4 t=touches[j];\n" +
         "        if(t.z<=.01)continue;\n" +
         "        float2 d=frag-t.xy;\n" +
-        "        float reach=max(resolution.y,1)*.16;\n" +
+        "        float reach=max(resolution.y,1)*.17;\n" +
         "        float r2=reach*reach;\n" +
         "        float d2=dot(d,d)+r2*.25;\n" +
-        "        float w=r2/d2*t.z*.8;\n" +
+        "        float w=r2/d2*t.z*.85;\n" +
         "        // Fingers act as magnets: the surface itself leans toward them.\n" +
         "        F+=w;grad-=2*w/d2*d;\n" +
         "        touchLight+=t.z*exp(-dot(d,d)/(r2*.55));\n" +
+        "        // Velocity streak: a bright drag line behind a moving finger.\n" +
+        "        float sp=touchVel[j].z;\n" +
+        "        if(sp>.02){\n" +
+        "            float2 dir=normalize(touchVel[j].xy+float2(1e-4));\n" +
+        "            float along=dot(d,dir);\n" +
+        "            float perp=dot(d,float2(-dir.y,dir.x));\n" +
+        "            float back=max(-along,0.);\n" +
+        "            float tail=exp(-(perp*perp)/(r2*.16))*exp(-(back*back)/(r2*1.6))*t.z;\n" +
+        "            streakAmt+=tail*sp;\n" +
+        "            streakColor+=hueRgb(hue2+.08*sp);\n" +
+        "        }\n" +
         "    }\n" +
         "    float iso=1;\n" +
-        "    float body=smoothstep(iso-.22,iso+.30,F);\n" +
-        "    float halo=smoothstep(iso*.42,iso,F);\n" +
-        "    if(body<=0&&halo<=0)return half4(0,0,0,0);\n" +
-        "    float e=clamp(charge*.5+touchLight*.7,0,1);\n" +
-        "    float3 nrm=normalize(float3(grad*2.2,7));\n" +
-        "    float3 lightDir=normalize(float3(-tiltX*.8-.22,-tiltY*.8-.4,1));\n" +
+        "    float edge=smoothstep(iso-.06,iso+.10,F);\n" +
+        "    float halo=smoothstep(iso*.50,iso-.04,F);\n" +
+        "    if(halo<=0)return half4(0,0,0,0);\n" +
+        "    float e=clamp(charge*.6+touchLight*.75,0,1);\n" +
+        "    // The field gradient is the surface slope; strong enough to read as 3D domes.\n" +
+        "    float3 nrm=normalize(float3(grad*13,3.2));\n" +
+        "    float3 lightDir=normalize(float3(-tiltX*.6-.35,-tiltY*.6-.5,1));\n" +
         "    float diff=clamp(dot(nrm,lightDir),0,1);\n" +
-        "    float spec=pow(clamp(dot(reflect(-lightDir,nrm),float3(0,0,1)),0,1),26);\n" +
-        "    float shimmer=.5+.5*sin(F*(2.6+1.8*clamp(detail,0,2))-time*2.4+frag.x*.021+frag.y*.017);\n" +
-        "    float3 deep=hueRgb(hue)*.16;\n" +
-        "    float3 bodyColor=mix(deep,hueRgb(hue+.045*shimmer)*(.52+.34*diff),body);\n" +
-        "    bodyColor+=hueRgb(hue2)*e*.38*body;\n" +
-        "    float3 rim=mix(hueRgb(hue2),float3(1),.35);\n" +
-        "    float3 color=bodyColor+rim*spec*(.5+.5*e)+float3(1)*touchLight*.10*clamp(ripple,0,2);\n" +
-        "    float alpha=(body*(.52+.34*diff)+halo*clamp(glow,0,2)*.14)*clamp(strength,0,1);\n" +
-        "    alpha=min(alpha,.88*clamp(strength,0,1));\n" +
-        "    return half4(clamp(color,0,1)*alpha,alpha);\n" +
+        "    float3 halfv=normalize(lightDir+float3(0,0,1));\n" +
+        "    float spec=pow(clamp(dot(nrm,halfv),0,1),90)*1.4;\n" +
+        "    float fres=pow(1-clamp(nrm.z,0,1),2.2);\n" +
+        "    // Slight iridescence: the hue drifts toward hue2 on the steep walls.\n" +
+        "    float3 base=mix(hueRgb(hue),hueRgb(hue+.06),fres*.7);\n" +
+        "    float3 rimC=mix(hueRgb(hue2),float3(1),.25);\n" +
+        "    // Moving sheen: one slow-rotating highlight sweeping across the domes.\n" +
+        "    float2 xy=nrm.xy;float xl=length(xy);\n" +
+        "    float2 sheenDir=normalize(float2(.75,.4)+.5*float2(sin(time*.6),cos(time*.8)));\n" +
+        "    float sheen=(xl>1e-4)?pow(clamp(dot(xy/xl,sheenDir),0,1),3)*edge*.22:0;\n" +
+        "    float3 metal=base*(.24+.22*diff+.55*diff*diff);\n" +
+        "    metal+=rimC*fres*(.5+.5*e);\n" +
+        "    metal+=base*e*.45;\n" +
+        "    metal+=float3(1)*spec;\n" +
+        "    metal+=hueRgb(hue2)*sheen;\n" +
+        "    metal+=clamp(streakColor,0,1)*streakAmt*.8*clamp(ripple,0,2);\n" +
+        "    float alpha=edge*(.62+.26*diff)+halo*halo*.12*clamp(glow,0,2);\n" +
+        "    alpha+=streakAmt*.30*clamp(ripple,0,2)*halo;\n" +
+        "    alpha=min(alpha*clamp(strength,0,1),.88*clamp(strength,0,1));\n" +
+        "    return half4(clamp(metal,0,1)*alpha,alpha);\n" +
         "}\n";
 }

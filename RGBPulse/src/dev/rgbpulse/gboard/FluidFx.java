@@ -11,6 +11,7 @@ final class FluidFx {
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float[] blobUniforms=new float[FluidSim.COUNT*4];
     private final float[] touchUniforms=new float[FluidSim.TOUCHES*4];
+    private final float[] velUniforms=new float[FluidSim.TOUCHES*4];
     private RuntimeShader shader;
     private String error;
     private long epoch=-1;
@@ -33,6 +34,7 @@ final class FluidFx {
         sim.step(now,tiltX,tiltY);
         sim.fillBlobs(blobUniforms);
         sim.fillTouches(touchUniforms);
+        sim.fillTouchVel(velUniforms);
         shader.setFloatUniform("resolution",w,h);
         shader.setFloatUniform("time",(now-epoch)/1000f);
         shader.setFloatUniform("strength",cfg.fluidStrength/100f);
@@ -46,6 +48,7 @@ final class FluidFx {
         shader.setFloatUniform("detail",1f);
         shader.setFloatUniform("blobs",blobUniforms);
         shader.setFloatUniform("touches",touchUniforms);
+        shader.setFloatUniform("touchVel",velUniforms);
         paint.setShader(shader);
         int save=canvas.save();
         try{

@@ -7,7 +7,9 @@ magnetic fluid that plays with your whole keyboard.
 - **Magnetic fluid** (Touch page): liquid metal that pools between the keys. It
   chases your fingertips (multi-touch), splashes on every tap, and leans when
   you tilt the phone using the gravity sensor. Idle breathing keeps it alive
-  between interactions. Adjustable intensity; fully opt-in.
+  between interactions. Rendered as a glossy pseudo-3D surface: dome lighting,
+  fresnel rim, sharp specular, a moving sheen and velocity drag-streaks, with
+  no banding artifacts. Adjustable intensity; fully opt-in.
 - **One button replaces Apply/Restart**: *Save & restart Gboard* saves every
   setting and force-stops Gboard in a single tap, so the keyboard always
   reopens with exactly what you saved. The old Apply changes button is gone.

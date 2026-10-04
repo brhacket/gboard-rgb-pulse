@@ -42,7 +42,7 @@ half4 main(float2 frag){
                     float edge=band(max(a.x,a.y)-.88,width);
                     float angle=atan(u.y,u.x)*.1591549+.5;
                     float travel=fract(angle-age);
-                    intensity=edge*(.12+.88*exp(-travel*9));
+                    intensity=edge*(.18+.82*exp(-travel*7))+.22*band(max(a.x,a.y)-.88,width*2.4);
                 }else if(style<1.5){
                     float edge=band(max(a.x,a.y)-(.70+.22*age),width);
                     intensity=edge*smoothstep(.40,.72,min(a.x,a.y));
@@ -58,17 +58,19 @@ half4 main(float2 frag){
                     intensity=1-smoothstep(.08,.22,d);
                 }else if(style<5.5){
                     float r=length((frag-center)/max(1,min(halfSize.x,halfSize.y)));
-                    intensity=band(r-(.12+.8*age),width);
+                    float front=band(r-(.12+.8*age),width);
+                    intensity=front+.45*band(r-(.12+.8*age)*.6,width*.8);
                 }else if(style<6.5){
                     intensity=band(a.x-(.15+.72*age),.12)*(1-smoothstep(.35,.85,a.y));
                 }else{
-                    intensity=.72*exp(-(u.x*u.x+u.y*u.y)/(.18+.3*sin(age*3.14159)));
+                    float r2p=u.x*u.x+u.y*u.y;
+                    intensity=.9*exp(-r2p/(.20+.34*sin(age*3.14159)))+.35*band(sqrt(r2p)-(.35+.5*age),width);
                 }
                 intensity*=clip;
             }else{
                 float2 p=(frag-taps[i].xy)/max(resolution.y,1);
-                if(style<8.5)intensity=band(length(p)-age*1.25,.025);
-                else intensity=band(p.y+age*.95-.16*sin(p.x*4+age*3),.075)*exp(-p.x*p.x/2);
+                if(style<8.5)intensity=band(length(p)-age*1.25,.035)+.3*band(length(p)-age*1.25+.09,.12);
+                else intensity=(band(p.y+age*.95-.16*sin(p.x*4+age*3),.075)+.35*band(p.y+age*.95-.16*sin(p.x*4+age*3)-.18,.14))*exp(-p.x*p.x/2);
             }
             float weight=clamp(intensity*envelope,0,1);
             energy+=weight;light+=palette(age+u.x*.1,taps[i].w)*weight;

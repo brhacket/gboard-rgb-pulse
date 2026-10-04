@@ -160,4 +160,14 @@ public final class FluidSim {
             out[u+3]=Math.min(1f,(float)Math.hypot(velX[s],velY[s])/speedScale);
         }
     }
+    /** Velocity uniforms: vx, vy in px/s and normalized speed for drag streaks. */
+    public void fillTouchVel(float[] out){
+        float speedScale=Math.max(1f,(width+height)*2f);
+        for(int s=0;s<TOUCHES;s++){
+            int u=s*4;
+            out[u]=velX[s];out[u+1]=velY[s];
+            out[u+2]=Math.min(1f,(float)Math.hypot(velX[s],velY[s])/speedScale);
+            out[u+3]=0f;
+        }
+    }
 }
