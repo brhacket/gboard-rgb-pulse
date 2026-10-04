@@ -62,18 +62,18 @@ final class LifecycleLight extends Drawable {
             float gap=area.width()*.52f*te;
             float left=area.centerX()-gap,right=area.centerX()+gap,w=area.width()*.3f;
             paint.setShader(new LinearGradient(area.left,0,left,0,new int[]{withAlpha(base,0),withAlpha(base,envelope*.38f)},null,Shader.TileMode.CLAMP));
-            canvas.drawRect(area.left,0,left,area.bottom(),paint);
+            canvas.drawRect(area.left,0,left,area.bottom,paint);
             paint.setShader(new LinearGradient(area.right,0,right,0,new int[]{withAlpha(base,0),withAlpha(base,envelope*.38f)},null,Shader.TileMode.CLAMP));
-            canvas.drawRect(right,0,area.right,area.bottom(),paint);
+            canvas.drawRect(right,0,area.right,area.bottom,paint);
             paint.setShader(null);
             paint.setShader(new LinearGradient(left-w,0,left+w,0,new int[]{withAlpha(base,0),withAlpha(hot,envelope*.85f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));
-            canvas.drawRect(left-w,0,left+w,area.bottom(),paint);
+            canvas.drawRect(left-w,0,left+w,area.bottom,paint);
             paint.setShader(new LinearGradient(right-w,0,right+w,0,new int[]{withAlpha(base,0),withAlpha(hot,envelope*.85f),withAlpha(base,0)},null,Shader.TileMode.CLAMP));
-            canvas.drawRect(right-w,0,right+w,area.bottom(),paint);
+            canvas.drawRect(right-w,0,right+w,area.bottom,paint);
             paint.setShader(null);
-            float seam=withAlpha(hot,envelope*.5f*(1-te));
+            int seam=withAlpha(hot,envelope*.5f*(1-te));
             paint.setShader(new LinearGradient(area.centerX()-w*.4f,0,area.centerX()+w*.4f,0,new int[]{withAlpha(base,0),seam,withAlpha(base,0)},null,Shader.TileMode.CLAMP));
-            canvas.drawRect(area.centerX()-w*.4f,0,area.centerX()+w*.4f,area.bottom(),paint);
+            canvas.drawRect(area.centerX()-w*.4f,0,area.centerX()+w*.4f,area.bottom,paint);
         }else{
             // Horizon rise: a hot crest line with fringe, sky glow above and a shorter
             // reflection below.
