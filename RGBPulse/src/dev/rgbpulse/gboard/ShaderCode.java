@@ -4,6 +4,8 @@ package dev.rgbpulse.gboard;
 final class ShaderCode {
     static final String FIELD =
         "// Ten curated pulses: eight key-local effects and two intentionally wide effects.\n" +
+        "// Every pulse stacks layered light — a hot near-white core, a saturated body,\n" +
+        "// a soft halo and a prismatic fringe that disperses hue across the feature.\n" +
         "// Actual key bounds determine local footprint; summed alpha is capped for fast typing.\n" +
         "uniform float2 resolution;\n" +
         "uniform float time;\n" +
@@ -21,12 +23,23 @@ final class ShaderCode {
         "    float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);\n" +
         "    return mix(float3(1),clamp(w-1,0,1),saturation);\n" +
         "}\n" +
-        "float3 palette(float phase,float hue){\n" +
+        "// Body color of the palette; phase also drives the two-color gradient.\n" +
+        "float3 body(float phase,float hue){\n" +
         "    if(colorMode>2.5&&colorMode<3.5)return mix(hueRgb(hue1),hueRgb(hue2),clamp(phase,0,1));\n" +
         "    if(colorMode>1.5&&colorMode<2.5)return hueRgb(hue1);\n" +
         "    return hueRgb(hue+phase*.12+(colorMode<.5?time*.015:0));\n" +
         "}\n" +
+        "// Prismatic variant: the hue (or gradient position) slides with f, so the\n" +
+        "// edges of every feature disperse into neighboring colors like light in glass.\n" +
+        "float3 prism(float phase,float hue,float f){\n" +
+        "    if(colorMode>2.5&&colorMode<3.5)return mix(hueRgb(hue1),hueRgb(hue2),clamp(phase+f,0,1));\n" +
+        "    if(colorMode>1.5&&colorMode<2.5)return hueRgb(hue1+f*.45);\n" +
+        "    return hueRgb(hue+f+phase*.12+(colorMode<.5?time*.015:0));\n" +
+        "}\n" +
         "float band(float d,float w){return exp(-d*d/(w*w));}\n" +
+        "float sq(float x){return x*x;}\n" +
+        "float eo(float t){t=clamp(t,0.,1.);return 1.-pow(1.-t,3.);}\n" +
+        "float4 L(float3 c,float w){return float4(c*w,w);}\n" +
         "half4 main(float2 frag){\n" +
         "    float energy=0;float3 light=float3(0);\n" +
         "    for(int i=0;i<4;i++){\n" +
@@ -38,152 +51,168 @@ final class ShaderCode {
         "            float2 u=(frag-center)/halfSize;\n" +
         "            float2 a=abs(u);\n" +
         "            float envelope=smoothstep(0,.07,age)*(1-smoothstep(.35,1,age));\n" +
-        "            float intensity=0;\n" +
-        "            float width=.09*clamp(thickness,.6,1.6)*clamp(effectSize,.85,1.15);\n" +
+        "            float hue=taps[i].w;\n" +
+        "            float4 acc=float4(0);\n" +
+        "            float width=.12*clamp(thickness,.6,1.6)*clamp(effectSize,.85,1.15);\n" +
         "            if(style<7.5){\n" +
         "                // Hard finite footprint, with a soft edge: no keyboard-sized local waves.\n" +
         "                float clip=(1-smoothstep(1.06,1.20,a.x))*(1-smoothstep(1.06,1.20,a.y));\n" +
         "                if(style<.5){\n" +
-        "                    float edge=band(max(a.x,a.y)-.88,width);\n" +
-        "                    float angle=atan(u.y,u.x)*.1591549+.5;\n" +
-        "                    float travel=fract(angle-age);\n" +
-        "                    intensity=edge*(.18+.82*exp(-travel*7))+.22*band(max(a.x,a.y)-.88,width*2.4);\n" +
+        "                    // Edge runner: a white-hot comet circles the rim, trailing a spectral tail.\n" +
+        "                    float d=max(a.x,a.y);\n" +
+        "                    float edge=band(d-.88,width*1.5);\n" +
+        "                    float ang=atan(u.y,u.x)*.1591549+.5;\n" +
+        "                    float head=eo(age)*1.15;\n" +
+        "                    float behind=fract(ang-head+1.);\n" +
+        "                    float tail=exp(-behind*5.);\n" +
+        "                    float hg=edge*exp(-sq(fract(ang-head+.5)-.5)*60.);\n" +
+        "                    acc+=L(prism(age,hue,-behind*.45),edge*tail);\n" +
+        "                    acc+=L(float3(1),hg*1.1);\n" +
+        "                    acc+=L(body(age,hue),hg*.7+edge*.2);\n" +
+        "                    acc+=L(prism(age,hue,.3),band(d-.88,width*3.2)*(tail*.6+.2)*.35);\n" +
         "                }else if(style<1.5){\n" +
-        "                    float edge=band(max(a.x,a.y)-(.70+.22*age),width);\n" +
-        "                    intensity=edge*smoothstep(.40,.72,min(a.x,a.y));\n" +
+        "                    // Corner snap: brackets spring in from outside, overshoot and settle,\n" +
+        "                    // with a hot tip and a snap flash as they land.\n" +
+        "                    float s=.82+.30*exp(-5.5*age)*cos(10.*age);\n" +
+        "                    float2 q=abs(u)-s;\n" +
+        "                    // Two slim arms per corner form a crisp L bracket pointing inward.\n" +
+        "                    float inX=1.-smoothstep(.02,.12,q.x);\n" +
+        "                    float inY=1.-smoothstep(.02,.12,q.y);\n" +
+        "                    float armX=band(q.y,width*1.2)*(1.-smoothstep(.38,.5,abs(q.x)))*inX;\n" +
+        "                    float armY=band(q.x,width*1.2)*(1.-smoothstep(.38,.5,abs(q.y)))*inY;\n" +
+        "                    float br=max(armX,armY);\n" +
+        "                    float dotc=exp(-dot(q,q)*18.);\n" +
+        "                    float flash=exp(-sq((age-.34)*7.));\n" +
+        "                    acc+=L(body(age,hue),br*1.1);\n" +
+        "                    acc+=L(float3(1),dotc*(.5+.8*flash));\n" +
+        "                    acc+=L(body(age,hue),exp(-dot(q,q)*9.)*.35);\n" +
+        "                    acc+=L(prism(age,hue,.35),br*.4);\n" +
         "                }else if(style<2.5){\n" +
-        "                    float head=-.9+1.8*age;\n" +
-        "                    intensity=band(u.y-.83,width)*band(u.x-head,.38);\n" +
+        "                    // Underline: a calligraphic stroke with a bright head, arced baseline\n" +
+        "                    // and a spectral tail left behind the sweep.\n" +
+        "                    float head=-.92+1.84*eo(age);\n" +
+        "                    float arc=.84+.05*sin((u.x+.9)*2.4);\n" +
+        "                    float along=head-u.x;\n" +
+        "                    float stroke=band(u.y-arc,width*1.7)*exp(-max(along,0.)*1.6)*smoothstep(-.08,.02,along+width*4.);\n" +
+        "                    float hg=exp(-dot(u-float2(head,arc),u-float2(head,arc))*14.);\n" +
+        "                    acc+=L(body(age,hue),stroke*1.1);\n" +
+        "                    acc+=L(prism(age,hue,-.4),stroke*.6*smoothstep(0.,.5,along));\n" +
+        "                    acc+=L(float3(1),hg);\n" +
+        "                    acc+=L(body(age,hue),band(u.y-arc,width*4.)*exp(-max(along,0.)*1.2)*.3);\n" +
+        "                    acc+=L(prism(age,hue,.4),band(u.y-arc,width*3.4)*exp(-max(along,0.)*1.4)*.35);\n" +
         "                }else if(style<3.5){\n" +
-        "                    intensity=band(u.x+u.y-(-1.4+2.8*age),.15)*(1-smoothstep(.82,1,max(a.x,a.y)));\n" +
+        "                    // Prism swipe: a diagonal gleam split into dispersed color bands,\n" +
+        "                    // white-hot where they overlap.\n" +
+        "                    float v=(u.x+u.y)*.7071;\n" +
+        "                    float c=-1.4+2.8*eo(age);\n" +
+        "                    float m=1.-smoothstep(.82,1.,max(a.x,a.y));\n" +
+        "                    float wR=band(v-c-width*2.,width*1.3);\n" +
+        "                    float wG=band(v-c,width*1.3);\n" +
+        "                    float wB=band(v-c+width*2.,width*1.3);\n" +
+        "                    acc+=L(prism(age,hue,-.18),wR*.9*m);\n" +
+        "                    acc+=L(body(age,hue),wG*1.1*m);\n" +
+        "                    acc+=L(prism(age,hue,.18),wB*.9*m);\n" +
+        "                    acc+=L(float3(1),wG*wG*.9*m);\n" +
+        "                    acc+=L(body(age,hue),band(v-c,width*4.)*.25*m);\n" +
         "                }else if(style<4.5){\n" +
-        "                    float reach=.5+.52*age;\n" +
-        "                    float d=min(abs(u.x-reach)+a.y,abs(u.x+reach)+a.y);\n" +
-        "                    d=min(d,min(a.x+abs(u.y-reach),a.x+abs(u.y+reach)));\n" +
-        "                    intensity=1-smoothstep(.08,.22,d);\n" +
+        "                    // Four sparks: twinkling diamond sparks fly from the edge midpoints,\n" +
+        "                    // each with a streak back toward the key and a white tip.\n" +
+        "                    float reach=.25+.85*eo(age);\n" +
+        "                    float tw=.7+.3*sin(time*42.+hue*6.28318);\n" +
+        "                    for(int k=0;k<4;k++){\n" +
+        "                        float2 dir=k==0?float2(1,0):(k==1?float2(-1,0):(k==2?float2(0,1):float2(0,-1)));\n" +
+        "                        float2 q=u-dir*reach;\n" +
+        "                        float along=dot(q,-dir);\n" +
+        "                        float perp=abs(dot(q,float2(dir.y,-dir.x)));\n" +
+        "                        float streak=exp(-(abs(along)*3.+perp*9.))*tw;\n" +
+        "                        float core=exp(-(abs(q.x)+abs(q.y))*7.);\n" +
+        "                        float tip=exp(-dot(q,q)*24.);\n" +
+        "                        acc+=L(body(age,hue),streak);\n" +
+        "                        acc+=L(prism(age,hue,.3),streak*.4);\n" +
+        "                        acc+=L(body(age,hue),core*.8);\n" +
+        "                        acc+=L(body(age,hue),exp(-dot(q,q)*10.)*.5);\n" +
+        "                        acc+=L(float3(1),tip);\n" +
+        "                    }\n" +
+        "                    acc+=L(body(age,hue),band(max(a.x,a.y)-.9,width*1.4)*exp(-age*6.)*.4);\n" +
         "                }else if(style<5.5){\n" +
-        "                    float r=length((frag-center)/max(1,min(halfSize.x,halfSize.y)));\n" +
-        "                    float front=band(r-(.12+.8*age),width);\n" +
-        "                    intensity=front+.45*band(r-(.12+.8*age)*.6,width*.8);\n" +
+        "                    // Drop ring: a chromatic ring with a hot crest, an inner echo and a\n" +
+        "                    // droplet highlight left at the tap point.\n" +
+        "                    float r=length(u);\n" +
+        "                    float R=.12+.85*eo(age);\n" +
+        "                    float ring=band(r-R,width*1.2);\n" +
+        "                    acc+=L(prism(age,hue,-.25),band(r-R-width*1.5,width*.9)*.8);\n" +
+        "                    acc+=L(prism(age,hue,.25),band(r-R+width*1.5,width*.9)*.8);\n" +
+        "                    acc+=L(body(age,hue),ring);\n" +
+        "                    acc+=L(float3(1),ring*ring*.9);\n" +
+        "                    acc+=L(body(age,hue),band(r-R*.55,width*.8)*(1-age)*.5);\n" +
+        "                    acc+=L(float3(1),exp(-r*r*8.)*(1-age)*.8);\n" +
+        "                    acc+=L(body(age,hue),band(r-R,width*3.)*.3);\n" +
         "                }else if(style<6.5){\n" +
-        "                    intensity=band(a.x-(.15+.72*age),.12)*(1-smoothstep(.35,.85,a.y));\n" +
+        "                    // Split shutters: two bowed slivers of light part from a seam flash,\n" +
+        "                    // each with a bright spine and prismatic edges.\n" +
+        "                    float s=eo(age)*.78;\n" +
+        "                    float bow=.06*sin(u.y*2.2);\n" +
+        "                    float xr=abs(u.x)-s+bow;\n" +
+        "                    float mask=1.-smoothstep(.5,1.,a.y);\n" +
+        "                    float sliver=band(xr,width*1.4)*mask;\n" +
+        "                    acc+=L(body(age,hue),sliver);\n" +
+        "                    acc+=L(float3(1),band(xr,width*.6)*mask*.6);\n" +
+        "                    acc+=L(prism(age,hue,.3),band(xr,width*3.)*mask*.35);\n" +
+        "                    acc+=L(float3(1),exp(-u.x*u.x*30.)*exp(-age*7.)*.9*mask);\n" +
         "                }else{\n" +
-        "                    float r2p=u.x*u.x+u.y*u.y;\n" +
-        "                    intensity=.9*exp(-r2p/(.20+.34*sin(age*3.14159)))+.35*band(sqrt(r2p)-(.35+.5*age),width);\n" +
+        "                    // Soft press: a breathing glow with a hot core, wide colored halo and a\n" +
+        "                    // slowly expanding prismatic rim.\n" +
+        "                    float r2=u.x*u.x+u.y*u.y;\n" +
+        "                    float breathe=1.+.10*sin(age*6.28318);\n" +
+        "                    float core=exp(-r2/(.20*breathe));\n" +
+        "                    float halo=exp(-r2/(.65*breathe));\n" +
+        "                    float rim=band(sqrt(r2)-(.45+.35*eo(age)),width*1.8);\n" +
+        "                    acc+=L(body(age,hue),core*1.05);\n" +
+        "                    acc+=L(float3(1),core*core*.8);\n" +
+        "                    acc+=L(prism(age,hue,.3),halo*.45);\n" +
+        "                    acc+=L(body(age,hue),halo*.35);\n" +
+        "                    acc+=L(prism(age,hue,-.3),rim*.5);\n" +
         "                }\n" +
-        "                intensity*=clip;\n" +
+        "                acc*=clip;\n" +
         "            }else{\n" +
         "                float2 p=(frag-taps[i].xy)/max(resolution.y,1);\n" +
-        "                if(style<8.5)intensity=band(length(p)-age*1.25,.035)+.3*band(length(p)-age*1.25+.09,.12);\n" +
-        "                else intensity=(band(p.y+age*.95-.16*sin(p.x*4+age*3),.075)+.35*band(p.y+age*.95-.16*sin(p.x*4+age*3)-.18,.14))*exp(-p.x*p.x/2);\n" +
+        "                if(style<8.5){\n" +
+        "                    // Wide orbit: a fine chromatic ring with a hot crest, angular sparkle,\n" +
+        "                    // a trailing echo and a soft glow at the tap point.\n" +
+        "                    float r=length(p);\n" +
+        "                    float R=1.25*eo(age);\n" +
+        "                    float ring=band(r-R,.05);\n" +
+        "                    float ang=atan(p.y,p.x);\n" +
+        "                    float sparkle=.75+.25*sin(ang*3.+time*2.);\n" +
+        "                    acc+=L(body(age,hue),ring*sparkle*1.1);\n" +
+        "                    acc+=L(float3(1),ring*ring*.95);\n" +
+        "                    acc+=L(prism(age,hue,-.25),band(r-R-.06,.06)*.6);\n" +
+        "                    acc+=L(prism(age,hue,.25),band(r-R+.06,.06)*.6);\n" +
+        "                    acc+=L(body(age,hue),band(r-R*.86,.11)*(1-age)*.35);\n" +
+        "                    acc+=L(body(age,hue),exp(-r*r*3.)*(1-age)*.6);\n" +
+        "                }else{\n" +
+        "                    // Wide aurora: three shimmering spectral curtains sweep the keyboard\n" +
+        "                    // over a broad under-glow.\n" +
+        "                    float sweep=-.9+1.8*eo(age);\n" +
+        "                    float shimmer=.7+.3*sin(p.x*23.+time*3.);\n" +
+        "                    for(int k=0;k<3;k++){\n" +
+        "                        float off=(float(k)-1.)*.22;\n" +
+        "                        float wav=.10*sin(p.x*(3.+float(k)*1.7)+time*(.6+.2*float(k))+float(k)*2.1)+.05*sin(p.x*7.-time*.8);\n" +
+        "                        float d=p.y-sweep-off-wav;\n" +
+        "                        float cur=exp(-d*d/(.06+.025*float(k)))*shimmer;\n" +
+        "                        acc+=L(prism(age,hue,(float(k)-1.)*.3),cur*(.9+.25*float(k)));\n" +
+        "                    }\n" +
+        "                    float d0=p.y-sweep;\n" +
+        "                    acc+=L(body(age,hue),exp(-d0*d0/.5)*.08);\n" +
+        "                }\n" +
         "            }\n" +
-        "            float weight=clamp(intensity*envelope,0,1);\n" +
-        "            energy+=weight;light+=palette(age+u.x*.1,taps[i].w)*weight;\n" +
+        "            float weight=acc.w*envelope;\n" +
+        "            energy+=weight;light+=acc.xyz*envelope;\n" +
         "        }\n" +
         "    }\n" +
         "    // This cap applies to the combined light, not separately per tap.\n" +
         "    float cap=style<7.5?.48:.28;\n" +
-        "    float alpha=min(cap,energy*.55)*clamp(strength,0,1);\n" +
+        "    float alpha=min(cap,energy*.7)*clamp(strength,0,1);\n" +
         "    return half4(clamp(light/max(energy,.0001),0,1)*alpha,alpha);\n" +
-        "}\n";
-    static final String FLUID =
-        "// Magnetic fluid v2: liquid metal. The CPU simulation owns blob positions; this\n" +
-        "// program builds a pseudo-3D surface from the metaball field — dome lighting,\n" +
-        "// fresnel rim, sharp specular, a slow moving sheen and velocity streaks where\n" +
-        "// fingers drag it. Smooth functions only: no isoline banding.\n" +
-        "// Uniform order matters for the desktop Skia test: scalar block first so the\n" +
-        "// float4 arrays start 16-byte aligned.\n" +
-        "uniform float2 resolution;\n" +
-        "uniform float time;\n" +
-        "uniform float strength;\n" +
-        "uniform float hue;\n" +
-        "uniform float hue2;\n" +
-        "uniform float saturation;\n" +
-        "uniform float tiltX;\n" +
-        "uniform float tiltY;\n" +
-        "uniform float ripple;\n" +
-        "uniform float glow;\n" +
-        "uniform float detail;\n" +
-        "uniform float4 blobs[12];\n" +
-        "uniform float4 touches[4];\n" +
-        "uniform float4 touchVel[4];\n" +
-        "float3 hueRgb(float h){\n" +
-        "    float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);\n" +
-        "    return mix(float3(1),clamp(w-1,0,1),clamp(saturation,0,1));\n" +
-        "}\n" +
-        "half4 main(float2 frag){\n" +
-        "    float F=0;float2 grad=float2(0);float charge=0;\n" +
-        "    for(int i=0;i<12;i++){\n" +
-        "        float4 b=blobs[i];\n" +
-        "        if(b.z<=0)continue;\n" +
-        "        float2 d=frag-b.xy;\n" +
-        "        float r2=b.z*b.z;\n" +
-        "        // Moving drops stretch along their velocity and slim across it.\n" +
-        "        float st=min(touchVel[i].z*1.3,1.);\n" +
-        "        float la=1.+1.6*st;\n" +
-        "        float2 dir=normalize(touchVel[i].xy+float2(1e-4,1e-5));\n" +
-        "        float2 per=float2(-dir.y,dir.x);\n" +
-        "        float da=dot(d,dir)/la;\n" +
-        "        float dp=dot(d,per)*la;\n" +
-        "        float q=da*da+dp*dp;\n" +
-        "        float D=q+r2*.18;\n" +
-        "        float w=r2/D;\n" +
-        "        F+=w;\n" +
-        "        grad-=(w/D)*(2*da/la*dir+2*dp*la*per);\n" +
-        "        charge+=b.w*w;\n" +
-        "    }\n" +
-        "    float touchLight=0;float streakAmt=0;float3 streakColor=float3(0);\n" +
-        "    for(int j=0;j<4;j++){\n" +
-        "        float4 t=touches[j];\n" +
-        "        if(t.z<=.01)continue;\n" +
-        "        float2 d=frag-t.xy;\n" +
-        "        float reach=max(resolution.y,1)*.17;\n" +
-        "        float r2=reach*reach;\n" +
-        "        float d2=dot(d,d)+r2*.25;\n" +
-        "        float w=r2/d2*t.z*.85;\n" +
-        "        // Fingers act as magnets: the surface itself leans toward them.\n" +
-        "        F+=w;grad-=2*w/d2*d;\n" +
-        "        touchLight+=t.z*exp(-dot(d,d)/(r2*.55));\n" +
-        "        // Velocity streak: a bright drag line behind a moving finger.\n" +
-        "        float sp=touchVel[j].z;\n" +
-        "        if(sp>.02){\n" +
-        "            float2 dir=normalize(touchVel[j].xy+float2(1e-4));\n" +
-        "            float along=dot(d,dir);\n" +
-        "            float perp=dot(d,float2(-dir.y,dir.x));\n" +
-        "            float back=max(-along,0.);\n" +
-        "            float tail=exp(-(perp*perp)/(r2*.16))*exp(-(back*back)/(r2*1.6))*t.z;\n" +
-        "            streakAmt+=tail*sp;\n" +
-        "            streakColor+=hueRgb(hue2+.08*sp);\n" +
-        "        }\n" +
-        "    }\n" +
-        "    float iso=1;\n" +
-        "    float edge=smoothstep(iso-.06,iso+.10,F);\n" +
-        "    float halo=smoothstep(iso*.50,iso-.04,F);\n" +
-        "    if(halo<=0)return half4(0,0,0,0);\n" +
-        "    float e=clamp(charge*.6+touchLight*.75,0,1);\n" +
-        "    // The field gradient is the surface slope; strong enough to read as 3D domes.\n" +
-        "    float3 nrm=normalize(float3(grad*13,3.2));\n" +
-        "    float3 lightDir=normalize(float3(-tiltX*.6-.35,-tiltY*.6-.5,1));\n" +
-        "    float diff=clamp(dot(nrm,lightDir),0,1);\n" +
-        "    float3 halfv=normalize(lightDir+float3(0,0,1));\n" +
-        "    float spec=pow(clamp(dot(nrm,halfv),0,1),90)*1.4;\n" +
-        "    float fres=pow(1-clamp(nrm.z,0,1),2.2);\n" +
-        "    // Slight iridescence: the hue drifts toward hue2 on the steep walls.\n" +
-        "    float3 base=mix(hueRgb(hue),hueRgb(hue+.06),fres*.7);\n" +
-        "    float3 rimC=mix(hueRgb(hue2),float3(1),.25);\n" +
-        "    // Moving sheen: one slow-rotating highlight sweeping across the domes.\n" +
-        "    float2 xy=nrm.xy;float xl=length(xy);\n" +
-        "    float2 sheenDir=normalize(float2(.75,.4)+.5*float2(sin(time*.6),cos(time*.8)));\n" +
-        "    float sheen=(xl>1e-4)?pow(clamp(dot(xy/xl,sheenDir),0,1),3)*edge*.22:0;\n" +
-        "    float3 metal=base*(.24+.22*diff+.55*diff*diff);\n" +
-        "    metal+=rimC*fres*(.5+.5*e);\n" +
-        "    metal+=base*e*.45;\n" +
-        "    metal+=float3(1)*spec;\n" +
-        "    metal+=hueRgb(hue2)*sheen;\n" +
-        "    metal+=clamp(streakColor,0,1)*streakAmt*.8*clamp(ripple,0,2);\n" +
-        "    float alpha=edge*(.62+.26*diff)+halo*halo*.12*clamp(glow,0,2);\n" +
-        "    alpha+=streakAmt*.30*clamp(ripple,0,2)*halo;\n" +
-        "    alpha=min(alpha*clamp(strength,0,1),.88*clamp(strength,0,1));\n" +
-        "    return half4(clamp(metal,0,1)*alpha,alpha);\n" +
         "}\n";
 }

@@ -58,10 +58,8 @@ public final class ConfigTest {
         check(Config.EFFECTS.length==10&&Config.EFFECT_HINTS.length==10);
         p.put("quietBackground48",true);c=Config.from(p);check(c.enabled&&c.quietBackground&&!c.ripple&&!c.tapEffects);
         p.put("quietBackground48",false);check(!Config.from(p).enabled);
-        p.put("fluid50",true);c=Config.from(p);check(c.enabled&&c.fluid&&c.fluidStrength==70&&!c.ripple&&!c.tapEffects);
-        p.put("fluidStrength50",999);check(Config.from(p).fluidStrength==100);
-        p.put("fluidStrength50",1);check(Config.from(p).fluidStrength==10);
-        p.put("fluid50",false);p.put("fluidStrength50",70);check(!Config.from(p).enabled&&!Config.from(p).fluid);
+        p.put("fluid50",true);p.put("fluidStrength50",70);check(!Config.from(p).enabled); // removed feature keys stay inert
+        p.remove("fluid50");p.remove("fluidStrength50");
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
         p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);
         p.put("closing46",0);check(!Config.from(p).enabled);

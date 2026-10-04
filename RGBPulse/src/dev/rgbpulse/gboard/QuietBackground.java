@@ -12,15 +12,32 @@ final class QuietBackground {
     void tap(RectF key,long now){x=key.centerX();y=key.centerY();radius=QuietPolicy.radius(key.width(),key.height(),dp);start=now;}
     void clear(){start=-1;}
     boolean active(long now){return start>=0&&now-start<QuietPolicy.DURATION;}
+    private static int towardWhite(int rgb,float t){
+        int r=(rgb>>16)&255,g=(rgb>>8)&255,b=rgb&255;
+        r=Math.round(r+(255-r)*t);g=Math.round(g+(255-g)*t);b=Math.round(b+(255-b)*t);
+        return (r<<16)|(g<<8)|b;
+    }
     void draw(Canvas canvas,RectF clip,Config cfg,long now){
         if(!active(now))return;
         float p=(now-start)/(float)QuietPolicy.DURATION;
         float alpha=QuietPolicy.alpha(now-start,cfg.quietStrength);
         int color=Color.HSVToColor(new float[]{cfg.hue1,cfg.sat/100f,1});
-        int tint=(color&0xffffff)|(Math.round(alpha*255)<<24);
+        int base=color&0xffffff;
+        // Layered light: a hot core over the tint, plus a wide soft halo, so the
+        // pool reads as light rather than a flat sticker.
+        int core=towardWhite(base,.55f)|(Math.round(alpha*255)<<24);
+        int mid=base|(Math.round(alpha*.8f*255)<<24);
+        int halo=base|(Math.round(alpha*.35f*255)<<24);
+        int edge=base&0xffffff;
         // Radius stays fixed: this is a gentle light response, not an expanding wave.
         // The pool sinks a few dp while it fades, so the background visibly moves.
-        paint.setShader(new RadialGradient(x,y+6*dp*p,Math.max(1,radius),tint,color&0xffffff,Shader.TileMode.CLAMP));
-        int save=canvas.save();canvas.clipRect(clip);canvas.drawRect(x-radius,y-radius,x+radius,y+radius+6*dp,paint);canvas.restoreToCount(save);paint.setShader(null);
+        float sink=6*dp*p;
+        float r=Math.max(1,radius)*(1f+.05f*(float)Math.sin(p*6.28318f));
+        int save=canvas.save();canvas.clipRect(clip);
+        paint.setShader(new RadialGradient(x,y+sink,r*1.7f,new int[]{halo,edge},new float[]{0f,1f},Shader.TileMode.CLAMP));
+        canvas.drawRect(x-r*1.7f,y-r*1.7f+sink,x+r*1.7f,y+r*1.7f+sink,paint);
+        paint.setShader(new RadialGradient(x,y+sink,r,new int[]{core,mid,edge},new float[]{0f,.45f,1f},Shader.TileMode.CLAMP));
+        canvas.drawRect(x-r,y-r+sink,x+r,y+r+sink,paint);
+        canvas.restoreToCount(save);paint.setShader(null);
     }
 }

@@ -1,12 +1,11 @@
 # Gboard RGB Pulse · Pulse Studio
 
-**Version 1.1.0** — optional key feedback, a visible quiet glow, expressive ripples and a magnetic fluid for Gboard.
+**Version 1.1.0** — optional key feedback, a visible quiet glow and expressive ripples for Gboard.
 
 [Download 1.1.0](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.1.0)
 
 ## Choose your level of motion
-- **Touch:** quick feedback on the tapped key, plus an independently controlled quiet background glow that is now clearly visible and sinks gently as it fades. Try the everyday preset for Soft press at 160 ms without traveling waves.
-- **Magnetic fluid:** one living bubble of liquid metal between your keys. Touch the keyboard and it darts straight to your finger; several fingers split it into equal parts that flow back together when you let go. It leans with device tilt, stretches while it moves and flashes as it splits. Opt-in, with an intensity slider.
+- **Touch:** ten curated tap animations — comet borders, corner brackets, spectral swipes, spark bursts, rings and soft presses, plus two wide keyboard sweeps — each a layered glow with hot cores and prismatic fringes, plus an independently controlled quiet background glow that is clearly visible and sinks gently as it fades. Try the everyday preset for Soft press at 160 ms without traveling waves.
 - **Ripple:** optional row and full-keyboard patterns, adjustable borders and letter colors. Hiding key fills does not hide ripple borders.
 - **Keyboard:** optional opening/closing lighting and a real keyboard test field.
 
@@ -26,9 +25,9 @@ Requires **Android 13+** and **LSPosed/Vector** with Gboard in scope. Keep a bac
 If the status says **no live module reply**, check scope and reboot; do not assume settings were applied. Closing light can be cut short by Android's dismissal timing.
 
 ## Verification
-CI runs Java policy/source checks (including the fluid physics suite), desktop Skia shader checks for the pulse field and the magnetic fluid, Android compilation, APK archive checks and signature verification. The release includes a checksum and signer report.
+CI runs Java policy/source checks, desktop Skia shader checks for the pulse field, Android compilation, APK archive checks and signature verification. The release includes a checksum and signer report.
 
-**Device behavior remains unverified.** Tilt response depends on the device's gravity sensor (accelerometer fallback). See [release notes](docs/RELEASE-1.1.0.md) and the [source audit](docs/SOURCE-AUDIT.md) for limitations.
+**Device behavior remains unverified.** See [release notes](docs/RELEASE-1.1.0.md) and the [source audit](docs/SOURCE-AUDIT.md) for limitations.
 
 ## Development
 ```bash
@@ -36,6 +35,6 @@ cd RGBPulse
 bash test.sh
 bash build.sh ../Gboard-RGB-Pulse-1.1.0.apk
 ```
-The build uses JDK 11+, Android API 34, R8/D8, `aapt`, `curl`, `openssl`, `zip`, and `apksigner` or `libapksig-java`. Shader Java embedding is generated from `shaders/field.agsl` and `shaders/fluid.agsl`.
+The build uses JDK 11+, Android API 34, R8/D8, `aapt`, `curl`, `openssl`, `zip`, and `apksigner` or `libapksig-java`. Shader Java embedding is generated from `shaders/field.agsl`.
 
 The `Release` workflow builds and publishes from `main`. The current CI signing identity is generated per build; it is not an update-compatible persistent signing identity. Private signing material must never be committed.

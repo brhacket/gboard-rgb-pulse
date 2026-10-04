@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "src" / "dev" / "rgbpulse" / "gboard" / "ShaderCode.java"
-SOURCES = [("shaders/field.agsl", "FIELD"), ("shaders/fluid.agsl", "FLUID")]
+SOURCES = [("shaders/field.agsl", "FIELD")]
 
 
 def java_literal(text):

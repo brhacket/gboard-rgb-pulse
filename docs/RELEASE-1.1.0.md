@@ -1,17 +1,16 @@
 ## Gboard RGB Pulse 1.1.0
 
-Long-session stability, a visible quiet glow, one-button saving and a new
-magnetic fluid that plays with your whole keyboard.
+Long-session stability, a visible quiet glow, one-button saving and a curated
+catalog of layered, luminous tap animations.
 
 ### Highlights
-- **Magnetic fluid** (Touch page): one living bubble of liquid metal between
-  the keys. It darts straight to a touch; two or more touches split it into
-  equal parts (mass is conserved, so each part gets 1/N of the area) and the
-  parts flow back together when the fingers lift. The bubble leans when you
-  tilt the phone (gravity sensor with accelerometer fallback), stretches along
-  its motion, and flashes on split/merge. Rendered as a glossy pseudo-3D
-  surface — dome lighting, fresnel rim, sharp specular, moving sheen, velocity
-  drag-streaks — with no banding artifacts. Adjustable intensity; fully opt-in.
+- **Ten curated tap animations** (Touch page): each pulse is built from
+  layered light — a hot near-white core, a saturated mid glow, a wide soft
+  halo and a prismatic fringe that shifts hue across the feature — with eased
+  motion (comet tails, spring-snapping brackets, spectral swipes, spark
+  bursts with twinkle, chromatic rings). Two optional wide sweeps cross the
+  whole keyboard. Fully opt-in, with strength, length, size and thickness
+  controls.
 - **One button replaces Apply/Restart**: *Save & restart Gboard* saves every
   setting and force-stops Gboard in a single tap, so the keyboard always
   reopens with exactly what you saved. The old Apply changes button is gone.
@@ -36,12 +35,10 @@ needs root; if it is denied, simply opening the keyboard picks up the saved
 settings instead.
 
 ### Verification and limitations
-Publication requires automated Java/source tests (including new fluid physics
-tests), desktop Skia shader tests for both the pulse field and the fluid,
-Android compilation, archive checks, and APK signature verification.
-`SHA256SUMS.txt` and `APK-verification.txt` accompany the APK.
+Publication requires automated Java/source tests, desktop Skia shader tests
+for the pulse field, Android compilation, archive checks, and APK signature
+verification. `SHA256SUMS.txt` and `APK-verification.txt` accompany the APK.
 
-Tilt response uses the gravity sensor (accelerometer fallback); exact tilt
-feel depends on the device. Rendering and force-stop behavior remain
-device-unverified; Android may cut closing light short. Publishing this
-version does not imply those device checks have passed.
+Rendering and force-stop behavior remain device-unverified; Android may cut
+closing light short. Publishing this version does not imply those device
+checks have passed.

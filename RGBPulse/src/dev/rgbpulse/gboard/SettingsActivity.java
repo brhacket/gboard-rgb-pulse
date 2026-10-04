@@ -97,7 +97,7 @@ public final class SettingsActivity extends Activity {
         ripplePage.addView(text("A little extra, when you want it",20,INK));
         ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
         pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key feedback, the quiet glow and the magnetic fluid work independently. No traveling wave needed.",13,MUTED));
+        pulsePage.addView(text("Key feedback and the quiet glow work independently. No traveling wave needed.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
@@ -167,17 +167,6 @@ public final class SettingsActivity extends Activity {
         transitions.addView(text("A dramatic reveal or exit, with the keys firmly in place. Closing depends on Android’s dismissal timing and may be cut short.",13,MUTED));
         transitionControl(transitions,"Opening light","opening46",false);
         transitionControl(transitions,"Closing light","closing46",true);
-        LinearLayout fluidCard=card(pulsePage);
-        fluidCard.addView(text("Magnetic fluid",18,INK));
-        fluidCard.addView(text("One living bubble of liquid metal between your keys. Touch the keyboard and it darts straight to your finger; two or more fingers split it into equal parts, and when you let go they flow back together. It leans when you tilt your phone and flashes as it splits. Turn it on and play with it.",13,MUTED));
-        Switch fluidOn=new Switch(this);fluidOn.setText("Magnetic fluid");fluidOn.setTextColor(INK);fluidOn.setMinHeight(px(48));fluidOn.setChecked(cfg.fluid);
-        fluidOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("fluid50",value).apply();changed();});fluidCard.addView(fluidOn);
-        TextView fluidValue=text("Fluid intensity · "+cfg.fluidStrength+"%",14,INK);fluidCard.addView(fluidValue);
-        SeekBar fluidLevel=new SeekBar(this);fluidLevel.setMax(90);fluidLevel.setProgress(cfg.fluidStrength-10);fluidLevel.setMinimumHeight(px(48));fluidLevel.setContentDescription("Magnetic fluid intensity");
-        fluidLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar b,int value,boolean user){if(user){draft.edit().putInt("fluidStrength50",value+10).apply();fluidValue.setText("Fluid intensity · "+(value+10)+"%");changed();}}
-            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
-        });fluidCard.addView(fluidLevel);
         LinearLayout quietCard=card(pulsePage);
         quietCard.addView(text("Quiet background",18,INK));
         quietCard.addView(text("One visible pool of light near the tapped key that sinks gently as it fades. No spreading rings, no full-keyboard wash. Fast taps replace the glow rather than stacking it.",13,MUTED));
@@ -196,7 +185,7 @@ public final class SettingsActivity extends Activity {
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
         details.addView(text("Pulse Studio · version 1.1.0\nSettings are stored privately. Saving force-stops Gboard once, so the keyboard always reopens with exactly what you saved. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
         details.addView(text("Android 13+ and LSPosed / Vector are required. Edit anything, then tap Save & restart Gboard: one tap saves everything and restarts the keyboard. The force-stop needs root; without it, opening the keyboard still syncs the new settings. Font replacement and gesture trails remain off.",13,MUTED));
-        details.addView(text("Background animations, the quiet glow and the magnetic fluid are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
+        details.addView(text("Background animations and the quiet glow are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
         details.addView(text("If letter colors do not change: enable logs, Save & restart Gboard, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
@@ -205,7 +194,7 @@ public final class SettingsActivity extends Activity {
             .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint. This does not disable Gboard’s own native key-press animation. Everything is saved and Gboard is force-stopped, so the change is live the next time the keyboard opens.")
             .setPositiveButton("Disable & save",(d,w)->{
                 draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
-                    .putBoolean("quietBackground48",false).putBoolean("fluid50",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                    .putBoolean("quietBackground48",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
                 render();persist();
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
@@ -460,7 +449,6 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 rect.set(start+k*(kw+gap),y,start+k*(kw+gap)+kw,y+rh);}
         }
         @Override public boolean onTouchEvent(MotionEvent e){
-            fluidTouch(e);
             if(e.getActionMasked()==MotionEvent.ACTION_DOWN||e.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){
                 int pointer=e.getActionIndex();
                 if(cfg.enabled)for(int row=0;row<rows.length;row++)for(int k=0;k<rows[row].length;k++){
@@ -468,19 +456,6 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 return true;
             }
             if(e.getActionMasked()==MotionEvent.ACTION_UP)performClick();return true;
-        }
-        private void fluidTouch(MotionEvent e){
-            if(!cfg.fluid)return;
-            int action=e.getActionMasked();long now=SystemClock.uptimeMillis();
-            if(action==MotionEvent.ACTION_CANCEL){fx.fluidCancel();invalidate();return;}
-            if(action==MotionEvent.ACTION_MOVE){
-                for(int i=0;i<e.getPointerCount();i++)fx.fluidPointer(e.getPointerId(i),e.getX(i),e.getY(i),true,now);
-                return;
-            }
-            int index=e.getActionIndex();
-            boolean down=action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN;
-            fx.fluidPointer(e.getPointerId(index),e.getX(index),e.getY(index),down,now);
-            if(action==MotionEvent.ACTION_DOWN)fx.fluidImpulse(e.getX(index),e.getY(index),now);
         }
         @Override public boolean performClick(){super.performClick();return true;}
         @Override protected void onDraw(Canvas canvas){

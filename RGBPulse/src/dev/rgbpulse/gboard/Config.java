@@ -6,11 +6,11 @@ public final class Config {
     public static final String PREFS = "settings";
     public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Wide orbit", "Wide aurora"};
     public static final String[] EFFECT_HINTS={
-        "A quick highlight runs around the tapped key.","Four small brackets snap toward the key corners.",
-        "A short line sweeps beneath the tapped letter.","A narrow diagonal gleam crosses one key.",
-        "Four tiny diamond sparks lift from the key edges.","One compact ring expands inside the key.",
-        "Two soft slivers separate toward the key edges.","A soft, single glow responds beneath your finger.",
-        "Wide effect · one fine ring travels across the keyboard.","Wide effect · one flowing ribbon crosses the keyboard."};
+        "A white-hot comet with a spectral tail circles the tapped key.","Glowing brackets spring onto the key corners and flash as they land.",
+        "A luminous calligraphic stroke sweeps beneath the tapped letter.","A prism gleam crosses one key, splitting into dispersed colors.",
+        "Four twinkling sparks fly from the key edges, trailing light.","A chromatic ring with a hot crest expands inside the key.",
+        "Two bowed slivers of light part from a seam flash.","A soft breathing glow with a prismatic rim answers your finger.",
+        "Wide effect · one fine chromatic ring travels across the keyboard.","Wide effect · shimmering spectral curtains sweep the keyboard."};
     public static final int GPU_COUNT = 10;
     public int pulseDuration=160;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
@@ -19,8 +19,6 @@ public final class Config {
     public boolean tapEffects = false;
     public boolean quietBackground=false;
     public int quietStrength=65;
-    public boolean fluid=false;
-    public int fluidStrength=70;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -65,8 +63,6 @@ public final class Config {
             c.enabled = flag(p,"enabled", c.enabled);
             c.quietBackground=flag(p,"quietBackground48",false);
             c.quietStrength=clamp(number(p,"quietStrength48",65),10,100);
-            c.fluid=flag(p,"fluid50",false);
-            c.fluidStrength=clamp(number(p,"fluidStrength50",70),10,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
             c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
@@ -95,7 +91,7 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0||c.fluid;
+            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);

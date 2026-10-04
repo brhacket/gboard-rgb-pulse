@@ -42,7 +42,6 @@ jobs:
           commands = [
               [sys.executable, '-m', 'pip', 'install', 'skia-python', 'numpy', 'pillow>=10'],
               [sys.executable, 'RGBPulse/tests/shader_test.py', '--stills'],
-              [sys.executable, 'RGBPulse/tests/fluid_shader_test.py'],
           ]
           for command in commands:
               result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

@@ -105,7 +105,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 try {
                     MotionEvent e = (MotionEvent) p.args[0]; int a = e.getActionMasked();
                     c.glideEvent(e);
-                    c.fluidEvent(e);
                     if (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN) {
                         int i = e.getActionIndex(); c.tap(e.getX(i), e.getY(i));
                     }
@@ -194,7 +193,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         final ViewGroup root;
         final Fx fx;
         final LifecycleLight light;
-        final FluidMotion motion;
         boolean opened,openPending;
         final KeyStyle keyStyle=new KeyStyle();
 
@@ -217,7 +215,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
 
         Controller(ViewGroup root) {
             this.root = root; light=new LifecycleLight(root); fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
-            motion=new FluidMotion(root.getContext());
             XposedHelpers.setAdditionalInstanceField(root, ROOT, this);
             controllers.add(new java.lang.ref.WeakReference<>(this));
             SettingsClient.start(root.getContext(),PulseModule::acceptSettings);
@@ -240,7 +237,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             fx.clear();keyStyle.restore();bind(null);
             KeyStyle.configure(config,root.getContext());fx.cfg=config;
             disabled=false;missedFrames=0;layoutDirty=true;
-            if(config.enabled&&config.fluid&&visible)motion.start();else motion.stop();
             if(!config.enabled||!visible){root.invalidate();return;}
             if(config.debug){lastLog="";CapHooks.traces=0;}
             root.postDelayed(resync,RESYNC_MS);
@@ -320,31 +316,6 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 if(hit)fx.glide.points.begin(xy[0],xy[1],now);
             }else if(action==MotionEvent.ACTION_MOVE)fx.glide.points.move(xy[0],xy[1],now,8*root.getResources().getDisplayMetrics().density);
             else if(action==MotionEvent.ACTION_UP)fx.glide.points.end();
-            kick();
-        }
-        /** The magnetic fluid tracks every finger on the panel, not just glides. */
-        void fluidEvent(MotionEvent e){
-            int action=e.getActionMasked();
-            if(action==MotionEvent.ACTION_CANCEL){fx.fluidCancel();if(body!=null)body.invalidate();return;}
-            if(disposed||disabled||!visible||!config.enabled||!config.fluid||body==null)return;
-            Matrix m=new Matrix();root.transformMatrixToGlobal(m);body.transformMatrixToLocal(m);
-            long now=SystemClock.uptimeMillis();
-            if(action==MotionEvent.ACTION_MOVE){
-                for(int i=0;i<e.getPointerCount();i++){
-                    float[] xy={e.getX(i),e.getY(i)};m.mapPoints(xy);
-                    fx.fluidPointer(e.getPointerId(i),xy[0]+body.getScrollX(),xy[1]+body.getScrollY(),true,now);
-                }
-                return;
-            }
-            int index=e.getActionIndex();
-            float[] xy={e.getX(index),e.getY(index)};m.mapPoints(xy);
-            float px=xy[0]+body.getScrollX(),py=xy[1]+body.getScrollY();
-            if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN){
-                fx.fluidPointer(e.getPointerId(index),px,py,true,now);
-                fx.fluidImpulse(px,py,now); // Every touchdown splashes the liquid.
-            }else{
-                fx.fluidPointer(e.getPointerId(index),px,py,false,now);
-            }
             kick();
         }
         void drawTrail(Canvas canvas){

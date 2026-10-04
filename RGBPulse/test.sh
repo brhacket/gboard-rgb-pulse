@@ -40,8 +40,6 @@ javac -encoding UTF-8 -d work/tests tests/stubs/android/content/SharedPreference
 java -cp work/tests dev.rgbpulse.gboard.SettingsStoreTest
 javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/QuietPolicy.java tests/QuietPolicyTest.java
 java -cp work/tests dev.rgbpulse.gboard.QuietPolicyTest
-javac -encoding UTF-8 -d work/tests src/dev/rgbpulse/gboard/FluidSim.java tests/FluidSimTest.java
-java -cp work/tests dev.rgbpulse.gboard.FluidSimTest
 python3 tests/settings_transport_test.py
 python3 tests/regression_contract_test.py
 python3 tests/source_contract_test.py

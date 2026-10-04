@@ -126,21 +126,14 @@ assert 'restart=button("Restart…",false)' not in ui and 'Gboard was not stoppe
 assert 'quiet.clear()' in fx and 'cfg.quietBackground' in fx
 print('PASS: single save-and-restart button replaces apply/restart pair')
 
-assert 'fluid50' in cfg and 'fluidStrength50' in cfg and 'fluidStrength=70' in cfg
-assert 'c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0||c.fluid' in cfg
-assert 'Magnetic fluid' in ui and 'fluidOn.setChecked(cfg.fluid)' in ui and 'putBoolean("fluid50",value)' in ui
-assert 'putInt("fluidStrength50",value+10)' in ui and 'putBoolean("fluid50",false)' in ui
-assert 'cfg.enabled&&cfg.fluid' in fx and 'FluidMotion.tiltX()' in fx and 'fluidImpulse' in fx
-assert 'c.fluidEvent(e)' in module and 'fx.fluidImpulse(px,py,now)' in module
-assert 'motion=new FluidMotion(root.getContext())' in module and 'motion.stop()' in module
-assert 'if(config.enabled&&config.fluid&&visible)motion.start();else motion.stop();' in module
-fluidsim=(src/'FluidSim.java').read_text()
-assert 'public final class FluidSim' in fluidsim and 'import android' not in fluidsim
-assert 'fillBlobs' in fluidsim and 'fillTouches' in fluidsim and 'impulse' in fluidsim
-shader=Path(root/'shaders/fluid.agsl').read_text()
-assert 'uniform float4 blobs[12]' in shader and 'uniform float4 touches[4]' in shader
-assert 'static final String FLUID' in (src/'ShaderCode.java').read_text()
-print('PASS: magnetic fluid config, UI, touch/tilt wiring and embedded shader')
+# The magnetic fluid was removed: no code, shader, UI or preference leftovers.
+for gone in ['FluidSim.java','FluidFx.java','FluidMotion.java']:
+    assert not (src/gone).exists()
+assert not (root/'shaders/fluid.agsl').exists()
+assert not (root/'tests/fluid_shader_test.py').exists() and not (root/'tests/FluidSimTest.java').exists()
+assert 'fluid' not in cfg and 'fluid' not in ui and 'fluid' not in fx and 'fluid' not in module
+assert 'FLUID' not in (src/'ShaderCode.java').read_text() and 'fluid.agsl' not in (root/'embed_shader.py').read_text()
+print('PASS: magnetic fluid fully removed from config, UI, touch wiring, shader and sources')
 
 assert 'root.postDelayed(resync,RESYNC_MS)' in module and 'SettingsClient.request()' in module
 assert 'root.removeCallbacks(resync)' in module
