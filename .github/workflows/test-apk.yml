@@ -2,7 +2,7 @@ name: APK checks
 
 on:
   push:
-    branches: ['arena/01a0f95a-gboard-rgb-pulse']
+    branches: ['arena/01a106a7-gboard-rgb-pulse']
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/arena/01a0f95a-gboard-rgb-pulse'
+    if: github.ref == 'refs/heads/arena/01a106a7-gboard-rgb-pulse'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +33,7 @@ jobs:
           commands = [
               [sys.executable, '-m', 'pip', 'install', 'skia-python', 'numpy', 'pillow>=10'],
               [sys.executable, 'RGBPulse/tests/shader_test.py', '--stills'],
+              [sys.executable, 'RGBPulse/tests/fluid_shader_test.py'],
           ]
           for command in commands:
               result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -48,17 +49,17 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.0.2.apk
+        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.1.0.apk
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-1.0.2.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.0.2.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-1.0.2.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-1.0.2.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-1.1.0.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.1.0.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-1.1.0.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-1.1.0.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-1.0.2.apk
+            Gboard-RGB-Pulse-1.1.0.apk
             APK-verification.txt
             SHA256SUMS.txt

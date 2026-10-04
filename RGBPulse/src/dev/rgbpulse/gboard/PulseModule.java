@@ -105,6 +105,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 try {
                     MotionEvent e = (MotionEvent) p.args[0]; int a = e.getActionMasked();
                     c.glideEvent(e);
+                    c.fluidEvent(e);
                     if (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN) {
                         int i = e.getActionIndex(); c.tap(e.getX(i), e.getY(i));
                     }
@@ -189,9 +190,11 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
     }
 
     static final class Controller implements ViewTreeObserver.OnPreDrawListener, ViewTreeObserver.OnGlobalLayoutListener, View.OnAttachStateChangeListener, Runnable {
+        static final long RESYNC_MS=30000;
         final ViewGroup root;
         final Fx fx;
         final LifecycleLight light;
+        final FluidMotion motion;
         boolean opened,openPending;
         final KeyStyle keyStyle=new KeyStyle();
 
@@ -205,9 +208,16 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         long lastScan, lastDraw; int missedFrames; String lastLog = "";
         final Runnable settleScan = new Runnable(){public void run(){if(!visible||disposed)return;safeScan(true);kick();}};
         final Runnable scanLater = new Runnable() { public void run() { safeScan(true); kick(); } };
+        // Long sessions resync settings periodically so nothing silently expires.
+        final Runnable resync = new Runnable(){public void run(){
+            if(disposed||!visible)return;
+            SettingsClient.request();
+            root.postDelayed(this,RESYNC_MS);
+        }};
 
         Controller(ViewGroup root) {
             this.root = root; light=new LifecycleLight(root); fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
+            motion=new FluidMotion(root.getContext());
             XposedHelpers.setAdditionalInstanceField(root, ROOT, this);
             controllers.add(new java.lang.ref.WeakReference<>(this));
             SettingsClient.start(root.getContext(),PulseModule::acceptSettings);
@@ -225,13 +235,15 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         void applyCurrentSettings(){
             if(disposed)return;
             // Off must clean up even if the panel is hidden or no longer bound.
-            root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);ticking=false;
+            root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);root.removeCallbacks(resync);ticking=false;
             if(!config.enabled||!visible)light.cancel();
             fx.clear();keyStyle.restore();bind(null);
             KeyStyle.configure(config,root.getContext());fx.cfg=config;
             disabled=false;missedFrames=0;layoutDirty=true;
+            if(config.enabled&&config.fluid&&visible)motion.start();else motion.stop();
             if(!config.enabled||!visible){root.invalidate();return;}
             if(config.debug){lastLog="";CapHooks.traces=0;}
+            root.postDelayed(resync,RESYNC_MS);
             safeScan(true);kick();
         }
         void openingLight(){light.play(config.opening,false,config.rippleActive,lightArea());}
@@ -308,6 +320,31 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
                 if(hit)fx.glide.points.begin(xy[0],xy[1],now);
             }else if(action==MotionEvent.ACTION_MOVE)fx.glide.points.move(xy[0],xy[1],now,8*root.getResources().getDisplayMetrics().density);
             else if(action==MotionEvent.ACTION_UP)fx.glide.points.end();
+            kick();
+        }
+        /** The magnetic fluid tracks every finger on the panel, not just glides. */
+        void fluidEvent(MotionEvent e){
+            int action=e.getActionMasked();
+            if(action==MotionEvent.ACTION_CANCEL){fx.fluidCancel();if(body!=null)body.invalidate();return;}
+            if(disposed||disabled||!visible||!config.enabled||!config.fluid||body==null)return;
+            Matrix m=new Matrix();root.transformMatrixToGlobal(m);body.transformMatrixToLocal(m);
+            long now=SystemClock.uptimeMillis();
+            if(action==MotionEvent.ACTION_MOVE){
+                for(int i=0;i<e.getPointerCount();i++){
+                    float[] xy={e.getX(i),e.getY(i)};m.mapPoints(xy);
+                    fx.fluidPointer(e.getPointerId(i),xy[0]+body.getScrollX(),xy[1]+body.getScrollY(),true,now);
+                }
+                return;
+            }
+            int index=e.getActionIndex();
+            float[] xy={e.getX(index),e.getY(index)};m.mapPoints(xy);
+            float px=xy[0]+body.getScrollX(),py=xy[1]+body.getScrollY();
+            if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN){
+                fx.fluidPointer(e.getPointerId(index),px,py,true,now);
+                fx.fluidImpulse(px,py,now); // Every touchdown splashes the liquid.
+            }else{
+                fx.fluidPointer(e.getPointerId(index),px,py,false,now);
+            }
             kick();
         }
         void drawTrail(Canvas canvas){
@@ -394,7 +431,8 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             }
         }
         void pause() {
-            light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
+            light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); root.removeCallbacks(resync); ticking=false;
+            motion.stop();
             if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();keyStyle.refreshRipples();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }
@@ -404,7 +442,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             pause(); bind(null); disposed=true;
             ViewTreeObserver o=root.getViewTreeObserver(); if(o.isAlive()){o.removeOnPreDrawListener(this);o.removeOnGlobalLayoutListener(this);}
             root.removeOnAttachStateChangeListener(this); XposedHelpers.removeAdditionalInstanceField(root,ROOT);
-            surface.release(); fx.dispose();
+            surface.release(); fx.dispose(); motion.stop();
         }
     }
 }

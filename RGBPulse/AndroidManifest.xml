@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="49" android:versionName="1.0.2">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.rgbpulse.gboard" android:versionCode="50" android:versionName="1.1.0">
  <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="34"/>
  <permission android:name="dev.rgbpulse.gboard.permission.NOTIFY_SETTINGS" android:protectionLevel="signature"/>
  <uses-permission android:name="dev.rgbpulse.gboard.permission.NOTIFY_SETTINGS"/>

@@ -17,13 +17,17 @@ assert 'synchronized(SettingsStore.LOCK)' in sender and 'synchronized(SettingsSt
 assert 'RevisionGate.accepts' in receipt
 assert 'stamp<lastStamp' in client and 'SystemClock.elapsedRealtimeNanos()' in sender
 assert client.index('listener.apply(next)')<client.index('receipt.send()')
-assert 'MAIN.postDelayed(failClosed,3000)' in client and 'listener.apply(new Config())' in client
+assert 'MAIN.postDelayed(failClosed,2500)' in client and 'listener.apply(new Config())' in client
 assert 'if(!revision.equals(currentRevision))' in client
+# A failed pull is retried, and applied settings survive timeouts once confirmed.
+assert 'if(pullRetries<3)' in client and 'MAIN.postDelayed(pull,900)' in client
+assert 'keeping last applied settings' in client
+assert client.index('MAIN.removeCallbacks(failClosed);pullRetries=0;')<client.index('stamp<lastStamp')
 assert 'moduleResponded48' in sender and 'No live module reply' in ui
 assert 'SettingsTransport.push(this)' in ui and 'SettingsStore.save(snapshot,applied)' in ui
-assert 'saving=false;' in ui and 'Couldn’t save. Tap Apply changes' in ui
+assert 'saving=false;' in ui and 'Couldn’t save. Tap Save & restart Gboard' in ui
 cleanup=module.split('void applyCurrentSettings(){',1)[1].split('void safeScan(',1)[0]
 assert cleanup.index('keyStyle.restore()')<cleanup.index('if(!config.enabled||!visible){root.invalidate();return;}')
-for callback in ['this','scanLater','settleScan']:assert 'root.removeCallbacks('+callback+')' in cleanup
+for callback in ['this','scanLater','settleScan','resync']:assert 'root.removeCallbacks('+callback+')' in cleanup
 assert 'if (body == next && next != null) return;' in module
-print('PASS: signed snapshots, immutable non-exported receipt, fixed-destination bootstrap, stale-message rejection, timeout/off cleanup and live-module status')
+print('PASS: signed snapshots, immutable non-exported receipt, fixed-destination bootstrap, stale-message rejection, retried timeout, kept-applied settings and live-module status')

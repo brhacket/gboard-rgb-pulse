@@ -26,6 +26,7 @@ old=(src/'ShaderCode.java').read_text()
 subprocess.run([sys.executable,str(root/'embed_shader.py')],check=True)
 assert old==(src/'ShaderCode.java').read_text()
 assert 'GPU_COUNT = 10' in cfg
+assert 'static final String FLUID' in old and (root/'shaders/fluid.agsl').exists()
 print('PASS: curated pulse catalog, migration, no idle animation and shader sync')
 
 field=(src/'FieldFx.java').read_text()

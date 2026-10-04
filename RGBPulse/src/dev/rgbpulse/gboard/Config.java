@@ -19,6 +19,8 @@ public final class Config {
     public boolean tapEffects = false;
     public boolean quietBackground=false;
     public int quietStrength=65;
+    public boolean fluid=false;
+    public int fluidStrength=70;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -63,6 +65,8 @@ public final class Config {
             c.enabled = flag(p,"enabled", c.enabled);
             c.quietBackground=flag(p,"quietBackground48",false);
             c.quietStrength=clamp(number(p,"quietStrength48",65),10,100);
+            c.fluid=flag(p,"fluid50",false);
+            c.fluidStrength=clamp(number(p,"fluidStrength50",70),10,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
             c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
@@ -91,7 +95,7 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0;
+            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0||c.fluid;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
             c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);

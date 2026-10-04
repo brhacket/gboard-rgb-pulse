@@ -2,7 +2,7 @@ package dev.rgbpulse.gboard;
 
 import android.graphics.*;
 
-/** One small, low-contrast pool behind the tap. New taps replace it, never stack. */
+/** One clearly visible pool of light behind the tap. New taps replace it, never stack. */
 final class QuietBackground {
     private final Paint paint=new Paint(3);
     private final float dp;
@@ -19,7 +19,8 @@ final class QuietBackground {
         int color=Color.HSVToColor(new float[]{cfg.hue1,cfg.sat/100f,1});
         int tint=(color&0xffffff)|(Math.round(alpha*255)<<24);
         // Radius stays fixed: this is a gentle light response, not an expanding wave.
-        paint.setShader(new RadialGradient(x,y+3*dp*p,Math.max(1,radius),tint,color&0xffffff,Shader.TileMode.CLAMP));
-        int save=canvas.save();canvas.clipRect(clip);canvas.drawRect(x-radius,y-radius,x+radius,y+radius+3*dp,paint);canvas.restoreToCount(save);paint.setShader(null);
+        // The pool sinks a few dp while it fades, so the background visibly moves.
+        paint.setShader(new RadialGradient(x,y+6*dp*p,Math.max(1,radius),tint,color&0xffffff,Shader.TileMode.CLAMP));
+        int save=canvas.save();canvas.clipRect(clip);canvas.drawRect(x-radius,y-radius,x+radius,y+radius+6*dp,paint);canvas.restoreToCount(save);paint.setShader(null);
     }
 }

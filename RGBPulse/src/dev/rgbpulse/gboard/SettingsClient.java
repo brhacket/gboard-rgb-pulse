@@ -13,16 +13,27 @@ final class SettingsClient {
     private static boolean registered;
     private static long lastStamp;
     private static String currentRevision="";
+    private static int pullRetries;
+    // A missing reply is retried before any consequence. Once settings have been
+    // applied in this process they are kept across failed pulls, so a slow or
+    // killed module app during a long session never blanks live effects.
     private static final Runnable failClosed=()->{
+        if(pullRetries<3){MAIN.postDelayed(pull,900);return;}
+        pullRetries=0;
+        if(!currentRevision.isEmpty()){
+            android.util.Log.w("RGBPulse","Settings pull timed out; keeping last applied settings.");
+            return;
+        }
         currentRevision="";if(listener!=null)listener.apply(new Config());
-        android.util.Log.w("RGBPulse","No signed settings reply: effects disabled. Open the module and Apply.");
+        android.util.Log.w("RGBPulse","No signed settings reply: effects disabled. Open the module and save.");
     };
     private static final Runnable pull=()->{
         if(context==null)return;
         try{
             context.sendBroadcast(new Intent(SettingsContract.PULL).setComponent(
                 new ComponentName("dev.rgbpulse.gboard","dev.rgbpulse.gboard.SettingsRelay")));
-            MAIN.removeCallbacks(failClosed);MAIN.postDelayed(failClosed,3000);
+            pullRetries++;
+            MAIN.removeCallbacks(failClosed);MAIN.postDelayed(failClosed,2500);
         }catch(RuntimeException e){failClosed.run();}
     };
     static void start(Context ctx,Listener callback){
@@ -33,6 +44,8 @@ final class SettingsClient {
                     @Override public void onReceive(Context c,Intent intent){
                         if(!SettingsContract.ACTION.equals(intent.getAction()))return;
                         if(intent.getIntExtra("runtimeVersion",0)!=SettingsContract.RUNTIME_VERSION)return;
+                        // A live reply proves the module app is up, whatever the stamp says.
+                        MAIN.removeCallbacks(failClosed);pullRetries=0;
                         Bundle data=intent.getBundleExtra("snapshot");
                         PendingIntent receipt=intent.getParcelableExtra("receipt",PendingIntent.class);
                         long stamp=intent.getLongExtra("stamp",0);

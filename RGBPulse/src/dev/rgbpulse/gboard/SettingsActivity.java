@@ -13,7 +13,7 @@ import android.view.*;
 import android.widget.*;
 import java.util.Map;
 
-/** One effect, three controls, and an explicit boundary between draft and live settings. */
+/** Draft-based studio: edit freely, then one button saves everything and restarts Gboard. */
 public final class SettingsActivity extends Activity {
     private SharedPreferences applied, draft;
     private Config cfg;
@@ -24,7 +24,7 @@ public final class SettingsActivity extends Activity {
     private final Runnable confirmationTick=()->checkConfirmation();
     private TextView state, shaderStatus;
     private View backgroundPalette;
-    private Button apply;
+    private Button saveRestart;
     private Preview preview;
     private LinearLayout controls;
     private ScrollView settingsScroll;
@@ -97,12 +97,12 @@ public final class SettingsActivity extends Activity {
         ripplePage.addView(text("A little extra, when you want it",20,INK));
         ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
         pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key feedback and quiet background light work independently. No traveling wave needed.",13,MUTED));
+        pulsePage.addView(text("Key feedback, the quiet glow and the magnetic fluid work independently. No traveling wave needed.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
         keyboardTest.addView(text("Test your keyboard",17,INK));
-        keyboardTest.addView(text("Tap below to open your actual keyboard. Gboard uses your last applied settings, not the draft above. Typed text is not saved by this app.",12,MUTED));
+        keyboardTest.addView(text("Tap below to open your actual keyboard. Gboard uses your last saved settings, not the draft above. Typed text is not saved by this app.",12,MUTED));
         EditText test=new EditText(this);test.setHint("Type here with Gboard…");test.setTextColor(INK);test.setHintTextColor(MUTED);
         test.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         test.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffb9efd4));
@@ -167,9 +167,20 @@ public final class SettingsActivity extends Activity {
         transitions.addView(text("A dramatic reveal or exit, with the keys firmly in place. Closing depends on Android’s dismissal timing and may be cut short.",13,MUTED));
         transitionControl(transitions,"Opening light","opening46",false);
         transitionControl(transitions,"Closing light","closing46",true);
+        LinearLayout fluidCard=card(pulsePage);
+        fluidCard.addView(text("Magnetic fluid",18,INK));
+        fluidCard.addView(text("Liquid metal that pools between your keys. It chases your fingertips, splashes on every tap and leans when you tilt your phone — it reacts to everything you do. Turn it on and play with it.",13,MUTED));
+        Switch fluidOn=new Switch(this);fluidOn.setText("Magnetic fluid");fluidOn.setTextColor(INK);fluidOn.setMinHeight(px(48));fluidOn.setChecked(cfg.fluid);
+        fluidOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("fluid50",value).apply();changed();});fluidCard.addView(fluidOn);
+        TextView fluidValue=text("Fluid intensity · "+cfg.fluidStrength+"%",14,INK);fluidCard.addView(fluidValue);
+        SeekBar fluidLevel=new SeekBar(this);fluidLevel.setMax(90);fluidLevel.setProgress(cfg.fluidStrength-10);fluidLevel.setMinimumHeight(px(48));fluidLevel.setContentDescription("Magnetic fluid intensity");
+        fluidLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int value,boolean user){if(user){draft.edit().putInt("fluidStrength50",value+10).apply();fluidValue.setText("Fluid intensity · "+(value+10)+"%");changed();}}
+            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
+        });fluidCard.addView(fluidLevel);
         LinearLayout quietCard=card(pulsePage);
         quietCard.addView(text("Quiet background",18,INK));
-        quietCard.addView(text("One small pool of light near the tapped key. No spreading rings, no full-keyboard wash. Fast taps replace the glow rather than stacking it.",13,MUTED));
+        quietCard.addView(text("One visible pool of light near the tapped key that sinks gently as it fades. No spreading rings, no full-keyboard wash. Fast taps replace the glow rather than stacking it.",13,MUTED));
         Switch quietOn=new Switch(this);quietOn.setText("Subtle background on tap");quietOn.setTextColor(INK);quietOn.setMinHeight(px(48));quietOn.setChecked(cfg.quietBackground);
         quietOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("quietBackground48",value).apply();changed();});quietCard.addView(quietOn);
         TextView quietValue=text("Softness · "+cfg.quietStrength+"%",14,INK);quietCard.addView(quietValue);
@@ -179,41 +190,43 @@ public final class SettingsActivity extends Activity {
             public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
         });quietCard.addView(quietLevel);
         Button everyday=button("Try everyday setup",false);quietCard.addView(everyday);
-        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putBoolean("quietBackground48",true).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — Apply changes when you’re ready.",Toast.LENGTH_SHORT).show();});
+        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putBoolean("quietBackground48",true).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
         Button help=button("Setup & troubleshooting  +",false);keyboardPage.addView(help);
         LinearLayout details=card(keyboardPage);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
-        details.addView(text("Pulse Studio · version 1.0.2\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
-        details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
-        details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
+        details.addView(text("Pulse Studio · version 1.1.0\nSettings are stored privately. Saving force-stops Gboard once, so the keyboard always reopens with exactly what you saved. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
+        details.addView(text("Android 13+ and LSPosed / Vector are required. Edit anything, then tap Save & restart Gboard: one tap saves everything and restarts the keyboard. The force-stop needs root; without it, opening the keyboard still syncs the new settings. Font replacement and gesture trails remain off.",13,MUTED));
+        details.addView(text("Background animations, the quiet glow and the magnetic fluid are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
-        details.addView(text("If letter colors do not change: enable logs, Apply & restart, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
-        Button emergency=button("Turn everything off & apply",false);
+        details.addView(text("If letter colors do not change: enable logs, Save & restart Gboard, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
+        Button emergency=button("Turn everything off & save",false);
         emergency.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Disable all module effects?")
-            .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint when Gboard receives it. This does not disable Gboard’s own native key-press animation. No root restart is requested.")
-            .setPositiveButton("Disable & apply",(d,w)->{
+            .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint. This does not disable Gboard’s own native key-press animation. Everything is saved and Gboard is force-stopped, so the change is live the next time the keyboard opens.")
+            .setPositiveButton("Disable & save",(d,w)->{
                 draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
-                    .putBoolean("quietBackground48",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
-                render();persist(false);
+                    .putBoolean("quietBackground48",false).putBoolean("fluid50",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                render();persist();
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
-        Button restartKeyboard=button("Save & restart keyboard…",false);restartKeyboard.setOnClickListener(v->applySettings());details.addView(restartKeyboard);
         Button reset=button("Reset draft",false);reset.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until Apply.")
+            .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until you save.")
             .setPositiveButton("Reset",(d,w)->{draft.edit().clear().apply();prepareDraft();render();}).setNegativeButton("Cancel",null).show());details.addView(reset);
-        keyboardPage.addView(text("Your draft stays here until you apply it. Nothing plays automatically in the preview.",12,MUTED));
+        keyboardPage.addView(text("Your draft stays here until you save it. Nothing plays automatically in the preview.",12,MUTED));
 
         LinearLayout footer=new LinearLayout(this);footer.setOrientation(1);footer.setPadding(px(22),px(8),px(22),px(12));footer.setBackgroundColor(BG);
         state=text("",12,MUTED);state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);footer.addView(state);
         LinearLayout actions=new LinearLayout(this);
         Button discard=button("Discard",false);discard.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Discard draft changes?")
-            .setMessage("Reload your last applied settings. Gboard will not be changed.")
+            .setMessage("Reload your last saved settings. Gboard will not be changed.")
             .setPositiveButton("Discard",(d,w)->{copySettings(applied.getAll(),draft).commit();prepareDraft();render();}).setNegativeButton("Cancel",null).show());
         details.addView(discard);
-        Button restart=button("Restart…",false);restart.setOnClickListener(v->applySettings());actions.addView(restart,new LinearLayout.LayoutParams(0,px(52),1));
-        apply=button("Apply changes",true);apply.setOnClickListener(v->persist(false));
-        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,px(52),2);ap.leftMargin=px(10);actions.addView(apply,ap);
+        // The one and only apply path: saves every setting, then force-stops Gboard so
+        // the keyboard reopens with the new configuration. No separate apply step.
+        saveRestart=button("Save & restart Gboard",true);
+        saveRestart.setContentDescription("Save all settings and force-stop Gboard");
+        saveRestart.setOnClickListener(v->persist());
+        actions.addView(saveRestart,new LinearLayout.LayoutParams(-1,px(56)));
         footer.addView(actions);
 shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selectedPage);updateState();
     }
@@ -340,25 +353,17 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
         String savedState=confirmed(revision,received)?
             (Config.from(applied).enabled?"You’re all set · Gboard is up to date":"Gboard confirmed: all module effects off"):
-            "Saved · waiting for Gboard";
-        state.setText(saving?"Saving…":dirty?"Unsaved changes · preview only":savedState);
-        apply.setEnabled(!saving);apply.setAlpha(!saving?1f:.45f);
+            "Saved · waiting for Gboard to open";
+        state.setText(saving?"Saving & restarting Gboard…":dirty?"Unsaved changes · tap Save & restart Gboard":savedState);
+        saveRestart.setEnabled(!saving);saveRestart.setAlpha(!saving?1f:.45f);
     }
     private static SharedPreferences.Editor copySettings(Map<String,?> values,SharedPreferences target){return SettingsStore.copy(values,target);}
-    private void applySettings(){
-        if(saving)return;
-        new AlertDialog.Builder(this).setTitle("Apply settings / restart Gboard?")
-            .setMessage("Save only keeps Gboard running. Save & restart requests root to force-stop Gboard after saving. The keyboard will close; tap a text field to reopen it. Keep a backup keyboard enabled. No restart happens without this confirmation.")
-            .setPositiveButton("Save & restart",(d,w)->persist(true))
-            .setNeutralButton("Save only",(d,w)->persist(false))
-            .setNegativeButton("Cancel",null).show();
-    }
-    private void persist(boolean restart){
+    private void persist(){
         if(saving)return;
         final Map<String,Object> snapshot=new java.util.HashMap<>(draft.getAll());
         final String revision=java.util.UUID.randomUUID().toString();snapshot.put(SettingsContract.REVISION,revision);
         saving=true;updateState();
-        state.setText(restart?"Saving, then waiting for root approval…":"Saving…");
+        state.setText("Saving, then waiting for root approval…");
         new Thread(()->{
             boolean saved=false,stopped=false;String failure=null;
             try{
@@ -366,26 +371,26 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 if(saved){
                     draft.edit().putString(SettingsContract.REVISION,revision).apply();
                     notifyKeyboard();
-                    stopped=restart&&GboardRestart.stop();
+                    stopped=GboardRestart.stop();
                 }
-            }catch(RuntimeException e){failure=e.getClass().getSimpleName();android.util.Log.w("RGBPulse","Apply did not complete",e);}
+            }catch(RuntimeException e){failure=e.getClass().getSimpleName();android.util.Log.w("RGBPulse","Save & restart did not complete",e);}
             final boolean ok=saved,didStop=stopped;final String problem=failure;
             runOnUiThread(()->{
                 saving=false;
                 if(isFinishing()||isDestroyed())return;
                 updateState();
-                if(!ok){state.setText("Couldn’t save. Tap Apply changes to try again.");return;}
+                if(!ok){state.setText("Couldn’t save. Tap Save & restart Gboard to try again.");return;}
                 confirmationChecks=0;confirmationHandler.removeCallbacks(confirmationTick);confirmationHandler.postDelayed(confirmationTick,300);
-                if(problem!=null)state.setText("Saved, but connection needs a retry. Open Gboard to sync.");
-                else if(restart)state.setText(didStop?"Saved · tap the test field to reopen Gboard.":"Saved · restart was not approved. Open Gboard to sync.");
-                else state.setText("Saved · checking Gboard…");
-                if(restart&&!didStop)new AlertDialog.Builder(this).setTitle("Gboard was not stopped")
-                    .setMessage("Root was unavailable, denied, or timed out. Saving and force-stopping are separate operations. You can force-stop Gboard in Android settings.")
+                if(didStop)state.setText("Saved · Gboard was stopped. Tap a text field to reopen it with the new settings.");
+                else if(problem!=null)state.setText("Saved, but connection needs a retry. Open Gboard to sync.");
+                else state.setText("Saved · the force-stop was not approved. Open Gboard to sync.");
+                if(didStop)Toast.makeText(this,"Saved. Gboard restarts the next time you open it.",Toast.LENGTH_SHORT).show();
+                else new AlertDialog.Builder(this).setTitle("Gboard was not stopped")
+                    .setMessage("Settings were saved, but the force-stop needs root and it was unavailable, denied, or timed out. Open the keyboard to pick up the new settings anyway, or force-stop Gboard manually.")
                     .setPositiveButton("Open app settings",(d,w)->openGboardSettings()).setNegativeButton("Not now",null).show();
-                Toast.makeText(this,"Saved. Waiting for Gboard to confirm.",Toast.LENGTH_SHORT).show();
-                if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need Apply.");
+                if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need saving.");
             });
-        },"Apply ripple").start();
+        },"Save & restart").start();
     }
     private void notifyKeyboard(){
         try{SettingsTransport.push(this);}
@@ -405,7 +410,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         if(++confirmationChecks<30)confirmationHandler.postDelayed(confirmationTick,400);
         else {
             boolean reply=getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE).getBoolean("moduleResponded48",false);
-            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load 1.0.2.");
+            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load 1.1.0.");
         }
     }
     private void openGboardSettings(){
@@ -455,6 +460,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 rect.set(start+k*(kw+gap),y,start+k*(kw+gap)+kw,y+rh);}
         }
         @Override public boolean onTouchEvent(MotionEvent e){
+            fluidTouch(e);
             if(e.getActionMasked()==MotionEvent.ACTION_DOWN||e.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){
                 int pointer=e.getActionIndex();
                 if(cfg.enabled)for(int row=0;row<rows.length;row++)for(int k=0;k<rows[row].length;k++){
@@ -462,6 +468,19 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 return true;
             }
             if(e.getActionMasked()==MotionEvent.ACTION_UP)performClick();return true;
+        }
+        private void fluidTouch(MotionEvent e){
+            if(!cfg.fluid)return;
+            int action=e.getActionMasked();long now=SystemClock.uptimeMillis();
+            if(action==MotionEvent.ACTION_CANCEL){fx.fluidCancel();invalidate();return;}
+            if(action==MotionEvent.ACTION_MOVE){
+                for(int i=0;i<e.getPointerCount();i++)fx.fluidPointer(e.getPointerId(i),e.getX(i),e.getY(i),true,now);
+                return;
+            }
+            int index=e.getActionIndex();
+            boolean down=action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN;
+            fx.fluidPointer(e.getPointerId(index),e.getX(index),e.getY(index),down,now);
+            if(action==MotionEvent.ACTION_DOWN)fx.fluidImpulse(e.getX(index),e.getY(index),now);
         }
         @Override public boolean performClick(){super.performClick();return true;}
         @Override protected void onDraw(Canvas canvas){

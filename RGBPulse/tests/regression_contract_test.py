@@ -11,14 +11,15 @@ assert 'WavePolicy.glow' in side and 'boolean body=top!=null && cx!=null' in sid
 assert 'SideSweep.glowAt' in ui and 'fx.side.active(now,cfg.duration)' in ui
 assert 'lastAuto' not in ui and 'postDelayed(tick' not in ui
 assert 'ProcessBuilder' not in ui  # root work is isolated from the UI thread
-assert 'Save & restart' in ui and 'Save only' in ui and 'persist(true)' in ui
-assert 'if(saved)' in ui and 'stopped=restart&&GboardRestart.stop()' in ui
+assert 'Save & restart Gboard' in ui and 'saveRestart.setOnClickListener(v->persist())' in ui
+assert 'Apply changes' not in ui and 'Save only' not in ui  # one button, no separate apply step
+assert 'if(saved)' in ui and 'stopped=GboardRestart.stop()' in ui
 assert 'Browse animations' not in ui and 'Import TTF' not in ui
 assert 'Ripple on tap' in ui and 'Setup & troubleshooting' in ui
 assert ui.count('slider(settings,')==2
 assert 'SettingsStore.save(snapshot,applied)' in ui
 assert 'getSharedPreferences("settings_draft",Context.MODE_PRIVATE)' in ui
-assert 'Apply settings / restart Gboard?' in ui and 'Discard draft changes?' in ui
+assert 'Discard draft changes?' in ui
 assert 'enabled = false' in cfg and 'tapEffects = false' in cfg
 assert 'ClassCastException' in cfg and 'value==null?fallback:value' in cfg
 assert 'cfg.refined)return' in key and 'if(!c.refined){caps.apply' in key
@@ -28,7 +29,7 @@ paint=(src/'RipplePaint.java').read_text().split('void draw(',1)[1]
 assert 'new Paint' not in paint and 'new RectF' not in paint
 assert 'canvas.clipRect(bounds)' in paint
 assert 'RGBPulse/signing/' in (root.parent/'.gitignore').read_text()
-print('PASS: simple UI, explicit Apply, stock text, drawable state, shared clipped renderer, safe preferences')
+print('PASS: simple UI, one save-and-restart button, stock text, drawable state, shared clipped renderer, safe preferences')
 
 assert 'Test your keyboard' in ui and 'EditText test=new EditText(this)' in ui
 assert 'test.setSaveEnabled(false)' in ui
@@ -112,7 +113,7 @@ light=(src/'LifecycleLight.java').read_text()
 assert 'shell.addView(pinned)' in ui and 'demo=card(pinned)' in ui
 assert 'shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1))' in ui
 assert 'private void selectPage(int index)' in ui and 'previewCollapsed' in ui
-assert 'apply.setOnClickListener(v->persist(false))' in ui
+assert 'actions.addView(saveRestart,new LinearLayout.LayoutParams(-1,px(56)))' in ui
 assert 'transitionControl(transitions,"Opening light"' in ui and 'transitionControl(transitions,"Closing light"' in ui
 assert 'onFinishInputView' in module and 'closingLight()' in module
 assert 'host.getOverlay().remove' in light and 'animator.cancel()' in light
@@ -121,5 +122,29 @@ assert '.putInt("opening46",0).putInt("closing46",0)' in ui
 print('PASS: sticky responsive preview, independent borders, grouped controls and cancellable light-only transitions')
 
 assert 'Try everyday setup' in ui and 'quietBackground48' in ui
-assert 'restart=button("Restart…",false)' in ui and 'Gboard was not stopped' in ui
+assert 'restart=button("Restart…",false)' not in ui and 'Gboard was not stopped' in ui
 assert 'quiet.clear()' in fx and 'cfg.quietBackground' in fx
+print('PASS: single save-and-restart button replaces apply/restart pair')
+
+assert 'fluid50' in cfg and 'fluidStrength50' in cfg and 'fluidStrength=70' in cfg
+assert 'c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0||c.fluid' in cfg
+assert 'Magnetic fluid' in ui and 'fluidOn.setChecked(cfg.fluid)' in ui and 'putBoolean("fluid50",value)' in ui
+assert 'putInt("fluidStrength50",value+10)' in ui and 'putBoolean("fluid50",false)' in ui
+assert 'cfg.enabled&&cfg.fluid' in fx and 'FluidMotion.tiltX()' in fx and 'fluidImpulse' in fx
+assert 'c.fluidEvent(e)' in module and 'fx.fluidImpulse(px,py,now)' in module
+assert 'motion=new FluidMotion(root.getContext())' in module and 'motion.stop()' in module
+assert 'if(config.enabled&&config.fluid&&visible)motion.start();else motion.stop();' in module
+fluidsim=(src/'FluidSim.java').read_text()
+assert 'public final class FluidSim' in fluidsim and 'import android' not in fluidsim
+assert 'fillBlobs' in fluidsim and 'fillTouches' in fluidsim and 'impulse' in fluidsim
+shader=Path(root/'shaders/fluid.agsl').read_text()
+assert 'uniform float4 blobs[12]' in shader and 'uniform float4 touches[4]' in shader
+assert 'static final String FLUID' in (src/'ShaderCode.java').read_text()
+print('PASS: magnetic fluid config, UI, touch/tilt wiring and embedded shader')
+
+assert 'root.postDelayed(resync,RESYNC_MS)' in module and 'SettingsClient.request()' in module
+assert 'root.removeCallbacks(resync)' in module
+client=(src/'SettingsClient.java').read_text()
+assert 'if(pullRetries<3)' in client and 'keeping last applied settings' in client
+assert 'MAIN.postDelayed(pull,900)' in client
+print('PASS: long-session resync keeps effects alive without blanking applied settings')

@@ -1,0 +1,65 @@
+// Magnetic fluid: metaball liquid that pools between the keys, stretches toward
+// fingertips, splashes on taps and tilts with the device. The CPU simulation owns
+// blob positions; this program renders the surface, lighting and touch glow.
+// Uniform order matters for the desktop Skia test: scalar block first so the
+// float4 arrays start 16-byte aligned.
+uniform float2 resolution;
+uniform float time;
+uniform float strength;
+uniform float hue;
+uniform float hue2;
+uniform float saturation;
+uniform float tiltX;
+uniform float tiltY;
+uniform float ripple;
+uniform float glow;
+uniform float detail;
+uniform float4 blobs[12];
+uniform float4 touches[4];
+float3 hueRgb(float h){
+    float3 w=abs(fract(float3(h)+float3(0,.6666667,.3333333))*6-3);
+    return mix(float3(1),clamp(w-1,0,1),clamp(saturation,0,1));
+}
+half4 main(float2 frag){
+    float F=0;float2 grad=float2(0);float charge=0;
+    for(int i=0;i<12;i++){
+        float4 b=blobs[i];
+        if(b.z<=0)continue;
+        float2 d=frag-b.xy;
+        float r2=b.z*b.z;
+        float d2=dot(d,d)+r2*.18;
+        float w=r2/d2;
+        F+=w;grad-=2*w/d2*d;charge+=b.w*w;
+    }
+    float touchLight=0;
+    for(int j=0;j<4;j++){
+        float4 t=touches[j];
+        if(t.z<=.01)continue;
+        float2 d=frag-t.xy;
+        float reach=max(resolution.y,1)*.16;
+        float r2=reach*reach;
+        float d2=dot(d,d)+r2*.25;
+        float w=r2/d2*t.z*.8;
+        // Fingers act as magnets: the surface itself leans toward them.
+        F+=w;grad-=2*w/d2*d;
+        touchLight+=t.z*exp(-dot(d,d)/(r2*.55));
+    }
+    float iso=1;
+    float body=smoothstep(iso-.22,iso+.30,F);
+    float halo=smoothstep(iso*.42,iso,F);
+    if(body<=0&&halo<=0)return half4(0,0,0,0);
+    float e=clamp(charge*.5+touchLight*.7,0,1);
+    float3 nrm=normalize(float3(grad*2.2,7));
+    float3 lightDir=normalize(float3(-tiltX*.8-.22,-tiltY*.8-.4,1));
+    float diff=clamp(dot(nrm,lightDir),0,1);
+    float spec=pow(clamp(dot(reflect(-lightDir,nrm),float3(0,0,1)),0,1),26);
+    float shimmer=.5+.5*sin(F*(2.6+1.8*clamp(detail,0,2))-time*2.4+frag.x*.021+frag.y*.017);
+    float3 deep=hueRgb(hue)*.16;
+    float3 bodyColor=mix(deep,hueRgb(hue+.045*shimmer)*(.52+.34*diff),body);
+    bodyColor+=hueRgb(hue2)*e*.38*body;
+    float3 rim=mix(hueRgb(hue2),float3(1),.35);
+    float3 color=bodyColor+rim*spec*(.5+.5*e)+float3(1)*touchLight*.10*clamp(ripple,0,2);
+    float alpha=(body*(.52+.34*diff)+halo*clamp(glow,0,2)*.14)*clamp(strength,0,1);
+    alpha=min(alpha,.88*clamp(strength,0,1));
+    return half4(clamp(color,0,1)*alpha,alpha);
+}
