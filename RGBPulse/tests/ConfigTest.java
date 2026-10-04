@@ -46,7 +46,8 @@ public final class ConfigTest {
         p.put("hideTiles45",false);check(Config.from(p).tiles);
         p.put("hideTiles45",true);p.put("ripple40",false);p.put("tapEffects36",false);
         check(!Config.from(p).enabled); // hiding tiles never silently enables effects
-        for(int style=0;style<10;style++){p.put("pulse47",style);check(Config.from(p).effect==style);}
+        for(int style=0;style<8;style++){p.put("pulse47",style);check(Config.from(p).effect==style);}
+        p.put("pulse47",9);check(Config.from(p).effect==7); // wide indices are not key animations
         p.remove("pulse47");p.put("tapFx6",19);check(Config.from(p).effect==7);
         check(Config.from(p).pulseDuration==160);p.put("pulseDuration47",999);check(Config.from(p).pulseDuration==360);
         p.put("pulseDuration47",1);check(Config.from(p).pulseDuration==120);
