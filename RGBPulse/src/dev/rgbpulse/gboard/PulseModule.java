@@ -189,6 +189,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
     }
 
     static final class Controller implements ViewTreeObserver.OnPreDrawListener, ViewTreeObserver.OnGlobalLayoutListener, View.OnAttachStateChangeListener, Runnable {
+        static final long RESYNC_MS=30000;
         final ViewGroup root;
         final Fx fx;
         final LifecycleLight light;
@@ -205,6 +206,12 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         long lastScan, lastDraw; int missedFrames; String lastLog = "";
         final Runnable settleScan = new Runnable(){public void run(){if(!visible||disposed)return;safeScan(true);kick();}};
         final Runnable scanLater = new Runnable() { public void run() { safeScan(true); kick(); } };
+        // Long sessions resync settings periodically so nothing silently expires.
+        final Runnable resync = new Runnable(){public void run(){
+            if(disposed||!visible)return;
+            SettingsClient.request();
+            root.postDelayed(this,RESYNC_MS);
+        }};
 
         Controller(ViewGroup root) {
             this.root = root; light=new LifecycleLight(root); fx = new Fx(root.getResources().getDisplayMetrics().density); fx.cfg = config;
@@ -225,13 +232,14 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
         void applyCurrentSettings(){
             if(disposed)return;
             // Off must clean up even if the panel is hidden or no longer bound.
-            root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);ticking=false;
+            root.removeCallbacks(this);root.removeCallbacks(scanLater);root.removeCallbacks(settleScan);root.removeCallbacks(resync);ticking=false;
             if(!config.enabled||!visible)light.cancel();
             fx.clear();keyStyle.restore();bind(null);
             KeyStyle.configure(config,root.getContext());fx.cfg=config;
             disabled=false;missedFrames=0;layoutDirty=true;
             if(!config.enabled||!visible){root.invalidate();return;}
             if(config.debug){lastLog="";CapHooks.traces=0;}
+            root.postDelayed(resync,RESYNC_MS);
             safeScan(true);kick();
         }
         void openingLight(){light.play(config.opening,false,config.rippleActive,lightArea());}
@@ -394,7 +402,7 @@ public final class PulseModule implements IXposedHookLoadPackage, IXposedHookZyg
             }
         }
         void pause() {
-            light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); ticking=false;
+            light.cancel();openPending=false;visible=false; fx.clear();keyStyle.clearRippleFades(); root.removeCallbacks(this); root.removeCallbacks(scanLater); root.removeCallbacks(settleScan); root.removeCallbacks(resync); ticking=false;
             if (body!=null) {body.invalidate();for(View k:keys) k.invalidate();keyStyle.refreshRipples();}
         }
         @Override public void onViewAttachedToWindow(View v) { observe(); show(); }

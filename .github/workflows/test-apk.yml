@@ -2,7 +2,7 @@ name: APK checks
 
 on:
   push:
-    branches: ['arena/01a0f95a-gboard-rgb-pulse']
+    branches: ['arena/01a106a7-gboard-rgb-pulse']
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/arena/01a0f95a-gboard-rgb-pulse'
+    if: github.ref == 'refs/heads/arena/01a106a7-gboard-rgb-pulse'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Run regression and policy tests
-        run: bash RGBPulse/test.sh
+        run: |
+          set +e
+          bash RGBPulse/test.sh > /tmp/test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -n -E "error:|Error|Exception|Traceback|FAIL|assert" /tmp/test.log | head -n 8 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 6 /tmp/test.log | while IFS= read -r line; do echo "::error::tail: $line"; done
+            exit "$status"
+          fi
+          cat /tmp/test.log
       - name: Verify background shaders with desktop Skia
         run: |
           sudo apt-get update -qq
@@ -48,17 +57,26 @@ jobs:
       - name: Locate Android build tools
         run: echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
       - name: Build test APK
-        run: bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.0.2.apk
+        run: |
+          set +e
+          bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.0.3.apk > /tmp/build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -n -E "error:|Error:|Exception" /tmp/build.log | head -n 8 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 6 /tmp/build.log | while IFS= read -r line; do echo "::error::tail: $line"; done
+            exit "$status"
+          fi
+          cat /tmp/build.log
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-1.0.2.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.0.2.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-1.0.2.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-1.0.2.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-1.0.3.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.0.3.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-1.0.3.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-1.0.3.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-1.0.2.apk
+            Gboard-RGB-Pulse-1.0.3.apk
             APK-verification.txt
             SHA256SUMS.txt

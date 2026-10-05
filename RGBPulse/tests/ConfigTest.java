@@ -46,7 +46,8 @@ public final class ConfigTest {
         p.put("hideTiles45",false);check(Config.from(p).tiles);
         p.put("hideTiles45",true);p.put("ripple40",false);p.put("tapEffects36",false);
         check(!Config.from(p).enabled); // hiding tiles never silently enables effects
-        for(int style=0;style<10;style++){p.put("pulse47",style);check(Config.from(p).effect==style);}
+        for(int style=0;style<12;style++){p.put("pulse47",style);check(Config.from(p).effect==style);}
+        p.put("pulse47",16);check(Config.from(p).effect==11); // background indices are not key animations
         p.remove("pulse47");p.put("tapFx6",19);check(Config.from(p).effect==7);
         check(Config.from(p).pulseDuration==160);p.put("pulseDuration47",999);check(Config.from(p).pulseDuration==360);
         p.put("pulseDuration47",1);check(Config.from(p).pulseDuration==120);
@@ -55,9 +56,16 @@ public final class ConfigTest {
         c=Config.from(p);check(c.rippleOpacity==70&&c.backgroundOpacity==90); // no hidden legacy dim
         p.put("rippleActive42",0xff123456);p.put("letterInactive42",0xffaabbcc);p.put("borderWidth42",99);p.put("rippleStyle42",3);
         c=Config.from(p);check(c.rippleActive==0xff123456&&c.letterInactive==0xffaabbcc&&c.borderTenths==30&&c.rippleStyle==3);
-        check(Config.EFFECTS.length==10&&Config.EFFECT_HINTS.length==10);
-        p.put("quietBackground48",true);c=Config.from(p);check(c.enabled&&c.quietBackground&&!c.ripple&&!c.tapEffects);
-        p.put("quietBackground48",false);check(!Config.from(p).enabled);
+        check(Config.EFFECTS.length==16&&Config.EFFECT_HINTS.length==16);
+        p.put("quietBackground48",true);p.put("quietStrength48",90);check(!Config.from(p).enabled); // removed quiet background stays inert
+        p.remove("quietBackground48");p.remove("quietStrength48");
+        p.put("fluid50",true);p.put("fluidStrength50",70);check(!Config.from(p).enabled); // removed feature keys stay inert
+        p.remove("fluid50");p.remove("fluidStrength50");
+        p.put("pulse47",9);check(Config.from(p).effect==9);p.put("pulse47",12);check(Config.from(p).effect==11);
+        p.put("pulse47",3);p.put("background51",2);c=Config.from(p);check(c.enabled&&c.background==2&&c.effect==3);
+        p.put("background51",9);check(Config.from(p).background==4);
+        p.put("bgduration51",9999);check(Config.from(p).bgDuration==3500);p.put("bgduration51",10);check(Config.from(p).bgDuration==300);p.put("bgduration51",1800);check(Config.from(p).bgDuration==1800);
+        p.put("background51",0);p.put("tapEffects36",false);check(!Config.from(p).enabled);
         p.put("opening46",2);c=Config.from(p);check(c.enabled&&c.opening==2&&!c.ripple&&!c.tapEffects);
         p.put("opening46",0);p.put("closing46",3);check(Config.from(p).enabled);
         p.put("closing46",0);check(!Config.from(p).enabled);

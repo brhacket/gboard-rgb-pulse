@@ -1,0 +1,34 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Gboard RGB Pulse local build
+Signer #1 certificate SHA-256 digest: 11652f2818e4c961809992b7b2b70e35a8dc5c074dd3c1e020bcea24d6645cc4
+Signer #1 certificate SHA-1 digest: 28aaa932f53d2e8f0d913a2b7e690ae0732e5712
+Signer #1 certificate MD5 digest: 78d7d907ffe47434021fafa0c0fa06f6
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: b6c4d31a3a972413b7255a0b632d95181f10c20ec2ffb65307060de8fb5c122e
+Signer #1 public key SHA-1 digest: 14f1166e6c341b7a2a131d145561098a300810b6
+Signer #1 public key MD5 digest: e24b350113c7274ebdba22e6187a0076
+package: name='dev.rgbpulse.gboard' versionCode='51' versionName='1.0.3' platformBuildVersionName='14' platformBuildVersionCode='34' compileSdkVersion='34' compileSdkVersionCodename='14'
+sdkVersion:'33'
+targetSdkVersion:'34'
+uses-permission: name='dev.rgbpulse.gboard.permission.NOTIFY_SETTINGS'
+application-label:'Gboard RGB Pulse'
+application-icon-160:'res/drawable/ic_launcher.png'
+application: label='Gboard RGB Pulse' icon='res/drawable/ic_launcher.png'
+launchable-activity: name='dev.rgbpulse.gboard.SettingsActivity'  label='Gboard RGB Pulse' icon=''
+feature-group: label=''
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+main
+other-receivers
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--'
+densities: '160'

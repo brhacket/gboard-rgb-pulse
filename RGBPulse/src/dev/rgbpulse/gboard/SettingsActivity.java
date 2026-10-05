@@ -13,7 +13,7 @@ import android.view.*;
 import android.widget.*;
 import java.util.Map;
 
-/** One effect, three controls, and an explicit boundary between draft and live settings. */
+/** Draft-based studio: edit freely, then one button saves everything and restarts Gboard. */
 public final class SettingsActivity extends Activity {
     private SharedPreferences applied, draft;
     private Config cfg;
@@ -24,7 +24,10 @@ public final class SettingsActivity extends Activity {
     private final Runnable confirmationTick=()->checkConfirmation();
     private TextView state, shaderStatus;
     private View backgroundPalette;
-    private Button apply;
+    private View bgPalette;
+    private View secondaryHueRow;
+    private View secondaryBgHueRow;
+    private Button saveRestart;
     private Preview preview;
     private LinearLayout controls;
     private ScrollView settingsScroll;
@@ -36,11 +39,14 @@ public final class SettingsActivity extends Activity {
 
     private static final int BG=0xff0c1419, CARD=0xff182329, INK=0xfff1f2ef, MUTED=0xffa2aaa9;
 
+    interface HueSink{void hue(int degrees);}
+    interface SvSink{void sv(float s,float v);}
+
     @SuppressWarnings("deprecation")
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         dp=getResources().getDisplayMetrics().density;
-        if(saved!=null){selectedPage=Config.clamp(saved.getInt("page46",0),0,2);previewCollapsed=saved.getBoolean("previewCollapsed46",false);}
+        if(saved!=null){selectedPage=Config.clamp(saved.getInt("page46",0),0,3);previewCollapsed=saved.getBoolean("previewCollapsed46",false);}
         applied=getSharedPreferences(Config.PREFS,Context.MODE_PRIVATE);
         draft=getSharedPreferences("settings_draft",Context.MODE_PRIVATE);
         if(saved==null){copySettings(applied.getAll(),draft).commit();prepareDraft();}
@@ -86,23 +92,25 @@ public final class SettingsActivity extends Activity {
             if(preview.getLayoutParams().height!=height){preview.getLayoutParams().height=height;preview.requestLayout();}
         });
         LinearLayout navigation=new LinearLayout(this);navigation.setPadding(0,px(8),0,px(8));pinned.addView(navigation);
-        pageButtons=new Button[3];String[] titles={"Ripple","Touch","Keyboard"};
-        for(int i=0;i<3;i++){final int index=i;Button tab=button(titles[i],false);pageButtons[i]=tab;
+        pageButtons=new Button[4];String[] titles={"Ripple","Keys","Background","Keyboard"};
+        for(int i=0;i<4;i++){final int index=i;Button tab=button(titles[i],false);pageButtons[i]=tab;
             tab.setOnClickListener(v->selectPage(index));navigation.addView(tab,new LinearLayout.LayoutParams(0,px(48),1));}
         ScrollView scroll=new ScrollView(this);settingsScroll=scroll;scroll.setFillViewport(true);
         controls=new LinearLayout(this);controls.setOrientation(1);controls.setPadding(px(18),0,px(18),px(24));
         scroll.addView(controls);shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        pages=new LinearLayout[3];for(int i=0;i<3;i++){pages[i]=new LinearLayout(this);pages[i].setOrientation(1);controls.addView(pages[i]);}
-        LinearLayout ripplePage=pages[0],pulsePage=pages[1],keyboardPage=pages[2];
+        pages=new LinearLayout[4];for(int i=0;i<4;i++){pages[i]=new LinearLayout(this);pages[i].setOrientation(1);controls.addView(pages[i]);}
+        LinearLayout ripplePage=pages[0],keysPage=pages[1],bgPage=pages[2],keyboardPage=pages[3];
         ripplePage.addView(text("A little extra, when you want it",20,INK));
-        ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Touch feedback instead.",13,MUTED));
-        pulsePage.addView(text("Small details. Better typing.",20,INK));
-        pulsePage.addView(text("Key feedback and quiet background light work independently. No traveling wave needed.",13,MUTED));
+        ripplePage.addView(text("Traveling ripple is optional. For an everyday setup, leave this off and use Keys instead.",13,MUTED));
+        keysPage.addView(text("Small details. Better typing.",20,INK));
+        keysPage.addView(text("Layered-light responses on the tapped key, with their own colors. No traveling wave needed.",13,MUTED));
+        bgPage.addView(text("A sky behind your keys",20,INK));
+        bgPage.addView(text("Wide light shows behind the keyboard, with their own color modes. They run independently of key animations — use either, or both at once.",13,MUTED));
         keyboardPage.addView(text("Make yourself at home",20,INK));
         keyboardPage.addView(text("Opening light, closing light, and a place to test the real thing.",13,MUTED));
         LinearLayout keyboardTest=card(keyboardPage);
         keyboardTest.addView(text("Test your keyboard",17,INK));
-        keyboardTest.addView(text("Tap below to open your actual keyboard. Gboard uses your last applied settings, not the draft above. Typed text is not saved by this app.",12,MUTED));
+        keyboardTest.addView(text("Tap below to open your actual keyboard. Gboard uses your last saved settings, not the draft above. Typed text is not saved by this app.",12,MUTED));
         EditText test=new EditText(this);test.setHint("Type here with Gboard…");test.setTextColor(INK);test.setHintTextColor(MUTED);
         test.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         test.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffb9efd4));
@@ -119,7 +127,7 @@ public final class SettingsActivity extends Activity {
         Switch tiles=new Switch(this);tiles.setText("Hide key fills");tiles.setTextColor(INK);tiles.setMinHeight(px(48));tiles.setChecked(cfg.hideTiles);
         tiles.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("hideTiles45",value).apply();changed();});settings.addView(tiles);
         settings.addView(text("Keep the keyboard airy without solid key tiles. Ripple borders stay visible. Turn all lighting off to restore your Gboard theme.",12,MUTED));
-        slider(settings,"Duration",400,1100,Config.clamp(cfg.duration,400,1100),true);
+        slider(settings,"Duration",150,1100,Config.clamp(cfg.duration,150,1100),true);
         Button rippleStyle=button("Ripple · "+Config.RIPPLES[cfg.rippleStyle],false);
         rippleStyle.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Ripple effect")
             .setSingleChoiceItems(Config.RIPPLES,cfg.rippleStyle,(dialog,index)->{
@@ -137,89 +145,103 @@ public final class SettingsActivity extends Activity {
         colorControl(appearancePanel,"Letters · inactive","letterInactive42",cfg.letterInactive);
 
 
-        Button backgrounds=button("Background animations  +",false);pulsePage.addView(backgrounds);
-        LinearLayout backgroundPanel=card(pulsePage);backgrounds.setVisibility(View.GONE);
-        backgrounds.setOnClickListener(v->{boolean open=backgroundPanel.getVisibility()!=View.VISIBLE;
-            backgroundPanel.setVisibility(open?View.VISIBLE:View.GONE);backgrounds.setText(open?"Background animations  −":"Background animations  +");});
-        Switch backgroundOn=new Switch(this);backgroundOn.setText("Tap feedback");backgroundOn.setTextColor(INK);
+        LinearLayout keysCard=card(keysPage);
+        Switch backgroundOn=new Switch(this);backgroundOn.setText("Key animations");backgroundOn.setTextColor(INK);
         backgroundOn.setMinHeight(px(48));backgroundOn.setChecked(cfg.tapEffects);
-        backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});backgroundPanel.addView(backgroundOn);
-        backgroundPanel.addView(text("Start with Soft press: one short response beneath your finger. Wide orbit and Wide aurora remain optional expressive choices.",12,MUTED));
-        backgroundStrength(backgroundPanel);
-        slider(backgroundPanel,"Feedback length",120,360,cfg.pulseDuration,true);
+        backgroundOn.setOnCheckedChangeListener((b,value)->{cfg.tapEffects=value;draft.edit().putBoolean("tapEffects36",value).apply();changed();});keysCard.addView(backgroundOn);
+        keysCard.addView(text("Layered-light responses on the tapped key. Start with Soft press.",12,MUTED));
+        final String[] keyEffects=java.util.Arrays.copyOfRange(Config.EFFECTS,0,Config.KEY_COUNT);
         TextView effectHint=text(Config.EFFECT_HINTS[cfg.effect],13,MUTED);
-        Button effect=button("Animation · "+Config.EFFECTS[cfg.effect],false);
-        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Choose your tap feedback")
-            .setSingleChoiceItems(Config.EFFECTS,cfg.effect,(dialog,index)->{
-                cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(effect);backgroundPanel.addView(effectHint);
-        Button colors=button("Color mode · "+Config.COLORS[cfg.colorMode],false);
-        colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
+        Button effect=button("Key animation · "+Config.EFFECTS[cfg.effect],false);
+        effect.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key animation")
+            .setSingleChoiceItems(keyEffects,cfg.effect,(dialog,index)->{
+                cfg.effect=index;draft.edit().putInt("pulse47",index).apply();effect.setText("Key animation · "+Config.EFFECTS[index]);effectHint.setText(Config.EFFECT_HINTS[index]);changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());keysCard.addView(effect);keysCard.addView(effectHint);
+        slider(keysCard,"Feedback length",120,360,cfg.pulseDuration,true);
+        LinearLayout bgCard=card(bgPage);
+        Button bg=button("Background · "+(cfg.background==0?"Off":Config.EFFECTS[Config.KEY_COUNT-1+cfg.background]),false);
+        TextView bgHint=text(cfg.background==0?"Choose a wide light show. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[Config.KEY_COUNT-1+cfg.background],13,MUTED);
+        bg.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background animation")
+            .setSingleChoiceItems(new String[]{"Off","Comet sweep","Nebula bloom","Starfall","Polar veil"},cfg.background,(dialog,index)->{
+                cfg.background=index;draft.edit().putInt("background51",index).apply();
+                bg.setText("Background · "+(index==0?"Off":Config.EFFECTS[Config.KEY_COUNT-1+index]));
+                bgHint.setText(index==0?"Choose a wide light show. It runs independently of key animations — use either, or both at once.":Config.EFFECT_HINTS[Config.KEY_COUNT-1+index]);
+                changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());bgCard.addView(bg);bgCard.addView(bgHint);
+        slider(bgCard,"Background length",300,3500,cfg.bgDuration,true);
+        backgroundStrength(bgCard);
+        Button colors=button("Key color mode · "+Config.COLORS[cfg.colorMode],false);
+        colors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Key color mode")
             .setSingleChoiceItems(Config.COLORS,cfg.colorMode,(dialog,index)->{
-                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Color mode · "+Config.COLORS[index]);changed();dialog.dismiss();
-            }).setNegativeButton("Cancel",null).show());backgroundPanel.addView(colors);
-        backgroundPalette=new View(this);backgroundPalette.setContentDescription("Background palette preview");backgroundPanel.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
-        hueControl(backgroundPanel,"Primary hue","hue1",true);
-        hueControl(backgroundPanel,"Secondary hue","hue2",false);
+                cfg.colorMode=index;draft.edit().putInt("colorMode",index).apply();colors.setText("Key color mode · "+Config.COLORS[index]);
+                if(secondaryHueRow!=null)secondaryHueRow.setVisibility(index==3?View.VISIBLE:View.GONE);
+                changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());keysCard.addView(colors);
+        backgroundPalette=new View(this);backgroundPalette.setContentDescription("Key palette preview");keysCard.addView(backgroundPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
+        hueControl(keysCard,"Primary hue","hue1",true,false);
+        secondaryHueRow=hueControl(keysCard,"Secondary hue","hue2",false,false);
+        secondaryHueRow.setVisibility(cfg.colorMode==3?View.VISIBLE:View.GONE);
+        Button everyday=button("Try everyday setup",false);keysCard.addView(everyday);
+        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putInt("background51",0).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — tap Save & restart Gboard when you’re ready.",Toast.LENGTH_SHORT).show();});
+        Button bgColors=button("Background color mode · "+Config.COLORS[cfg.bgColorMode],false);
+        bgColors.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Background color mode")
+            .setSingleChoiceItems(Config.COLORS,cfg.bgColorMode,(dialog,index)->{
+                cfg.bgColorMode=index;draft.edit().putInt("bcolorMode51",index).apply();bgColors.setText("Background color mode · "+Config.COLORS[index]);
+                if(secondaryBgHueRow!=null)secondaryBgHueRow.setVisibility(index==3?View.VISIBLE:View.GONE);
+                changed();dialog.dismiss();
+            }).setNegativeButton("Cancel",null).show());bgCard.addView(bgColors);
+        bgPalette=new View(this);bgPalette.setContentDescription("Background palette preview");bgCard.addView(bgPalette,new LinearLayout.LayoutParams(-1,px(24)));updatePalette();
+        hueControl(bgCard,"Background hue","bhue151",true,true);
+        secondaryBgHueRow=hueControl(bgCard,"Secondary background hue","bhue251",false,true);
+        secondaryBgHueRow.setVisibility(cfg.bgColorMode==3?View.VISIBLE:View.GONE);
 
         LinearLayout transitions=card(keyboardPage);
         transitions.addView(text("Hello & goodbye",18,INK));
         transitions.addView(text("A dramatic reveal or exit, with the keys firmly in place. Closing depends on Android’s dismissal timing and may be cut short.",13,MUTED));
         transitionControl(transitions,"Opening light","opening46",false);
         transitionControl(transitions,"Closing light","closing46",true);
-        LinearLayout quietCard=card(pulsePage);
-        quietCard.addView(text("Quiet background",18,INK));
-        quietCard.addView(text("One small pool of light near the tapped key. No spreading rings, no full-keyboard wash. Fast taps replace the glow rather than stacking it.",13,MUTED));
-        Switch quietOn=new Switch(this);quietOn.setText("Subtle background on tap");quietOn.setTextColor(INK);quietOn.setMinHeight(px(48));quietOn.setChecked(cfg.quietBackground);
-        quietOn.setOnCheckedChangeListener((b,value)->{draft.edit().putBoolean("quietBackground48",value).apply();changed();});quietCard.addView(quietOn);
-        TextView quietValue=text("Softness · "+cfg.quietStrength+"%",14,INK);quietCard.addView(quietValue);
-        SeekBar quietLevel=new SeekBar(this);quietLevel.setMax(90);quietLevel.setProgress(cfg.quietStrength-10);quietLevel.setMinimumHeight(px(48));quietLevel.setContentDescription("Quiet background intensity");
-        quietLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar b,int value,boolean user){if(user){draft.edit().putInt("quietStrength48",value+10).apply();quietValue.setText("Softness · "+(value+10)+"%");changed();}}
-            public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
-        });quietCard.addView(quietLevel);
-        Button everyday=button("Try everyday setup",false);quietCard.addView(everyday);
-        everyday.setOnClickListener(v->{draft.edit().putBoolean("ripple40",false).putBoolean("tapEffects36",true).putInt("pulse47",7).putInt("pulseDuration47",160).putBoolean("quietBackground48",true).putInt("opening46",0).putInt("closing46",0).apply();render();Toast.makeText(this,"Preview only — Apply changes when you’re ready.",Toast.LENGTH_SHORT).show();});
         Button help=button("Setup & troubleshooting  +",false);keyboardPage.addView(help);
         LinearLayout details=card(keyboardPage);details.setVisibility(View.GONE);
         help.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);help.setText(open?"Setup & troubleshooting  −":"Setup & troubleshooting  +");});
-        details.addView(text("Pulse Studio · version 1.0.2\nSettings are stored privately. Apply sends a revision to Gboard; only a matching reply is shown as confirmed. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
-        details.addView(text("Android 13+ and LSPosed / Vector are required. Press Apply after editing. If Gboard does not refresh, close and reopen it manually. Save only leaves Gboard running. Save & restart requests root only after confirmation. Font replacement and gesture trails remain off.",13,MUTED));
-        details.addView(text("Background animations remain optional and work together with the refined ripple. Font replacement and gesture trails remain off. Gboard is unchanged until Apply.",13,MUTED));
+        details.addView(text("Pulse Studio · version 1.0.3\nSettings are stored privately. Saving force-stops Gboard once, so the keyboard always reopens with exactly what you saved. Enable this module in LSPosed / Vector and scope Gboard. After upgrading from an older build, reboot once to unload the old hooks.",13,MUTED));
+        details.addView(text("Android 13+ and LSPosed / Vector are required. Edit anything, then tap Save & restart Gboard: one tap saves everything and restarts the keyboard. The force-stop needs root; without it, opening the keyboard still syncs the new settings. Font replacement and gesture trails remain off.",13,MUTED));
+        details.addView(text("Background animations are optional and work together with the refined ripple. Gboard is unchanged until you save.",13,MUTED));
         Switch logs=new Switch(this);logs.setText("Detailed layout logs (no drawing)");logs.setTextColor(INK);logs.setMinHeight(px(48));logs.setChecked(cfg.debug);
         logs.setOnCheckedChangeListener((b,value)->{cfg.debug=value;draft.edit().putBoolean("debug3",value).apply();changed();});details.addView(logs);
-        details.addView(text("If letter colors do not change: enable logs, Apply & restart, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
-        Button emergency=button("Turn everything off & apply",false);
+        details.addView(text("If letter colors do not change: enable logs, Save & restart Gboard, then tap a few keys. In LSPosed logs, share only lines beginning RGBPulse legend, plus your Gboard version. These lines contain renderer names and counters, not typed text.",12,MUTED));
+        Button emergency=button("Turn everything off & save",false);
         emergency.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Disable all module effects?")
-            .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint when Gboard receives it. This does not disable Gboard’s own native key-press animation. No root restart is requested.")
-            .setPositiveButton("Disable & apply",(d,w)->{
+            .setMessage("Turns all lighting off and removes module tiles, overlays and letter tint. This does not disable Gboard’s own native key-press animation. Everything is saved and Gboard is force-stopped, so the change is live the next time the keyboard opens.")
+            .setPositiveButton("Disable & save",(d,w)->{
                 draft.edit().putBoolean("refined37",true).putBoolean("ripple40",false).putBoolean("tapEffects36",false)
-                    .putBoolean("quietBackground48",false).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
-                render();persist(false);
+                    .putInt("background51",0).putInt("opening46",0).putInt("closing46",0).putBoolean("enabled",false).putBoolean("glass9",false).putBoolean("tiles41",false).putInt("side20",0).putInt("trail19",0).apply();
+                render();persist();
             }).setNegativeButton("Cancel",null).show());details.addView(emergency);
         Button keyboardSettings=button("Open app settings",false);keyboardSettings.setOnClickListener(v->openGboardSettings());details.addView(keyboardSettings);
-        Button restartKeyboard=button("Save & restart keyboard…",false);restartKeyboard.setOnClickListener(v->applySettings());details.addView(restartKeyboard);
         Button reset=button("Reset draft",false);reset.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until Apply.")
+            .setTitle("Reset draft?").setMessage("Ripple will be off, with balanced strength and duration. Nothing changes in Gboard until you save.")
             .setPositiveButton("Reset",(d,w)->{draft.edit().clear().apply();prepareDraft();render();}).setNegativeButton("Cancel",null).show());details.addView(reset);
-        keyboardPage.addView(text("Your draft stays here until you apply it. Nothing plays automatically in the preview.",12,MUTED));
+        keyboardPage.addView(text("Your draft stays here until you save it. Nothing plays automatically in the preview.",12,MUTED));
 
         LinearLayout footer=new LinearLayout(this);footer.setOrientation(1);footer.setPadding(px(22),px(8),px(22),px(12));footer.setBackgroundColor(BG);
         state=text("",12,MUTED);state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);footer.addView(state);
         LinearLayout actions=new LinearLayout(this);
         Button discard=button("Discard",false);discard.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Discard draft changes?")
-            .setMessage("Reload your last applied settings. Gboard will not be changed.")
+            .setMessage("Reload your last saved settings. Gboard will not be changed.")
             .setPositiveButton("Discard",(d,w)->{copySettings(applied.getAll(),draft).commit();prepareDraft();render();}).setNegativeButton("Cancel",null).show());
         details.addView(discard);
-        Button restart=button("Restart…",false);restart.setOnClickListener(v->applySettings());actions.addView(restart,new LinearLayout.LayoutParams(0,px(52),1));
-        apply=button("Apply changes",true);apply.setOnClickListener(v->persist(false));
-        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,px(52),2);ap.leftMargin=px(10);actions.addView(apply,ap);
+        // The one and only apply path: saves every setting, then force-stops Gboard so
+        // the keyboard reopens with the new configuration. No separate apply step.
+        saveRestart=button("Save & restart Gboard",true);
+        saveRestart.setContentDescription("Save all settings and force-stop Gboard");
+        saveRestart.setOnClickListener(v->persist());
+        actions.addView(saveRestart,new LinearLayout.LayoutParams(-1,px(56)));
         footer.addView(actions);
 shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selectedPage);updateState();
     }
     private void selectPage(int index){
         selectedPage=index;if(settingsScroll!=null)settingsScroll.scrollTo(0,0);
-        for(int i=0;i<3;i++){
+        for(int i=0;i<4;i++){
             pages[i].setVisibility(i==index?View.VISIBLE:View.GONE);
             pageButtons[i].setSelected(i==index);
             pageButtons[i].setTextColor(i==index?BG:MUTED);
@@ -257,6 +279,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             public void onProgressChanged(SeekBar b,int progress,boolean user){if(!user)return;int n=min+progress;
                 label.setText(name+"  ·  "+n+(duration?" ms":"%"));
                 if(duration&&name.equals("Feedback length")){cfg.pulseDuration=n;draft.edit().putInt("pulseDuration47",n).apply();}
+                else if(duration&&name.equals("Background length")){cfg.bgDuration=n;draft.edit().putInt("bgduration51",n).apply();}
                 else if(duration){cfg.duration=n;draft.edit().putInt("duration3",n).apply();}
                 else{cfg.rippleOpacity=n;draft.edit().putInt("rippleStrength41",n).apply();}changed();}
             public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
@@ -290,9 +313,19 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             chip.setOnClickListener(v->input.setText(hex(color)));palette.addView(chip,new LinearLayout.LayoutParams(0,px(48),1));
         }
         final int[] candidate={Config.number(draft,key,fallback)};sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);
+        // A real picker: saturation/value square plus hue bar, synced with hex and sample.
+        final float[] hsv=new float[3];Color.colorToHSV(candidate[0],hsv);
+        final Runnable[] apply=new Runnable[1];
+        ColorSquare square=new ColorSquare(this,hsv[0],hsv[1],hsv[2],(s,v)->{hsv[1]=s;hsv[2]=v;apply[0].run();});
+        content.addView(square,new LinearLayout.LayoutParams(-1,px(170)));
+        HueBar hbar=new HueBar(this,hsv[0],deg->{hsv[0]=deg;square.setHue(deg);apply[0].run();});
+        content.addView(hbar,new LinearLayout.LayoutParams(-1,px(44)));
+        apply[0]=()->{candidate[0]=Color.HSVToColor(hsv)|0xff000000;sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);input.setText(hex(candidate[0]));};
+        apply[0].run();
         input.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
-                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString());sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}}
+                if(s.toString().matches("#[0-9a-fA-F]{6}")){candidate[0]=Color.parseColor(s.toString())|0xff000000;Color.colorToHSV(candidate[0],hsv);
+                    square.setHue(hsv[0]);square.setSV(hsv[1],hsv[2]);sample.setTextColor(candidate[0]);swatch(sample,candidate[0]);}}
             public void afterTextChanged(android.text.Editable e){}
         });
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Use in draft",null).setNegativeButton("Cancel",null).create();
@@ -301,14 +334,17 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             draft.edit().putInt(key,candidate[0]).apply();select.setText(title+"  "+hex(candidate[0]));swatch(select,candidate[0]);changed();dialog.dismiss();
         }));dialog.show();
     }
-    private void updatePalette(){
-        if(backgroundPalette==null)return;
-        int first=Color.HSVToColor(new float[]{cfg.hue1,cfg.sat/100f,1}),second=Color.HSVToColor(new float[]{cfg.hue2,cfg.sat/100f,1});
+    private GradientDrawable paletteDrawable(int mode,int h1,int h2,int sat){
+        int first=Color.HSVToColor(new float[]{h1,sat/100f,1}),second=Color.HSVToColor(new float[]{h2,sat/100f,1});
         int[] colors;
-        if(cfg.colorMode==2)colors=new int[]{first,first};
-        else if(cfg.colorMode==3)colors=new int[]{first,second};
-        else{colors=new int[7];for(int i=0;i<7;i++)colors[i]=Color.HSVToColor(new float[]{i*60,cfg.sat/100f,1});}
-        GradientDrawable palette=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,colors);palette.setCornerRadius(px(8));backgroundPalette.setBackground(palette);
+        if(mode==2)colors=new int[]{first,first};
+        else if(mode==3)colors=new int[]{first,second};
+        else{colors=new int[7];for(int i=0;i<7;i++)colors[i]=Color.HSVToColor(new float[]{i*60,sat/100f,1});}
+        GradientDrawable palette=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,colors);palette.setCornerRadius(px(8));return palette;
+    }
+    private void updatePalette(){
+        if(backgroundPalette!=null)backgroundPalette.setBackground(paletteDrawable(cfg.colorMode,cfg.hue1,cfg.hue2,cfg.sat));
+        if(bgPalette!=null)bgPalette.setBackground(paletteDrawable(cfg.bgColorMode,cfg.bgHue1,cfg.bgHue2,cfg.bgSat));
     }
     private void backgroundStrength(LinearLayout panel){
         TextView label=text("Background brightness · "+cfg.backgroundOpacity+"%",14,INK);panel.addView(label);
@@ -319,16 +355,81 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
             public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
         });panel.addView(bar);
     }
-    private void hueControl(LinearLayout panel,String title,String key,boolean primary){
-        TextView value=text(title+" · "+(primary?cfg.hue1:cfg.hue2)+"°",13,INK);panel.addView(value);
-        swatch(value,Color.HSVToColor(new float[]{primary?cfg.hue1:cfg.hue2,cfg.sat/100f,1}));
-        SeekBar hue=new SeekBar(this);hue.setMax(360);hue.setProgress(primary?cfg.hue1:cfg.hue2);hue.setMinimumHeight(px(48));hue.setContentDescription(title);
-        hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar bar,int progress,boolean user){if(!user)return;
-                if(primary)cfg.hue1=progress;else cfg.hue2=progress;
-                value.setText(title+" · "+progress+"°");swatch(value,Color.HSVToColor(new float[]{progress,cfg.sat/100f,1}));draft.edit().putInt(key,progress).apply();changed();}
-            public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}
-        });panel.addView(hue);
+    private static float clamp01(float v){return v<0?0:(v>1?1:v);}
+
+    /** A draggable hue spectrum bar with a round thumb — a proper hue picker. */
+    private final class HueBar extends View {
+        private final Paint p=new Paint(3);
+        private final HueSink sink;
+        private float degrees;
+        HueBar(Context c,float start,HueSink sink){super(c);this.sink=sink;degrees=start;setMinimumHeight(px(44));setContentDescription("Hue");}
+        void set(float value){degrees=value;invalidate();}
+        @Override protected void onDraw(Canvas canvas){
+            float x0=getPaddingLeft(),x1=getWidth()-getPaddingRight(),w=Math.max(1,x1-x0),cy=getHeight()*.5f;
+            int[] rainbow=new int[7];for(int i=0;i<7;i++)rainbow[i]=Color.HSVToColor(new float[]{i*60,1,1});
+            p.setShader(new LinearGradient(x0,0,x1,0,rainbow,null,Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(x0,cy-px(8),x1,cy+px(8),px(8),px(8),p);
+            p.setShader(null);
+            float tx=x0+w*clamp01(degrees/360f);
+            p.setColor(0xff0c1419);canvas.drawCircle(tx,cy,px(12),p);
+            p.setColor(Color.HSVToColor(new float[]{degrees,1,1}));canvas.drawCircle(tx,cy,px(9),p);
+            p.setColor(0xffffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(px(1.5f));canvas.drawCircle(tx,cy,px(9),p);p.setStyle(Paint.Style.FILL);
+        }
+        @Override public boolean onTouchEvent(MotionEvent e){
+            int a=e.getActionMasked();
+            if(a==MotionEvent.ACTION_DOWN||a==MotionEvent.ACTION_MOVE){
+                float x0=getPaddingLeft(),w=Math.max(1,getWidth()-getPaddingLeft()-getPaddingRight());
+                degrees=clamp01((e.getX()-x0)/w)*360f;
+                sink.hue(Math.round(degrees));invalidate();
+            }
+            return true;
+        }
+    }
+
+    /** Saturation/value square for the current hue. */
+    private final class ColorSquare extends View {
+        private final Paint p=new Paint(3);
+        private final SvSink sink;
+        private float hue,sat,val;
+        ColorSquare(Context c,float h,float s,float v,SvSink sink){super(c);this.sink=sink;hue=h;sat=s;val=v;setMinimumHeight(px(160));setContentDescription("Saturation and brightness");}
+        void setHue(float h){hue=h;invalidate();}
+        void setSV(float s,float v){sat=s;val=v;invalidate();}
+        @Override protected void onDraw(Canvas canvas){
+            float w=getWidth(),h=getHeight();
+            int base=Color.HSVToColor(new float[]{hue,1,1});
+            p.setShader(new LinearGradient(0,0,w,0,new int[]{0xffffffff,base},null,Shader.TileMode.CLAMP));
+            canvas.drawRect(0,0,w,h,p);
+            p.setShader(new LinearGradient(0,0,0,h,new int[]{0x00000000,0xff000000},null,Shader.TileMode.CLAMP));
+            canvas.drawRect(0,0,w,h,p);
+            p.setShader(null);
+            float tx=clamp01(sat)*w,ty=(1-clamp01(val))*h;
+            p.setColor(0xff0c1419);canvas.drawCircle(tx,ty,px(11),p);
+            p.setColor(Color.HSVToColor(new float[]{hue,sat,val})|0xff000000);canvas.drawCircle(tx,ty,px(8),p);
+            p.setColor(0xffffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(px(1.5f));canvas.drawCircle(tx,ty,px(8),p);p.setStyle(Paint.Style.FILL);
+        }
+        @Override public boolean onTouchEvent(MotionEvent e){
+            int a=e.getActionMasked();
+            if(a==MotionEvent.ACTION_DOWN||a==MotionEvent.ACTION_MOVE){
+                float s=clamp01(e.getX()/Math.max(1,getWidth())),v=1-clamp01(e.getY()/Math.max(1,getHeight()));
+                sat=s;val=v;sink.sv(s,v);invalidate();
+            }
+            return true;
+        }
+    }
+
+    private LinearLayout hueControl(LinearLayout panel,String title,String key,boolean primary,boolean forBg){
+        int start=forBg?(primary?cfg.bgHue1:cfg.bgHue2):(primary?cfg.hue1:cfg.hue2);
+        int sat=forBg?cfg.bgSat:cfg.sat;
+        LinearLayout row=new LinearLayout(this);row.setOrientation(1);
+        TextView value=text(title+" · "+start+"°",13,INK);row.addView(value);
+        swatch(value,Color.HSVToColor(new float[]{start,sat/100f,1}));
+        HueBar bar=new HueBar(this,start,degrees->{
+            if(forBg){if(primary)cfg.bgHue1=degrees;else cfg.bgHue2=degrees;}
+            else{if(primary)cfg.hue1=degrees;else cfg.hue2=degrees;}
+            value.setText(title+" · "+degrees+"°");swatch(value,Color.HSVToColor(new float[]{degrees,sat/100f,1}));
+            draft.edit().putInt(key,degrees).apply();changed();
+        });
+        row.addView(bar,new LinearLayout.LayoutParams(-1,px(44)));panel.addView(row);return row;
     }
     private void changed(){
         cfg=Config.from(draft);preview.fx.cfg=cfg;updatePalette();
@@ -340,25 +441,17 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         String received=Config.string(getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE),SettingsContract.REVISION,"");
         String savedState=confirmed(revision,received)?
             (Config.from(applied).enabled?"You’re all set · Gboard is up to date":"Gboard confirmed: all module effects off"):
-            "Saved · waiting for Gboard";
-        state.setText(saving?"Saving…":dirty?"Unsaved changes · preview only":savedState);
-        apply.setEnabled(!saving);apply.setAlpha(!saving?1f:.45f);
+            "Saved · waiting for Gboard to open";
+        state.setText(saving?"Saving & restarting Gboard…":dirty?"Unsaved changes · tap Save & restart Gboard":savedState);
+        saveRestart.setEnabled(!saving);saveRestart.setAlpha(!saving?1f:.45f);
     }
     private static SharedPreferences.Editor copySettings(Map<String,?> values,SharedPreferences target){return SettingsStore.copy(values,target);}
-    private void applySettings(){
-        if(saving)return;
-        new AlertDialog.Builder(this).setTitle("Apply settings / restart Gboard?")
-            .setMessage("Save only keeps Gboard running. Save & restart requests root to force-stop Gboard after saving. The keyboard will close; tap a text field to reopen it. Keep a backup keyboard enabled. No restart happens without this confirmation.")
-            .setPositiveButton("Save & restart",(d,w)->persist(true))
-            .setNeutralButton("Save only",(d,w)->persist(false))
-            .setNegativeButton("Cancel",null).show();
-    }
-    private void persist(boolean restart){
+    private void persist(){
         if(saving)return;
         final Map<String,Object> snapshot=new java.util.HashMap<>(draft.getAll());
         final String revision=java.util.UUID.randomUUID().toString();snapshot.put(SettingsContract.REVISION,revision);
         saving=true;updateState();
-        state.setText(restart?"Saving, then waiting for root approval…":"Saving…");
+        state.setText("Saving, then waiting for root approval…");
         new Thread(()->{
             boolean saved=false,stopped=false;String failure=null;
             try{
@@ -366,26 +459,26 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
                 if(saved){
                     draft.edit().putString(SettingsContract.REVISION,revision).apply();
                     notifyKeyboard();
-                    stopped=restart&&GboardRestart.stop();
+                    stopped=GboardRestart.stop();
                 }
-            }catch(RuntimeException e){failure=e.getClass().getSimpleName();android.util.Log.w("RGBPulse","Apply did not complete",e);}
+            }catch(RuntimeException e){failure=e.getClass().getSimpleName();android.util.Log.w("RGBPulse","Save & restart did not complete",e);}
             final boolean ok=saved,didStop=stopped;final String problem=failure;
             runOnUiThread(()->{
                 saving=false;
                 if(isFinishing()||isDestroyed())return;
                 updateState();
-                if(!ok){state.setText("Couldn’t save. Tap Apply changes to try again.");return;}
+                if(!ok){state.setText("Couldn’t save. Tap Save & restart Gboard to try again.");return;}
                 confirmationChecks=0;confirmationHandler.removeCallbacks(confirmationTick);confirmationHandler.postDelayed(confirmationTick,300);
-                if(problem!=null)state.setText("Saved, but connection needs a retry. Open Gboard to sync.");
-                else if(restart)state.setText(didStop?"Saved · tap the test field to reopen Gboard.":"Saved · restart was not approved. Open Gboard to sync.");
-                else state.setText("Saved · checking Gboard…");
-                if(restart&&!didStop)new AlertDialog.Builder(this).setTitle("Gboard was not stopped")
-                    .setMessage("Root was unavailable, denied, or timed out. Saving and force-stopping are separate operations. You can force-stop Gboard in Android settings.")
+                if(didStop)state.setText("Saved · Gboard was stopped. Tap a text field to reopen it with the new settings.");
+                else if(problem!=null)state.setText("Saved, but connection needs a retry. Open Gboard to sync.");
+                else state.setText("Saved · the force-stop was not approved. Open Gboard to sync.");
+                if(didStop)Toast.makeText(this,"Saved. Gboard restarts the next time you open it.",Toast.LENGTH_SHORT).show();
+                else new AlertDialog.Builder(this).setTitle("Gboard was not stopped")
+                    .setMessage("Settings were saved, but the force-stop needs root and it was unavailable, denied, or timed out. Open the keyboard to pick up the new settings anyway, or force-stop Gboard manually.")
                     .setPositiveButton("Open app settings",(d,w)->openGboardSettings()).setNegativeButton("Not now",null).show();
-                Toast.makeText(this,"Saved. Waiting for Gboard to confirm.",Toast.LENGTH_SHORT).show();
-                if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need Apply.");
+                if(!draft.getAll().equals(snapshot))state.append(" Newer edits still need saving.");
             });
-        },"Apply ripple").start();
+        },"Save & restart").start();
     }
     private void notifyKeyboard(){
         try{SettingsTransport.push(this);}
@@ -405,7 +498,7 @@ shell.addView(footer);setContentView(shell);tintControls(shell);selectPage(selec
         if(++confirmationChecks<30)confirmationHandler.postDelayed(confirmationTick,400);
         else {
             boolean reply=getSharedPreferences(SettingsContract.STATUS,Context.MODE_PRIVATE).getBoolean("moduleResponded48",false);
-            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load 1.0.2.");
+            state.append(reply?". Module replied, but did not confirm application.":". No live module reply. Open Gboard; check module scope and reboot to load 1.0.3.");
         }
     }
     private void openGboardSettings(){

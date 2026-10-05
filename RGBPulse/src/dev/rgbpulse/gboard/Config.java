@@ -4,21 +4,26 @@ import android.content.SharedPreferences;
 
 public final class Config {
     public static final String PREFS = "settings";
-    public static final String[] EFFECTS = {"Edge runner", "Corner snap", "Underline", "Prism swipe", "Four sparks", "Drop ring", "Split shutters", "Soft press", "Wide orbit", "Wide aurora"};
+    public static final String[] EFFECTS = {"Rainbow ring", "Corner pulse", "Underline wave", "Diagonal wave", "Quad pulse", "Rainbow ripple", "Side waves", "Breathing glow", "Bloom wave", "Pulse cross", "Orbit glow", "Liquid rise", "Wave sweep", "Aura ripple", "Color wash", "Curtain wave"};
     public static final String[] EFFECT_HINTS={
-        "A quick highlight runs around the tapped key.","Four small brackets snap toward the key corners.",
-        "A short line sweeps beneath the tapped letter.","A narrow diagonal gleam crosses one key.",
-        "Four tiny diamond sparks lift from the key edges.","One compact ring expands inside the key.",
-        "Two soft slivers separate toward the key edges.","A soft, single glow responds beneath your finger.",
-        "Wide effect · one fine ring travels across the keyboard.","Wide effect · one flowing ribbon crosses the keyboard."};
-    public static final int GPU_COUNT = 10;
+        "A smooth ring of circulating color flows around the tapped key.","Four corner glows swell outward, one hue per quadrant.",
+        "A rainbow underline with a soft passing sheen.","A wide spectral band glides diagonally across one key.",
+        "Four soft orbs drift from the key edges, a quarter turn of hue apart.","An expanding ripple whose color runs around the ring.",
+        "Two vertical color waves part from the key center.","One large soft pulse of slowly drifting color.",
+        "Four smooth color petals open from the center.","Soft horizontal and vertical color bars meet in a calm glow.",
+        "A rainbow arc sweeps around the key like a smooth loading ring.","A rainbow fill level rises and drains behind a bright meniscus.",
+        "Wide effect · a broad rainbow wave glides across the keyboard.","Wide effect · a wide rainbow ring expands from the tap.",
+        "Wide effect · the keyboard breathes with a drifting hue gradient.","Wide effect · three smooth spectral curtains sway across."};
+    public static final int KEY_COUNT = 12;
+    public static final int GPU_COUNT = 16;
     public int pulseDuration=160;
     public static final String[] COLORS = {"Rainbow cycle", "Random per tap", "Single color", "Two-color gradient", "Hue by position"};
     public static final String[] LAYERS = {"Real keyboard background (default)", "Over keys — keyboard only"};
     public boolean enabled = false;
     public boolean tapEffects = false;
-    public boolean quietBackground=false;
-    public int quietStrength=65;
+    public int background=0;
+    public int bgDuration=1400;
+    public int bgColorMode=0,bgHue1=190,bgHue2=320,bgSat=60;
     public boolean ripple = false;
     public static final String[] RIPPLES={"Row flow", "Soft echo", "Wide glow", "Touch pulse", "Full keyboard", "Diamond field", "Cross bloom", "Diagonal weave", "Checker reveal"};
     public static final String[] TRANSITIONS={"Off", "Ignition", "Stage curtains", "Horizon rise"};
@@ -61,18 +66,22 @@ public final class Config {
             c.rippleOpacity=clamp(number(p,"rippleStrength41",70),15,100);
             c.backgroundOpacity=clamp(number(p,"backgroundStrength41",90),5,100);
             c.enabled = flag(p,"enabled", c.enabled);
-            c.quietBackground=flag(p,"quietBackground48",false);
-            c.quietStrength=clamp(number(p,"quietStrength48",65),10,100);
+            c.background=clamp(number(p,"background51",0),0,4);
+            c.bgDuration=clamp(number(p,"bgduration51",c.bgDuration),300,3500);
+            c.bgColorMode=clamp(number(p,"bcolorMode51",c.bgColorMode),0,COLORS.length-1);
+            c.bgHue1=clamp(number(p,"bhue151",c.bgHue1),0,360);
+            c.bgHue2=clamp(number(p,"bhue251",c.bgHue2),0,360);
+            c.bgSat=clamp(number(p,"bsat51",c.bgSat),0,100);
             c.tapEffects = flag(p,"tapEffects36", false);
             // New curated catalog: never reinterpret an obsolete index as a different effect.
-            c.effect = clamp(number(p,"pulse47", c.effect), 0, EFFECTS.length - 1);
+            c.effect = clamp(number(p,"pulse47", c.effect), 0, KEY_COUNT - 1);
             c.pulseDuration=clamp(number(p,"pulseDuration47",160),120,360);
             c.colorMode = clamp(number(p,"colorMode", c.colorMode), 0, COLORS.length - 1);
             c.hue1 = clamp(number(p,"hue1", c.hue1), 0, 360);
             c.hue2 = clamp(number(p,"hue2", c.hue2), 0, 360);
             c.sat = clamp(number(p,"sat", c.sat), 0, 100);
             c.opacity = clamp(number(p,"opacity3", c.opacity), 5, 100);
-            c.duration = clamp(number(p,"duration3", c.duration), 300, 3500);
+            c.duration = clamp(number(p,"duration3", c.duration), 150, 3500);
             c.size = clamp(number(p,"size", c.size), 30, 250);
             c.thickness = clamp(number(p,"thickness8", c.thickness), 25, 300);
             c.accentColor=number(p,"accent19",0xff575c68);c.tileColor=number(p,"tile19",0xfff5f5f3);c.sideStyle=clamp(number(p,"side20",0),0,2);c.trailStyle=clamp(number(p,"trail19",0),0,3);c.trailWidth=clamp(number(p,"trailWidth19",2),1,6);c.trailLife=clamp(number(p,"trailLife19",420),150,1000);
@@ -91,10 +100,10 @@ public final class Config {
         if(c.refined){
             // Migrate the old mislabelled master switch only when ripple40 is absent.
             c.ripple=flag(p,"ripple40",c.enabled);
-            c.enabled=c.ripple||c.tapEffects||c.quietBackground||c.opening>0||c.closing>0;
+            c.enabled=c.ripple||c.tapEffects||c.background>0||c.opening>0||c.closing>0;
             c.glass=c.ripple;c.sideStyle=c.ripple?1:0;c.trailStyle=0;c.layer=0;
             c.font=0;c.bold=false;c.letterSize=100;
-            c.duration=clamp(c.duration,400,1100);c.opacity=clamp(c.opacity,15,85);
+            c.duration=clamp(c.duration,150,1100);c.opacity=clamp(c.opacity,15,85);
         }
         return c;
     }
