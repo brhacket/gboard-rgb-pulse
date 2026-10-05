@@ -1,5 +1,7 @@
 ## Gboard RGB Pulse 1.0.3
 
+[Download the 1.0.3 APK](https://github.com/brhacket/gboard-rgb-pulse/releases/download/v1.0.3/Gboard-RGB-Pulse-1.0.3.apk) · [All releases](https://github.com/brhacket/gboard-rgb-pulse/releases)
+
 Long-session stability, one-button saving, a curated catalog of layered,
 luminous tap animations and two new wide background effects.
 

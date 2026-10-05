@@ -2,7 +2,7 @@
 
 **Version 1.0.3** — optional key feedback, wide background effects and expressive ripples for Gboard.
 
-[Download 1.0.3](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.0.3)
+[Download 1.0.3 APK](https://github.com/brhacket/gboard-rgb-pulse/releases/download/v1.0.3/Gboard-RGB-Pulse-1.0.3.apk) · [Release notes](https://github.com/brhacket/gboard-rgb-pulse/releases/tag/v1.0.3) · [All releases](https://github.com/brhacket/gboard-rgb-pulse/releases)
 
 ## Choose your level of motion
 - **Touch:** the settings studio has four tabs — Ripple, Keys, Background, Keyboard. Keys holds twelve RGB-style key responses (rainbow ring, corner pulse, underline wave, diagonal wave, quad pulse, rainbow ripple, side waves, breathing glow, bloom wave, pulse cross, orbit glow, liquid rise); Background holds four wide shows (Wave sweep, Aura ripple, Color wash, Curtain wave) with their own speed control. The two groups are independent — each with its own color modes and hue pickers — and can run at the same time. Every effect is smooth flowing color in the classic RGB lighting style. Try the everyday preset for Breathing glow at 160 ms without traveling waves.
