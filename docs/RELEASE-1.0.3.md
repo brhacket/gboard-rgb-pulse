@@ -1,4 +1,4 @@
-## Gboard RGB Pulse 1.1.0
+## Gboard RGB Pulse 1.0.3
 
 Long-session stability, one-button saving, a curated catalog of layered,
 luminous tap animations and two new wide background effects.
@@ -39,7 +39,7 @@ Android 13+ with LSPosed/Vector; scope the module to Gboard
 
 **Signing:** This build uses a new build-generated signing key. It cannot
 update prior installs in place. Uninstall the previous module first (module
-settings are lost), install `Gboard-RGB-Pulse-1.1.0.apk`, enable the module
+settings are lost), install `Gboard-RGB-Pulse-1.0.3.apk`, enable the module
 for Gboard, and reboot once to unload older hooks.
 
 Choose your options, then press **Save & restart Gboard**. The force-stop

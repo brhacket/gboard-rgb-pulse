@@ -59,7 +59,7 @@ jobs:
       - name: Build test APK
         run: |
           set +e
-          bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.1.0.apk > /tmp/build.log 2>&1
+          bash RGBPulse/build.sh ../Gboard-RGB-Pulse-1.0.3.apk > /tmp/build.log 2>&1
           status=$?
           if [ "$status" -ne 0 ]; then
             grep -n -E "error:|Error:|Exception" /tmp/build.log | head -n 8 | while IFS= read -r line; do echo "::error::$line"; done
@@ -69,14 +69,14 @@ jobs:
           cat /tmp/build.log
       - name: Verify archive and signature
         run: |
-          unzip -t Gboard-RGB-Pulse-1.1.0.apk
-          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.1.0.apk | tee APK-verification.txt
-          aapt dump badging Gboard-RGB-Pulse-1.1.0.apk >> APK-verification.txt
-          sha256sum Gboard-RGB-Pulse-1.1.0.apk > SHA256SUMS.txt
+          unzip -t Gboard-RGB-Pulse-1.0.3.apk
+          apksigner verify --verbose --print-certs Gboard-RGB-Pulse-1.0.3.apk | tee APK-verification.txt
+          aapt dump badging Gboard-RGB-Pulse-1.0.3.apk >> APK-verification.txt
+          sha256sum Gboard-RGB-Pulse-1.0.3.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Gboard-RGB-Pulse-test
           path: |
-            Gboard-RGB-Pulse-1.1.0.apk
+            Gboard-RGB-Pulse-1.0.3.apk
             APK-verification.txt
             SHA256SUMS.txt
