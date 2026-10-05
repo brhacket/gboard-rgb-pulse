@@ -393,7 +393,7 @@ The footer exposes Restart with confirmation, independently of Apply. Root failu
 gets a dedicated dialog, not a transient status overwritten by acknowledgement.
 
 The quiet background renderer and the original wide orbit/aurora programs were
-removed in the final 1.1.0 build; the wide catalog now offers two background
+removed in the final 1.0.3 build; the wide catalog now offers two background
 effects (Comet sweep, Nebula bloom) rendered by the same bounded pulse field.
 The everyday preset stages Soft press / 160ms, disabling ripple and
 entrance/exit lighting. No application/demo/restart occurs from preset
